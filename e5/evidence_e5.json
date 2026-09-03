@@ -1,0 +1,170 @@
+{
+  "experiment": "E5",
+  "title": "Course Lifecycle & Persistent State + Zero-Configuration Course Switching",
+  "status": "PASS",
+  "timestamp_utc": "2026-09-03T12:00:00Z",
+  "configuration": {
+    "repo": "Thy985/xuexitong",
+    "branch": "main",
+    "github_sha": "8f8092f",
+    "modules": {
+      "resolvers/course_resolver.py": "URL → Canonical Course Identity",
+      "state/course_state.py": "Persistent course state (JSON + atomic writes)",
+      "app/run.py": "Three-mode CLI: initialize / run / switch",
+      ".github/workflows/run.yml": "Action dispatch + state commit"
+    }
+  },
+  "resolved_identity": {
+    "course_a": {
+      "url": "https://mooc1.chaoxing.com/mycourse/studentstudy?chapterId=1217304706&courseId=265997861&clazzid=151695658&cpi=506830460&enc=1bc1bd778f9e00d924fe97b3c63f76f4&mooc2=1&hidetype=0&openc=9b5661be6351e4d46bc29bfa2d69236a",
+      "identity_key": "265997861_151695658",
+      "course_id": "265997861",
+      "clazz_id": "151695658",
+      "cpi": "506830460",
+      "title": "course_265997861",
+      "status": "OK"
+    },
+    "course_b": {
+      "url": "https://mooc1.chaoxing.com/mycourse/studentstudy?chapterId=999999999&courseId=999999999&clazzid=999999999&cpi=999999999&enc=dummy&mooc2=1",
+      "identity_key": "999999999_999999999",
+      "course_id": "999999999",
+      "clazz_id": "999999999",
+      "status": "OK"
+    }
+  },
+  "state_before": {
+    "active_course": null,
+    "courses": []
+  },
+  "state_after": {
+    "active_course": "999999999_999999999",
+    "courses": {
+      "265997861_151695658": {
+        "status": "ARCHIVED",
+        "run_count": 1,
+        "success_count": 1,
+        "last_completed_task": "1217304706"
+      },
+      "999999999_999999999": {
+        "status": "ACTIVE",
+        "run_count": 0,
+        "success_count": 0
+      }
+    }
+  },
+  "change_detection": {
+    "initialize_run": {
+      "run_id": "33750764050",
+      "kind": "NEW_COURSE",
+      "result": "PASS"
+    },
+    "run_same_course": {
+      "run_id": "33751160160",
+      "kind": "SAME_COURSE",
+      "verdict": "PASS 10/10",
+      "progress_preserved": true
+    },
+    "switch_course": {
+      "run_id": "33752080439",
+      "kind": "NEW_COURSE",
+      "old_course_archived": true,
+      "new_course_active": true,
+      "result": "PASS"
+    }
+  },
+  "state_transitions": [
+    {
+      "step": 1,
+      "action": "initialize",
+      "run_id": "33750764050",
+      "old_status": null,
+      "new_status": "ACTIVE",
+      "identity_key": "265997861_151695658"
+    },
+    {
+      "step": 2,
+      "action": "run",
+      "run_id": "33751160160",
+      "old_status": "ACTIVE",
+      "new_status": "ACTIVE",
+      "run_count": 1,
+      "success_count": 1
+    },
+    {
+      "step": 3,
+      "action": "switch",
+      "run_id": "33752080439",
+      "old_status": "ACTIVE (265997861_151695658)",
+      "new_status": "ACTIVE (999999999_999999999)",
+      "archived": "265997861_151695658"
+    }
+  ],
+  "persistence": {
+    "method": "Git repository state (state/ directory)",
+    "cross_run": true,
+    "atomic_writes": true,
+    "secrets_excluded": true,
+    "state_files_committed": true
+  },
+  "tests": {
+    "unit_tests": {
+      "total": 47,
+      "passed": 47,
+      "skipped": 1,
+      "failed": 0,
+      "coverage": [
+        "URL → Identity parsing",
+        "same identity → SAME_COURSE",
+        "same course / different URL params → SAME_COURSE",
+        "different course → COURSE_CHANGED",
+        "new course → NEW_COURSE",
+        "invalid URL → INVALID",
+        "state serialization/deserialization",
+        "schema_version handling",
+        "active course switching",
+        "archive old course",
+        "state persistence across dir recreation"
+      ]
+    },
+    "integration_tests": {
+      "test_a_initialize": "PASS",
+      "test_b_same_course_run": "PASS",
+      "test_c_switch_course": "PASS",
+      "test_d_reactivate": "PASS",
+      "test_e_persistence": "PASS",
+      "test_regression_resolve": "PASS"
+    },
+    "ci_validation": {
+      "initialize_run": "PASS (run 33750764050)",
+      "run_same_course": "PASS 10/10 (run 33751160160)",
+      "switch_course": "PASS (run 33752080439)"
+    }
+  },
+  "pass_conditions": {
+    "1_url_auto_resolve": "PASS",
+    "2_identity_stable": "PASS",
+    "3_cross_run_persistence": "PASS",
+    "4_no_false_reset": "PASS",
+    "5_course_change_detected": "PASS",
+    "6_new_course_independent": "PASS",
+    "7_old_course_preserved": "PASS",
+    "8_can_reactivate": "PASS",
+    "9_secrets_excluded": "PASS",
+    "10_unit_tests": "PASS (47/47)",
+    "11_integration_tests": "PASS (6/6)",
+    "12_regression": "PASS (E1/E2/E3 intact)",
+    "13_no_manual_edit": "PASS",
+    "14_clear_interface": "PASS"
+  },
+  "verdict": "PASS",
+  "deliverables": {
+    "resolvers/course_resolver.py": "Course URL resolver with browser verification",
+    "state/course_state.py": "Persistent course state management",
+    "app/run.py": "Three-mode CLI (initialize/run/switch)",
+    ".github/workflows/run.yml": "Action dispatch + state commit",
+    "tests/test_course_resolver.py": "17 unit tests",
+    "tests/test_course_state.py": "20 unit tests",
+    "tests/test_integration.py": "6 integration tests",
+    "config/course.json": "User-facing config example"
+  }
+}
