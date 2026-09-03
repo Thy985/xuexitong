@@ -1,0 +1,103 @@
+name: e2-headed-browser-compat
+
+on:
+  workflow_dispatch:
+    inputs:
+      chapter_id:
+        description: "课程章节 ID（默认 1217304705 = 1.6）"
+        required: false
+        default: "1217304705"
+      debug_capture:
+        description: "是否开启 network capture（需要 Xvfb）"
+        required: false
+        default: "false"
+
+jobs:
+  e2:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CX_USER: ${{ secrets.CX_USER }}
+      CX_PASS: ${{ secrets.CX_PASS }}
+      CHAPTER_ID: ${{ github.event.inputs.chapter_id || '1217304705' }}
+      HEADLESS: "false"
+      PLAYWRIGHT_JSBUNDLE: ""
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install system deps (Xvfb)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb x11-utils fonts-noto-cjk
+          # Remove any existing Xvfb
+          pkill -f "Xvfb :99" || true
+          echo "system-deps-installed"
+
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright==1.62.0
+          playwright install chromium
+          # Verify chromium version
+          python -c "from playwright.sync_api import sync_playwright; p=sync_playwright().start(); print('chromium_version:', p.chromium.launch().version); p.stop()"
+          echo "python-deps-installed"
+
+      - name: Run E2 verification
+        run: |
+          # Start virtual display before any browser launch
+          Xvfb :99 -screen 0 1440x900x24 -ac &
+          export DISPLAY=:99
+          sleep 2
+          # Verify Xvfb is running
+          xdpyinfo -display :99 || echo "xdpyinfo failed"
+          # Run the test
+          python e2/e2_headed_gha.py \
+            --chapter-id "$CHAPTER_ID" \
+            --output /tmp/evidence_e2.json \
+            --xvfb-display :99 \
+            --debug-capture "${{ github.event.inputs.debug_capture }}"
+          # Copy evidence to workspace for upload
+          cp /tmp/evidence_e2.json ./evidence_e2.json || true
+          echo "test-complete"
+
+      - name: Upload evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2-evidence-${{ github.run_number }}
+          path: |
+            evidence_e2.json
+            e2/
+          retention-days: 30
+
+      - name: Collect CI diagnostics on failure
+        if: failure()
+        run: |
+          echo "=== CI Diagnostics ==="
+          echo "--- OS ---"
+          cat /etc/os-release | head -5
+          echo "--- CPU ---"
+          nproc
+          echo "--- Memory ---"
+          free -h | head -3
+          echo "--- Display ---"
+          echo "DISPLAY=$DISPLAY"
+          xdpyinfo -display :99 2>&1 | head -20 || echo "xdpyinfo failed"
+          echo "--- Xvfb processes ---"
+          pgrep -a Xvfb || echo "no Xvfb"
+          echo "--- Chromium version ---"
+          ls /usr/bin/chromium* 2>/dev/null || ls ~/.cache/ms-playwright/*/chromium-*/chrome-linux/chrome 2>/dev/null || echo "chromium not found in usual paths"
+          echo "--- Playwright browser cache ---"
+          ls -la ~/.cache/ms-playwright/ 2>/dev/null || echo "no playwright cache"
+          echo "--- X log ---"
+          cat /tmp/Xvfb.log 2>/dev/null || cat /var/log/Xorg.*.log 2>/dev/null || echo "no X log"
+          echo "--- Any python tracebacks ---"
+          grep -i "traceback\|error\|exception" /tmp/evidence_e2.json 2>/dev/null | head -20 || true
