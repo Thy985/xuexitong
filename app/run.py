@@ -333,6 +333,13 @@ def cmd_scheduler(args) -> int:
     }
     print(json.dumps(out, ensure_ascii=False, indent=2))
 
+    # 写入 evidence 文件
+    output_path = args.output
+    if output_path:
+        os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(out, f, ensure_ascii=False, indent=2)
+
     # 如果是 RUN 且需要实际执行学习
     if result.decision == "RUN" and result.result in ("SUCCESS", "FAILED"):
         return 0 if result.passed else 1
