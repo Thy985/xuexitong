@@ -511,8 +511,11 @@ def run_test(args):
             evidence["iframe_tree"] = iframe_tree
             cards_iframe = next((n for n in iframe_tree if "knowledge/cards" in n.get("src", "")), None)
             evidence["checks"]["cards_iframe_loaded"] = cards_iframe is not None and cards_iframe.get("hasDoc")
-            evidence["checks"]["cards_has_video"] = cards_iframe and cards_iframe.get("videoCnt", 0) > 0
-            log(f"iframe tree: {len(iframe_tree)} nodes, cards_hasDoc={evidence['checks'].get('cards_iframe_loaded')}")
+            # 若 Step F 已在视频 metadata 就绪时确认 cards→ananas→video 递归访问成功，
+            # 这里（nextUnit 切换后采集）不得覆盖该结论；未置位时才用当前 iframe tree 兜底
+            if not evidence["checks"].get("cards_has_video"):
+                evidence["checks"]["cards_has_video"] = cards_iframe and cards_iframe.get("videoCnt", 0) > 0
+            log(f"iframe tree: {len(iframe_tree)} nodes, cards_hasDoc={evidence['checks'].get('cards_iframe_loaded')}, cards_has_video={evidence['checks'].get('cards_has_video')}")
         except Exception as e:
             evidence.setdefault("errors", []).append(f"iframe_tree: {e}")
             log(f"iframe tree error: {e}")
