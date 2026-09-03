@@ -106,10 +106,22 @@ def main():
     t0 = time.time()
     ev = None
     retry_count = 0
+    crash_msg = None
     for attempt in range(1, max_attempts + 1):
         if attempt > 1:
             print(f"  retry {attempt-1}/{max_attempts-1} …", flush=True)
-        ev = run_test(eargs)            # 每次都是全新浏览器会话
+        try:
+            ev = run_test(eargs)            # 每次都是全新浏览器会话
+        except Exception as e:
+            crash_msg = f"{type(e).__name__}: {e}"
+            print(f"[!] run_test crashed: {crash_msg}", flush=True)
+            ev = ev or {"verdict": "CRASH", "passed_count": 0, "errors": [crash_msg]}
+            # 崩溃也尝试落盘 evidence（run_test 可能已部分填充）
+            try:
+                _write(ev, out_path)
+            except Exception:
+                pass
+            break
         v = ev.get("verdict", "")
         if attempt < max_attempts and retryable(v):
             retry_count += 1
@@ -119,15 +131,18 @@ def main():
 
     # 若重试后仍失败，保留最后一次（也是最接近成功）的 evidence 供审计
     passed = ev.get("passed_count") == 10 if ev is not None else False
+    exit_code = 0 if passed else 1
     res = {
         "app": "xuexitong-mvp",
         "target": {"course_url": args.course_url, "chapter_id": chapter},
         "env_runner": "github-actions" if "GITHUB_RUN_ID" in os.environ else "local",
         "timing_s": round(total, 1),
         "retry_count": retry_count,
+        "exit_code": exit_code,
         "verdict": "PASS" if passed else ("DEGRADED" if ev and ev.get("passed_count", 0) >= 6 else "FAIL"),
         "passed_count": ev.get("passed_count") if ev else None,
         "failure_stage": (ev or {}).get("failure_stage"),
+        "crash": crash_msg,
         "evidence_file": out_path,
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
     }
@@ -135,8 +150,8 @@ def main():
     Path(out_path).write_text(json.dumps(final, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(res, ensure_ascii=False, indent=2))
     print(f"Evidence saved: {out_path}")
-    sys.exit(0 if passed else 1)
+    sys.exit(exit_code)
 
 
-if __name__ == "__main__":
-    main()
+    if __name__ == "__main__":
+        main()

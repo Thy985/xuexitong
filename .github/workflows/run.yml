@@ -4,6 +4,13 @@ name: run (MVP - learn one video task naturally)
 # 复用 E-series 已验证的有头浏览器(Chromium+Xvfb)自然播放引擎；
 # 不构造/不伪造/不重放 multimedia/log，不改业务参数；仅自然学习
 # URL 中指定的一个视频任务点并返回 Evidence。
+#
+# 失败诊断策略：
+#   1. 主步骤 continue-on-error: true — 引擎失败不终止 job，诊断步骤照跑
+#   2. 诊断步骤 if: always() — 无论成败都打印 failure_stage + 关键 checks
+#   3. 产物上传 if: always() — 截图/evidence 始终进 artifact
+#   4. 最终判定步骤 if: always() — 读 result.exit_code 决定 Action 红绿
+# 这样失败时打开 Actions 日志直接能看到诊断，不再靠猜。
 
 on:
   workflow_dispatch:
@@ -63,34 +70,105 @@ jobs:
           python -c "from playwright.sync_api import sync_playwright; p=sync_playwright().start(); print('chromium_version:', p.chromium.launch().version); p.stop()"
           echo "python-deps-installed"
 
+      # ── 主执行：continue-on-error: true 让失败不中断后续诊断步骤 ──
       - name: Run MVP learn (headed + Xvfb)
+        continue-on-error: true
         run: |
           Xvfb :99 -screen 0 1440x900x24 -ac &
           export DISPLAY=:99
           sleep 2
           xdpyinfo -display :99 >/dev/null 2>&1 || echo "xdpyinfo failed"
-          ARGS="--course-url \"$COURSE_URL\" --output ./evidence/run_$(date +%s).json --xvfb-display :99 --max-attempts $GHA_ATTEMPTS"
+          ARGS="--course-url \"$COURSE_URL\" --output ./evidence/result.json --xvfb-display :99 --max-attempts $GHA_ATTEMPTS"
           if [ -n "$GHA_CHAPTER" ]; then ARGS="$ARGS --chapter-id $GHA_CHAPTER"; fi
           ARGS="$ARGS --max-chapters $GHA_MAX"
           echo ">> python app/run.py $ARGS"
           eval "python app/run.py $ARGS"
           echo "mvp-run-complete"
 
-      - name: Upload Evidence
-        uses: actions/upload-artifact@v4
+      # ── 诊断步骤：always 执行，直接把失败信息打印到 Actions 日志 ──
+      - name: Dump failure diagnostics
         if: always()
+        run: |
+          echo "=== MVP diagnostics ==="
+          python3 - <<'PY'
+          import json, sys, glob, os
+          files = glob.glob('./evidence/result*.json') + glob.glob('./evidence/run_*.json')
+          if not files:
+              print("## ⚠️ No result file produced — check Run MVP step above")
+              sys.exit(0)
+          with open(files[0]) as f:
+              r = json.load(f)
+          res = r.get("result", {})
+          ev = r.get("evidence", {})
+          checks = ev.get("checks", {})
+          diag = ev.get("diagnostics", {})
+          print("══════════ FAILURE DIAGNOSTICS ══════════")
+          print(f"verdict:         {res.get('verdict')}")
+          print(f"failure_stage:   {res.get('failure_stage')}")
+          print(f"passed_count:    {res.get('passed_count')}/10")
+          print(f"retry_count:     {res.get('retry_count')}")
+          print(f"timing_s:        {res.get('timing_s')}")
+          print(f"crash:           {res.get('crash') or 'none'}")
+          print()
+          # 关键 checks 状态
+          for k, v in checks.items():
+              if v is True:
+                  continue
+              # 跳过 falsy 的非布尔值（如 max_currentTime=0 是正常事实）
+              if isinstance(v, bool) and not v:
+                  print(f"  ✗ {k}")
+          print()
+          # 诊断上下文
+          print("── diagnostics ──")
+          if diag:
+              for dk, dv in diag.items():
+                  if isinstance(dv, (dict, list)):
+                      s = json.dumps(dv, ensure_ascii=False)[:200]
+                  else:
+                      s = str(dv)[:200]
+                  print(f"  {dk}: {s}")
+          else:
+              print("  (no diagnostics captured)")
+          # evidence 顶层 key_console 和 errors
+          for ek in ("key_console", "errors"):
+              vals = ev.get(ek)
+              if vals:
+                  print(f"  {ek}: {[str(x)[:120] for x in vals[-5:]]}")
+          print("══════════════════════════════════════")
+          PY
+          echo ""
+          echo "Evidence artifacts:"
+          ls -la evidence/ 2>/dev/null || echo "  no evidence dir"
+          ls -la /tmp/diag_*.png 2>/dev/null || echo "  no diag screenshots"
+
+      # ── 产物上传：always 执行，成功/失败都保留 artifact 供审计 ──
+      - name: Upload Evidence
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: mvp-evidence-${{ github.run_id }}
           path: |
             evidence/
             app/
+            /tmp/diag_*.png
           retention-days: 30
 
-      - name: Diagnose on failure
-        if: failure()
+      # ── 最终判定：用 exit_code 控制 Action 红绿，语义不丢失 ──
+      - name: Final verdict
+        if: always()
         run: |
-          echo "=== MVP diagnostics ==="
-          cat /etc/os-release | head -5 ; nproc ; free -h | head -3
-          echo "DISPLAY=$DISPLAY" ; pgrep -a Xvfb || echo "no Xvfb"
-          ls evidence/ 2>/dev/null || echo "no evidence dir"
-          grep -ri "traceback\|error\|exception" evidence/ 2>/dev/null | head -20 || true
+          CODE=$(python3 - <<'PY'
+          import json, glob, sys
+          files = glob.glob('./evidence/result*.json') + glob.glob('./evidence/run_*.json')
+          if not files:
+              print("1", end="")
+              sys.exit(0)
+          try:
+              r = json.load(open(files[0]))
+              print(r["result"].get("exit_code", 1), end="")
+          except Exception:
+              print("1", end="")
+          PY
+          )
+          echo "Result exit_code=$CODE"
+          exit "$CODE"

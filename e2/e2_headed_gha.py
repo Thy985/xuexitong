@@ -554,6 +554,14 @@ def run_test(args):
             evidence.setdefault("errors", []).append(f"iframe_tree: {e}")
             log(f"iframe tree error: {e}")
 
+        # ── 诊断：在 browser.close() 前采集，避免 "Event loop is closed" ──
+        # 失败截图在 close() 前拍，成功时的 page 状态也在 close() 前快照
+        if True:
+            try:
+                _capture_diagnostic(page, evidence, tag="at_end")
+            except Exception as e:
+                evidence.setdefault("errors", []).append(f"diag_capture: {e}")
+
         # ── J. Console 关键日志 ─────────────────────────────────────
         key_logs = [m for m in console_msgs if any(k in (m.get("text") or "") for k in
                      ["准备切换到下一小节", "切换到同章节", "播放完成", "开始播放", "安全停止", "headless"])]
@@ -619,24 +627,13 @@ def run_test(args):
     evidence["passed_count"] = passed_count
     evidence["total_checks"] = 10
 
-    # ── 诊断：失败时截图 + 失败阶段推导（不再靠猜）──
+    # ── 诊断：失败阶段推导（截图已在 close() 前采集）──
     if passed_count < 10:
-        try:
-            _capture_diagnostic(page, evidence, tag="failure_at_end")
-        except Exception as e:
-            evidence.setdefault("errors", []).append(f"diag_capture: {e}")
         evidence["failure_stage"] = _derive_failure_stage(evidence)
         log(f"[diag] failure_stage={evidence['failure_stage']} passed={passed_count}/10")
     else:
         evidence["failure_stage"] = None
-        evidence.setdefault("diagnostics", {})["success_final_state"] = {
-            "page_url": page.url, "page_title": page.title()
-        }
-        try:
-            st = get_video_state(page)
-            evidence.setdefault("diagnostics", {})["success_final_video_state"] = st
-        except Exception:
-            pass
+        # 成功终态已在 at_end 截图中采集，无需再访问 page（已 close）
 
     if passed_count == 10:
         evidence["verdict"] = (
