@@ -63,13 +63,13 @@ jobs:
           if [ "${{ github.event.inputs.debug_capture }}" = "true" ]; then
             DEBUG_FLAG="--debug-capture"
           fi
+          # --output 直接写到工作区根目录；脚本在 sys.exit 前已写好文件，
+          # Upload 步骤 if: always() 会拾取，无需 cp（旧版 cp 因 set -e 从未执行）
           python e2/e2_headed_gha.py \
             --chapter-id "$CHAPTER_ID" \
-            --output /tmp/evidence_e2.json \
+            --output ./evidence_e2.json \
             --xvfb-display :99 \
             $DEBUG_FLAG
-          # Copy evidence to workspace for upload
-          cp /tmp/evidence_e2.json ./evidence_e2.json || true
           echo "test-complete"
 
       - name: Upload evidence
