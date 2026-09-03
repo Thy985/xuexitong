@@ -74,6 +74,9 @@ def main():
     E.CLAZZ_ID = course["clazz_id"]
     E.CPI = course["cpi"]
     E.ENC = course["enc"]
+    # openc / hidetype 决定 cards iframe 是否渲染（缺则 no_cards_frame）
+    E.OPENR = course.get("openc")
+    E.HIDETYPE = course.get("hidetype") or "0"
 
     out_path = args.output.replace("<ts>", str(int(time.time())))
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)

@@ -64,10 +64,14 @@ CLAZZ_ID   = os.environ.get("CLAZZ_ID", DEMO_CLAZZ_ID)
 CPI        = os.environ.get("CPI", DEMO_CPI)
 ENC        = os.environ.get("ENC", DEMO_ENC)
 CHAPTER_ID = os.environ.get("CHAPTER_ID", DEMO_CHAPTER)
+# 由超星课程侧提供的 openc/hidetype（从 URL / env / CLI 注入）。
+# 没有这两个参数时，当前学生页面不渲染 knowledge/cards iframe → no_cards_frame。
+OPENR = os.environ.get("OPENR") or os.environ.get("OPEN_C")    # noqa: N816
+HIDETYPE = os.environ.get("HIDETYPE")
 
 
 def parse_course_url(url: str | None) -> dict:
-    """从超星 studentstudy URL 提取课程/章节参数（多学共课程通用）。"""
+    """从超星 studentstudy URL 提取课程/章节/附加参数（openc/hidetype 必须保留）。"""
     if not url:
         return {}
     q = parse_qs(urlparse(url).query)
@@ -78,15 +82,27 @@ def parse_course_url(url: str | None) -> dict:
         "cpi":       pick("cpi"),
         "enc":       pick("enc"),
         "chapter_id": pick("chapterId"),
+        # 关键：openc / hidetype 决定 cards iframe 是否被渲染
+        "openc":     pick("openc"),
+        "hidetype":  pick("hidetype"),
     }
 
 
 def build_base_url(chap_id: str) -> str:
-    return (
+    url = (
         "https://mooc1.chaoxing.com/mycourse/studentstudy?"
         f"chapterId={chap_id}&courseId={COURSE_ID}&clazzId={CLAZZ_ID}"
         f"&cpi={CPI}&enc={ENC}&mooc2=1"
     )
+    # 保留产品必需参数；丢失则服务端可能不渲染 cards iframe
+    parts = []
+    if HIDETYPE:
+        parts.append(f"hidetype={HIDETYPE}")
+    if OPENR:
+        parts.append(f"openc={OPENR}")
+    if parts:
+        url += "&" + "&".join(parts)
+    return url
 
 V3_SCRIPT_PATH = Path(__file__).parent.parent / "xuexitongScript" / "v3_optimized.user.js"
 
@@ -645,6 +661,8 @@ def main():
     ap.add_argument("--clazz-id",  default=None, help="覆盖 clazzid")
     ap.add_argument("--cpi",       default=None, help="覆盖 cpi")
     ap.add_argument("--enc",       default=None, help="覆盖 enc")
+    ap.add_argument("--openc",     default=None, help="覆盖 openc（缺失时 cards iframe 可能不渲染）")
+    ap.add_argument("--hidetype",  default=None, help="覆盖 hidetype（通常为 0）")
     ap.add_argument("--chapter-id", default=os.environ.get("CHAPTER_ID", DEMO_CHAPTER))
     ap.add_argument("--output", default="/tmp/evidence_e2.json")
     ap.add_argument("--xvfb-display", default=None)
@@ -659,17 +677,24 @@ def main():
         args.cpi        = args.cpi        or pc.get("cpi")        or os.environ.get("CPI", DEMO_CPI)
         args.enc        = args.enc        or pc.get("enc")        or os.environ.get("ENC", DEMO_ENC)
         args.chapter_id = args.chapter_id or pc.get("chapter_id") or DEMO_CHAPTER
+        # openc / hidetype 决定 cards iframe 是否渲染，必须透传
+        args.openc      = args.openc      or pc.get("openc")      or os.environ.get("OPENR")
+        args.hidetype   = args.hidetype   or pc.get("hidetype")   or os.environ.get("HIDETYPE")
     else:
         args.course_id  = args.course_id  or os.environ.get("COURSE_ID", DEMO_COURSE_ID)
         args.clazz_id   = args.clazz_id   or os.environ.get("CLAZZ_ID", DEMO_CLAZZ_ID)
         args.cpi        = args.cpi        or os.environ.get("CPI", DEMO_CPI)
         args.enc        = args.enc        or os.environ.get("ENC", DEMO_ENC)
+        args.openc      = args.openc      or os.environ.get("OPENR")
+        args.hidetype   = args.hidetype   or os.environ.get("HIDETYPE")
 
     # 使 run_test 内 build_base_url 使用解析后的课程参数
     globals()["COURSE_ID"] = args.course_id
     globals()["CLAZZ_ID"]  = args.clazz_id
     globals()["CPI"]       = args.cpi
     globals()["ENC"]       = args.enc
+    globals()["OPENR"]     = args.openc
+    globals()["HIDETYPE"]  = args.hidetype
     args.course_id, args.clazz_id, args.cpi, args.enc = (
         args.course_id, args.clazz_id, args.cpi, args.enc)
 
