@@ -173,7 +173,22 @@ jobs:
               sys.exit(0)
           with open(files[0]) as f:
               r = json.load(f)
+          action = r.get("action", "run")
+          if action == "scheduler":
+              print(f"══════════ SCHEDULER DIAGNOSTICS ══════════")
+              print(f"action:          {action}")
+              print(f"decision:        {r.get('decision', 'N/A')}")
+              print(f"result:          {r.get('result', 'N/A')}")
+              print(f"trigger:         {r.get('trigger', 'N/A')}")
+              print(f"course_key:      {r.get('course_key', 'N/A')}")
+              print(f"verdict:         {r.get('verdict', 'N/A')}")
+              print(f"timing_s:        {r.get('timing_s', 'N/A')}")
+              print(f"error:           {r.get('error', 'N/A')}")
+              sys.exit(0)
           res = r.get("result", {})
+          if not isinstance(res, dict):
+              print(f"## ⚠️ Unexpected result format: {res}")
+              sys.exit(0)
           ev = r.get("evidence", {})
           checks = ev.get("checks", {})
           diag = ev.get("diagnostics", {})
@@ -257,19 +272,21 @@ jobs:
               sys.exit(0)
           try:
               r = json.load(open(files[0]))
-              # initialize/switch 模式总是成功（除非解析失败）
-              action = r.get("action", r.get("result", {}).get("action", "run"))
+              action = r.get("action", "run")
               if action in ("initialize", "switch"):
                   print("0", end="")
               elif action == "scheduler":
-                  # scheduler: NOOP/SUCCESS/BLOCKED = 0, FAILED = 1
                   sched_result = r.get("result", "FAILED")
                   if sched_result in ("NOOP", "SUCCESS", "BLOCKED"):
                       print("0", end="")
                   else:
                       print("1", end="")
               else:
-                  print(r.get("result", {}).get("exit_code", 1), end="")
+                  res = r.get("result", {})
+                  if isinstance(res, dict):
+                      print(res.get("exit_code", 1), end="")
+                  else:
+                      print("1", end="")
           except Exception:
               print("1", end="")
           PY
