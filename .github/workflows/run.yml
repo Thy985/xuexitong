@@ -28,11 +28,10 @@ on:
           - run
           - scheduler
           - switch
-  schedule:
-    - cron: '0 2 * * *'  # 每天 UTC 02:00 触发
-      # 注意：schedule 触发时不会传入 course_url，需要从 state 读取
+      course_url:
         description: "学习通课程/章节 studentstudy URL"
-        required: true
+        required: false
+        default: ""
       chapter_id:
         description: "(可选) 欲学习的章节 id，缺省取 URL 中的 chapterId"
         required: false
@@ -45,6 +44,8 @@ on:
         description: "视频 iframe/metadata 瞬态失败的最大尝试次数（默认 2）"
         required: false
         default: "2"
+  schedule:
+    - cron: '0 2 * * *'  # 每天 UTC 02:00 触发
 
 jobs:
   learn:
