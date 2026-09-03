@@ -1,0 +1,90 @@
+name: e3-reliability
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_label:
+        description: "E3-C run label (e.g. E3-C-001)"
+        required: false
+        default: "E3-C-001"
+      chapter_id:
+        description: "chapter id to test (default 1217304705 = 1.6)"
+        required: false
+        default: "1217304705"
+      repetition_tag:
+        description: "extra tag for matrix naming"
+        required: false
+        default: ""
+
+jobs:
+  e3c:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CX_USER: ${{ secrets.CX_USER }}
+      CX_PASS: ${{ secrets.CX_PASS }}
+      CHAPTER_ID: ${{ github.event.inputs.chapter_id || '1217304705' }}
+      HEADLESS: "false"
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install system deps (Xvfb)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb x11-utils fonts-noto-cjk
+          pkill -f "Xvfb :99" || true
+          echo "system-deps-installed"
+
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright==1.62.0
+          playwright install chromium
+          python -c "from playwright.sync_api import sync_playwright; p=sync_playwright().start(); print('chromium_version:', p.chromium.launch().version); p.stop()"
+          echo "python-deps-installed"
+
+      - name: Run E3 reliability (single run)
+        run: |
+          Xvfb :99 -screen 0 1440x900x24 -ac &
+          export DISPLAY=:99
+          sleep 2
+          xdpyinfo -display :99 >/dev/null 2>&1 || echo "xdpyinfo failed"
+          E3_LABEL="${{ github.event.inputs.run_label }}"
+          E3_TAG="${{ github.event.inputs.repetition_tag }}"
+          python3 e3/e3_ci_run.py \
+            --chapter-id "$CHAPTER_ID" \
+            --label "$E3_LABEL" \
+            --output "./evidence_${E3_LABEL}.json" \
+            --xvfb-display :99
+          echo "e3-run-complete"
+
+      - name: Upload evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e3-evidence-${{ github.run_id }}
+          path: |
+            evidence_*.json
+            e3/
+          retention-days: 30
+
+      - name: Collect CI diagnostics on failure
+        if: failure()
+        run: |
+          echo "=== CI Diagnostics ==="
+          cat /etc/os-release | head -5
+          nproc
+          free -h | head -3
+          echo "DISPLAY=$DISPLAY"
+          pgrep -a Xvfb || echo "no Xvfb"
+          ls ~/.cache/ms-playwright/ 2>/dev/null || echo "no playwright cache"
+          echo "--- any evidence errors ---"
+          grep -i "traceback\|error\|exception" evidence_*.json 2>/dev/null | head -20 || true
