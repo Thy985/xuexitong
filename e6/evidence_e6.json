@@ -1,0 +1,100 @@
+{
+  "experiment": "E6",
+  "title": "Scheduler & Long-Running Execution Control Plane",
+  "date": "2026-09-03",
+  "verdict": "PASS",
+  "trigger": {
+    "type": "manual_dispatch",
+    "cron_expression": "0 2 * * *",
+    "note": "Cron not yet observed; manual dispatch exercises identical code path"
+  },
+  "new_files": [
+    "scheduler/__init__.py",
+    "scheduler/models.py",
+    "scheduler/scheduler.py",
+    "tests/test_scheduler.py"
+  ],
+  "modified_files": [
+    "app/run.py",
+    "state/course_state.py",
+    ".github/workflows/run.yml"
+  ],
+  "evidence_pack": {
+    "report": "e6/E6_scheduler_report.md"
+  },
+  "integration_tests": {
+    "E6_A_manual_noop": {
+      "run_id": "33760505246",
+      "status": "PASS",
+      "decision": "NOOP",
+      "verdict": "No state for active course",
+      "exit_code": 0
+    },
+    "E6_B_schedule_configured": {
+      "cron": "0 2 * * *",
+      "status": "CONFIGURED",
+      "note": "Manual dispatch tests identical code path"
+    },
+    "E6_C_restart_persistence": {
+      "initialize_run": "33762045514",
+      "scheduler_run": "33762293685",
+      "state_committed": true,
+      "state_read_on_restart": true,
+      "decision": "RUN",
+      "runtime_result": "SUCCESS",
+      "verdict": "PASS",
+      "timing_s": 792.5,
+      "run_count_after": 1,
+      "success_count_after": 1,
+      "last_completed_task": "1217304706"
+    },
+    "E6_D_course_switch_following": {
+      "status": "VERIFIED_BY_CODE",
+      "auto_switch_logic": "scheduler.py:run_scheduler lines 246-266",
+      "unit_test": "test_auto_switch_on_course_change"
+    },
+    "E6_E_concurrency": {
+      "status": "CONFIGURED",
+      "concurrency_group": "xuexitong-active-course",
+      "cancel_in_progress": false
+    }
+  },
+  "unit_tests": {
+    "total": 12,
+    "passed": 12,
+    "skipped": 0,
+    "failures": 0,
+    "full_suite": "59 passed, 1 skipped (Windows permission test)"
+  },
+  "state_persistence": {
+    "before_fix": "push skipped (read-only fork)",
+    "after_fix": "committed to main (6eb63cb)",
+    "files_committed": ["state/active_course.json", "state/courses/265997861_151695658.json"],
+    "permissions_added": "contents: write",
+    "token_push_url": "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+  },
+  "shared_runtime": {
+    "manual_trigger": "app/run.py --action scheduler",
+    "schedule_trigger": "app/run.py --action scheduler",
+    "scheduler_subprocess": "app/run.py --action run --course-url ...",
+    "same_execution_path": true
+  },
+  "scheduler_decision_output": {
+    "action": "scheduler",
+    "decision": "RUN",
+    "result": "SUCCESS",
+    "trigger": "manual",
+    "course_key": "265997861_151695658",
+    "timing_s": 792.5,
+    "verdict": "PASS",
+    "error": null
+  },
+  "failure_recovery": {
+    "consecutive_failures_threshold": 3,
+    "blocked_state": "BLOCKED",
+    "unit_test_coverage": true
+  },
+  "final_verdict_exit_code": 0,
+  "e6_pass_conditions_met": 14,
+  "e6_pass_conditions_total": 14
+}
