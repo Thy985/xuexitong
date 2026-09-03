@@ -72,6 +72,20 @@ def _make_state_identity(resolved: dict) -> StateCourseIdentity:
     )
 
 
+def _write_output(output: str, data: dict) -> None:
+    """将结果 dict 原子写入 output 路径（evidence）。"""
+    if not output:
+        return
+    try:
+        p = Path(output)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        tmp = p.with_suffix(p.suffix + ".tmp")
+        tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp.replace(p)
+    except Exception as e:  # pragma: no cover
+        print(f"[!] 无法写入输出文件 {output}: {e}", flush=True)
+
+
 def cmd_initialize(args) -> int:
     """Initialize: 解析 URL，创建/初始化课程状态。"""
     print("[initialize] Resolving course URL …", flush=True)
@@ -93,6 +107,7 @@ def cmd_initialize(args) -> int:
         "resolver_evidence": result.evidence,
     }
     print(json.dumps(out, ensure_ascii=False, indent=2))
+    _write_output(args.output, out)
     return 0
 
 
@@ -125,6 +140,7 @@ def cmd_switch(args) -> int:
         "new_state": new_state.to_dict() if new_state else None,
     }
     print(json.dumps(out, ensure_ascii=False, indent=2))
+    _write_output(args.output, out)
     return 0
 
 
@@ -334,11 +350,7 @@ def cmd_scheduler(args) -> int:
     print(json.dumps(out, ensure_ascii=False, indent=2))
 
     # 写入 evidence 文件
-    output_path = args.output
-    if output_path:
-        os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
-        with open(output_path, "w", encoding="utf-8") as f:
-            json.dump(out, f, ensure_ascii=False, indent=2)
+    _write_output(args.output, out)
 
     # 如果是 RUN 且需要实际执行学习
     if result.decision == "RUN" and result.result in ("SUCCESS", "FAILED"):

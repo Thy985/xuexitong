@@ -157,7 +157,7 @@ jobs:
 
       # ── 提交状态更新（run/scheduler 模式成功后）───────────────────
       - name: Commit state update
-        if: (github.event.inputs.action == 'run' || github.event.inputs.action == 'scheduler' || github.event.schedule) && success()
+        if: (github.event.inputs.action != '' || github.event.schedule) && success()
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
