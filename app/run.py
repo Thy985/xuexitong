@@ -53,8 +53,9 @@ for _s in (sys.stdout, sys.stderr):
 from e2_headed_gha import parse_course_url, run_test, DEMO_CHAPTER  # noqa: E402
 from resolvers.course_resolver import resolve_course, detect_course_change  # noqa: E402
 from state.course_state import (  # noqa: E402
-    load_active_course, save_course_state, activate_course,
-    initialize_course, run_course as state_run_course,
+    load_active_course, load_course_state, save_course_state,
+    activate_course, archive_course, initialize_course,
+    run_course as state_run_course,
     CourseIdentity as StateCourseIdentity, CourseProgress,
 )
 
