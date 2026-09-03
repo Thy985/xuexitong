@@ -142,7 +142,7 @@ def main():
     )
     ev = e2_run_test(e2_args)     # runs full headed natural-playback verification
     total = time.time() - t0
-    e3 = build_e3(args.label, args.chapter_id, ev, total, retry_count=0)
+    e3 = build_e3_result(args.label, args.chapter_id, ev, total, retry_count=0)
     # embed the meta for debuggability
     e3.setdefault("meta", {}).update({
         "e3_test": "E3-C",
