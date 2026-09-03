@@ -1,22 +1,34 @@
 name: run (MVP - learn one video task naturally)
 
-# 产品级 MVP 触发：Fork → 设置 CX_USER/CX_PASS Secrets → 填 course_url → Run。
-# 复用 E-series 已验证的有头浏览器(Chromium+Xvfb)自然播放引擎；
-# 不构造/不伪造/不重放 multimedia/log，不改业务参数；仅自然学习
-# URL 中指定的一个视频任务点并返回 Evidence。
+# E5: 支持 Initialize / Run / Switch 三种操作模式
 #
-# 失败诊断策略：
-#   1. 主步骤 continue-on-error: true — 引擎失败不终止 job，诊断步骤照跑
-#   2. 诊断步骤 if: always() — 无论成败都打印 failure_stage + 关键 checks
+# 用法:
+#   workflow_dispatch:
+#     inputs:
+#       action: initialize | run | switch  (默认 run)
+#       course_url: ...
+#       chapter_id: ... (run 模式可选)
+#
+# 失败诊断策略:
+#   1. 主步骤 continue-on-error: true — 引擎失败不终止 job
+#   2. 诊断步骤 if: always() — 无论成败都打印 failure_stage
 #   3. 产物上传 if: always() — 截图/evidence 始终进 artifact
-#   4. 最终判定步骤 if: always() — 读 result.exit_code 决定 Action 红绿
-# 这样失败时打开 Actions 日志直接能看到诊断，不再靠猜。
+#   4. 最终判定步骤 if: always() — 读 result.exit_code 控制红绿
 
 on:
   workflow_dispatch:
     inputs:
+      action:
+        description: "操作模式: initialize/run/switch"
+        required: false
+        default: "run"
+        type: choice
+        options:
+          - initialize
+          - run
+          - switch
       course_url:
-        description: "学习通课程/章节 studentstudy URL（含 courseId/clazzid/cpi/enc/chapterId）"
+        description: "学习通课程/章节 studentstudy URL"
         required: true
       chapter_id:
         description: "(可选) 欲学习的章节 id，缺省取 URL 中的 chapterId"
@@ -27,7 +39,7 @@ on:
         required: false
         default: "1"
       max_attempts:
-        description: "对视频 iframe/metadata 瞬态失败的最大尝试次数（含首次；默认 2=含 1 次重试）"
+        description: "视频 iframe/metadata 瞬态失败的最大尝试次数（默认 2）"
         required: false
         default: "2"
 
@@ -39,6 +51,7 @@ jobs:
       CX_USER: ${{ secrets.CX_USER }}
       CX_PASS: ${{ secrets.CX_PASS }}
       COURSE_URL: ${{ github.event.inputs.course_url }}
+      GHA_ACTION: ${{ github.event.inputs.action || 'run' }}
       GHA_CHAPTER: ${{ github.event.inputs.chapter_id }}
       GHA_MAX: ${{ github.event.inputs.max_chapters || '1' }}
       GHA_ATTEMPTS: ${{ github.event.inputs.max_attempts || '2' }}
@@ -47,6 +60,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # 确保能读取/写入 state/ 目录
+          token: ${{ secrets.GH_PAT || github.token }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -70,8 +86,29 @@ jobs:
           python -c "from playwright.sync_api import sync_playwright; p=sync_playwright().start(); print('chromium_version:', p.chromium.launch().version); p.stop()"
           echo "python-deps-installed"
 
-      # ── 主执行：continue-on-error: true 让失败不中断后续诊断步骤 ──
+      # ── Initialize 模式: 仅解析 URL，不执行学习 ──────────────────
+      - name: Initialize course
+        if: github.event.inputs.action == 'initialize'
+        run: |
+          echo "=== Initialize Course ==="
+          python app/run.py --action initialize \
+            --course-url "$COURSE_URL" \
+            --output ./evidence/result.json
+          echo "initialize-complete"
+
+      # ── Switch 模式: 解析并切换课程，不执行学习 ───────────────────
+      - name: Switch course
+        if: github.event.inputs.action == 'switch'
+        run: |
+          echo "=== Switch Course ==="
+          python app/run.py --action switch \
+            --course-url "$COURSE_URL" \
+            --output ./evidence/result.json
+          echo "switch-complete"
+
+      # ── Run 模式: 执行视频学习 ────────────────────────────────────
       - name: Run MVP learn (headed + Xvfb)
+        if: github.event.inputs.action == 'run' || github.event.inputs.action == ''
         continue-on-error: true
         run: |
           Xvfb :99 -screen 0 1440x900x24 -ac &
@@ -85,7 +122,18 @@ jobs:
           eval "python app/run.py $ARGS"
           echo "mvp-run-complete"
 
-      # ── 诊断步骤：always 执行，直接把失败信息打印到 Actions 日志 ──
+      # ── 提交状态更新（run 模式成功后）────────────────────────────
+      - name: Commit state update
+        if: github.event.inputs.action == 'run' && success()
+        run: |
+          echo "=== Committing state updates ==="
+          git config user.name "xuexitong-mvp"
+          git config user.email "mvp@xuexitong.local"
+          git add state/
+          git diff --cached --quiet || git commit -m "chore(state): update course state after run"
+          git push || echo "push skipped (may be read-only fork)"
+
+      # ── 诊断步骤：always 执行 ─────────────────────────────────────
       - name: Dump failure diagnostics
         if: always()
         run: |
@@ -94,7 +142,7 @@ jobs:
           import json, sys, glob, os
           files = glob.glob('./evidence/result*.json') + glob.glob('./evidence/run_*.json')
           if not files:
-              print("## ⚠️ No result file produced — check Run MVP step above")
+              print("## ⚠️ No result file produced — check action above")
               sys.exit(0)
           with open(files[0]) as f:
               r = json.load(f)
@@ -102,22 +150,25 @@ jobs:
           ev = r.get("evidence", {})
           checks = ev.get("checks", {})
           diag = ev.get("diagnostics", {})
-          print("══════════ FAILURE DIAGNOSTICS ══════════")
+          action = res.get("action", "run")
+          print(f"══════════ {action.upper()} DIAGNOSTICS ══════════")
+          print(f"action:          {action}")
           print(f"verdict:         {res.get('verdict')}")
           print(f"failure_stage:   {res.get('failure_stage')}")
           print(f"passed_count:    {res.get('passed_count')}/10")
           print(f"retry_count:     {res.get('retry_count')}")
           print(f"timing_s:        {res.get('timing_s')}")
           print(f"crash:           {res.get('crash') or 'none'}")
+          print(f"course_key:      {res.get('course_key') or 'N/A'}")
           print()
           # 关键 checks 状态
-          for k, v in checks.items():
-              if v is True:
-                  continue
-              # 跳过 falsy 的非布尔值（如 max_currentTime=0 是正常事实）
-              if isinstance(v, bool) and not v:
+          failed_checks = [k for k, v in checks.items()
+                          if isinstance(v, bool) and not v]
+          if failed_checks:
+              print("── failed checks ──")
+              for k in failed_checks:
                   print(f"  ✗ {k}")
-          print()
+              print()
           # 诊断上下文
           print("── diagnostics ──")
           if diag:
@@ -129,19 +180,31 @@ jobs:
                   print(f"  {dk}: {s}")
           else:
               print("  (no diagnostics captured)")
-          # evidence 顶层 key_console 和 errors
           for ek in ("key_console", "errors"):
               vals = ev.get(ek)
               if vals:
                   print(f"  {ek}: {[str(x)[:120] for x in vals[-5:]]}")
+          # 课程状态
+          cs = r.get("course_state")
+          if cs:
+              print("── course_state ──")
+              print(f"  status: {cs.get('status')}")
+              print(f"  run_count: {cs.get('run_count')}")
+              print(f"  success_count: {cs.get('success_count')}")
+              print(f"  last_run: {cs.get('last_run')}")
+              print(f"  progress: {cs.get('progress')}")
           print("══════════════════════════════════════")
           PY
           echo ""
           echo "Evidence artifacts:"
           ls -la evidence/ 2>/dev/null || echo "  no evidence dir"
           ls -la /tmp/diag_*.png 2>/dev/null || echo "  no diag screenshots"
+          echo ""
+          echo "State directory:"
+          ls -la state/ 2>/dev/null || echo "  no state dir"
+          ls -la state/courses/ 2>/dev/null || echo "  no courses dir"
 
-      # ── 产物上传：always 执行，成功/失败都保留 artifact 供审计 ──
+      # ── 产物上传：always 执行 ─────────────────────────────────────
       - name: Upload Evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -149,11 +212,13 @@ jobs:
           name: mvp-evidence-${{ github.run_id }}
           path: |
             evidence/
+            state/
             app/
+            resolvers/
             /tmp/diag_*.png
           retention-days: 30
 
-      # ── 最终判定：用 exit_code 控制 Action 红绿，语义不丢失 ──
+      # ── 最终判定：用 exit_code 控制红绿 ───────────────────────────
       - name: Final verdict
         if: always()
         run: |
@@ -165,7 +230,12 @@ jobs:
               sys.exit(0)
           try:
               r = json.load(open(files[0]))
-              print(r["result"].get("exit_code", 1), end="")
+              # initialize/switch 模式总是成功（除非解析失败）
+              action = r.get("result", {}).get("action", "run")
+              if action in ("initialize", "switch"):
+                  print("0", end="")
+              else:
+                  print(r["result"].get("exit_code", 1), end="")
           except Exception:
               print("1", end="")
           PY

@@ -1,0 +1,5 @@
+{
+  "_comment": "E5: 课程配置示例。用户只需填写 course_url，其他字段由 Resolver 自动解析。",
+  "course_url": "https://mooc1.chaoxing.com/mycourse/studentstudy?chapterId=1217304706&courseId=265997861&clazzid=151695658&cpi=506830460&enc=1bc1bd778f9e00d924fe97b3c63f76f4&mooc2=1&hidetype=0&openc=9b5661be6351e4d46bc29bfa2d69236a",
+  "enabled": true
+}

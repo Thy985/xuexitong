@@ -1,0 +1,362 @@
+{
+  "result": {
+    "app": "xuexitong-mvp",
+    "target": {
+      "course_url": "https://mooc1.chaoxing.com/mycourse/studentstudy?chapterId=1217304712&courseId=265997861&clazzid=151695658&cpi=506830460&enc=1bc1bd778f9e00d924fe97b3c63f76f4&mooc2=1&hidetype=0&openc=9b5661be6351e4d46bc29bfa2d69236a",
+      "chapter_id": "1217304712"
+    },
+    "env_runner": "github-actions",
+    "timing_s": 792.4,
+    "retry_count": 0,
+    "exit_code": 0,
+    "verdict": "PASS",
+    "passed_count": 10,
+    "failure_stage": null,
+    "crash": null,
+    "evidence_file": "./evidence/result.json",
+    "created_at_utc": "2026-09-03T10:43:57.776295+00:00"
+  },
+  "evidence": {
+    "meta": {
+      "test": "E2_GHA_Headed_Browser_Compat",
+      "github_run_id": "33744633888",
+      "github_run_number": "13",
+      "github_sha": "8d2d5ad3c7cf95324563a2410456a5212a85d767",
+      "github_actor": "Thy985",
+      "started_at_utc": "2026-09-03T10:30:45.379518+00:00",
+      "chapter_id": "1217304712"
+    },
+    "checks": {
+      "login_ok": true,
+      "studentstudy_loaded": true,
+      "v3_injected": true,
+      "cards_iframe_loaded": true,
+      "cards_has_video": true,
+      "video_duration_ok": true,
+      "playback_started": true,
+      "max_currentTime": 744.260968,
+      "ml_log_count": 17,
+      "isPassed_seen": true,
+      "isPassed_body": "{\"isPassed\":true,\"videoTimeLimit\":false,\"hasJobLimit\":false}",
+      "ended_seen": false,
+      "nextunit_triggered": true,
+      "nextunit_chapterId": "1217304714",
+      "nextunit_title": "A students learning progress",
+      "banner_before": null,
+      "banner_after": null,
+      "banner_up": false,
+      "sidebar_before": null,
+      "sidebar_after": null,
+      "sidebar_down": false,
+      "loop_seconds": 752.9186172485352
+    },
+    "errors": [],
+    "ci_environment": {
+      "os_release": "PRETTY_NAME=\"Ubuntu 24.04.4 LTS\"\nNAME=\"Ubuntu\"\nVERSION_ID=\"24.04\"\nVERSION=\"24.04.4 LTS (Noble Numbat)\"\nVERSION_CODENAME=noble\nID=ubuntu\nID_LIKE=debian\nHOME_URL=\"https://www.ubuntu.com/\"\nSUPPORT_URL=\"https://help.ubuntu.com/\"\nBUG_REPORT_URL=\"https://bugs.launchpad.net/ubuntu/\"\nPRIVACY_POLICY_URL=\"https://www.ubuntu.com/legal/terms-and-policies/privacy-policy\"\nUBUNTU_CODENAME=noble\nLOGO=ubuntu-logo",
+      "cpu_count": "4",
+      "memory": "total        used        free      shared  buff/cache   available\nMem:            15Gi       1.4Gi        10Gi        44Mi       3.9Gi        14Gi\nSwap:          3.0Gi          0B       3.0Gi",
+      "xvfb_pid": "2961 Xvfb :99 -screen 0 1440x900x24 -ac"
+    },
+    "browser": {
+      "headless": false,
+      "channel": "chromium",
+      "version": "151.0.7922.34",
+      "display": ":99",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.7922.34 Safari/537.36",
+      "webdriver": true
+    },
+    "xvfb_status": "available",
+    "banner_before": null,
+    "sidebar_before": {
+      "unfinish": null,
+      "points": null,
+      "row_text": "Previous Next to learn"
+    },
+    "banner_learned_before": null,
+    "video_duration": 745,
+    "ml_log_count": 17,
+    "isPassed_body": "{\"isPassed\":true,\"videoTimeLimit\":false,\"hasJobLimit\":false}",
+    "nextunit_chapterId": "1217304714",
+    "nextunit_url": "https://mooc1.chaoxing.com/mycourse/studentstudy?chapterId=1217304714&courseId=265997861&clazzid=151695658&cpi=506830460&enc=1bc1bd778f9e00d924fe97b3c63f76f4&mooc2=1&hidetype=0&openc=9b5661be6351e4d46bc29bfa2d69236a",
+    "nextunit_title": "A students learning progress",
+    "max_currentTime": 744.260968,
+    "loop_seconds": 752.9186172485352,
+    "banner_after": null,
+    "banner_learned_after": null,
+    "sidebar_after": {
+      "unfinish": null,
+      "points": null,
+      "row_text": "Previous Next to learn"
+    },
+    "iframe_tree": [
+      {
+        "depth": 0,
+        "src": "https://mooc1.chaoxing.com/mooc-ans/knowledge/cards?clazzid=151695658&courseid=265997861&knowledgeid=1217304712&num=0&ut",
+        "hasDoc": true,
+        "videoCnt": 0,
+        "iframeCnt": 3
+      },
+      {
+        "depth": 1,
+        "src": "https://mooc1.chaoxing.com/ananas/modules/pdf/index.html?v=2026-0826-1905",
+        "hasDoc": true,
+        "videoCnt": 0,
+        "iframeCnt": 4
+      },
+      {
+        "depth": 2,
+        "src": "https://mooc1.chaoxing.com/ananas/modules/pdf/index.html?v=2026-0826-1905",
+        "hasDoc": true,
+        "videoCnt": 0,
+        "iframeCnt": 0
+      },
+      {
+        "depth": 2,
+        "src": "https://mooc1.chaoxing.com/mooc-ans/screen/file?objectid=cd624522d55ff4fb06ff019f18849816&ext=%7B%22_from_%22%3A%2226599",
+        "hasDoc": true,
+        "videoCnt": 0,
+        "iframeCnt": 0
+      },
+      {
+        "depth": 2,
+        "src": "",
+        "hasDoc": true,
+        "videoCnt": 0,
+        "iframeCnt": 0
+      },
+      {
+        "depth": 2,
+        "src": "",
+        "hasDoc": true,
+        "videoCnt": 0,
+        "iframeCnt": 0
+      },
+      {
+        "depth": 1,
+        "src": "https://mooc1.chaoxing.com/ananas/modules/video/index.html?v=2026-0828-1810",
+        "hasDoc": true,
+        "videoCnt": 1,
+        "iframeCnt": 1
+      },
+      {
+        "depth": 2,
+        "src": "https://mooc1.chaoxing.com/ananas/modules/video/index.html?v=2026-0828-1810",
+        "hasDoc": true,
+        "videoCnt": 0,
+        "iframeCnt": 0
+      },
+      {
+        "depth": 1,
+        "src": "https://mooc1.chaoxing.com/ananas/modules/work/index.html?v=2025-1028-1629&castscreen=0",
+        "hasDoc": true,
+        "videoCnt": 0,
+        "iframeCnt": 1
+      },
+      {
+        "depth": 2,
+        "src": "https://mooc1.chaoxing.com/mooc-ans/api/work?api=1&workId=8c7eda2650884864904324726b4290e3&jobid=work-8c7eda265088486490",
+        "hasDoc": true,
+        "videoCnt": 0,
+        "iframeCnt": 0
+      },
+      {
+        "depth": 0,
+        "src": "https://mooc1.chaoxing.com/mycourse/studentstudy?chapterId=1217304712&courseId=265997861&clazzid=151695658&cpi=506830460",
+        "hasDoc": true,
+        "videoCnt": 0,
+        "iframeCnt": 0
+      },
+      {
+        "depth": 0,
+        "src": "https://mooc1.chaoxing.com/mycourse/studentstudy?chapterId=1217304712&courseId=265997861&clazzid=151695658&cpi=506830460",
+        "hasDoc": true,
+        "videoCnt": 0,
+        "iframeCnt": 0
+      },
+      {
+        "depth": 0,
+        "src": "https://mooc1.chaoxing.com/mycourse/studentstudy?chapterId=1217304712&courseId=265997861&clazzid=151695658&cpi=506830460",
+        "hasDoc": true,
+        "videoCnt": 0,
+        "iframeCnt": 0
+      },
+      {
+        "depth": 0,
+        "src": "https://mooc1.chaoxing.com/mycourse/studentstudy?chapterId=1217304712&courseId=265997861&clazzid=151695658&cpi=506830460",
+        "hasDoc": true,
+        "videoCnt": 0,
+        "iframeCnt": 0
+      }
+    ],
+    "diagnostics": {
+      "at_end_screenshot": "/tmp/diag_at_end_1788432236.png",
+      "at_end_video_state": {
+        "found": true,
+        "currentTime": 0,
+        "duration": null,
+        "paused": true,
+        "readyState": 0,
+        "playbackRate": 1,
+        "ended": false
+      },
+      "at_end_page_url": "https://mooc1.chaoxing.com/mycourse/studentstudy?chapterId=1217304712&courseId=265997861&clazzid=151695658&cpi=506830460&enc=1bc1bd778f9e00d924fe97b3c63f76f4&mooc2=1&hidetype=0&openc=9b5661be6351e4d46bc29bfa2d69236a",
+      "at_end_page_title": "A students learning progress",
+      "at_end_console_tail": [
+        {
+          "t": 1788432227.3574967,
+          "type": "warning",
+          "text": "Warning, size detected as NaN on Element.addUnits."
+        },
+        {
+          "t": 1788432228.148284,
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 404 ()"
+        },
+        {
+          "t": 1788432228.1584415,
+          "type": "log",
+          "text": "%c课程信息: 7章, 72节, 当前: 第2章第4节 color:#607D8B"
+        },
+        {
+          "t": 1788432228.1686192,
+          "type": "error",
+          "text": "视频播放失败: AbortError: The play() request was interrupted by a new load request. https://goo.gl/LdLk22"
+        },
+        {
+          "t": 1788432228.1690927,
+          "type": "error",
+          "text": "播放错误详情: AbortError: The play() request was interrupted by a new load request. https://goo.gl/LdLk22"
+        },
+        {
+          "t": 1788432228.184223,
+          "type": "info",
+          "text": "%c============'信道复用技术' 开始播放============= color:#4CAF50"
+        },
+        {
+          "t": 1788432228.7673502,
+          "type": "log",
+          "text": "JQMIGRATE: Migrate is installed, version 1.4.1"
+        },
+        {
+          "t": 1788432230.3003979,
+          "type": "log",
+          "text": "%c============视频加载完成============= color:#2196F3"
+        },
+        {
+          "t": 1788432230.3153868,
+          "type": "log",
+          "text": "%c静音播放成功 color:#4CAF50"
+        },
+        {
+          "t": 1788432231.6739714,
+          "type": "warning",
+          "text": "[CxRobotSdkJs] 尊敬的开发者您好，您当前正在使用公共授权认证，可能存在流控风险和功能限制；建议您及时申请专用授权认证，授权指南：https://robot-docs.chaoxing.com/docs/auth"
+        },
+        {
+          "t": 1788432232.5116785,
+          "type": "log",
+          "text": "Deprecated as of 10.6.0. initHighlightingOnLoad() deprecated.  Use highlightAll() now."
+        },
+        {
+          "t": 1788432232.6562202,
+          "type": "log",
+          "text": "学习是一种信仰...v9"
+        },
+        {
+          "t": 1788432233.2452307,
+          "type": "warning",
+          "text": "Warning, size detected as NaN on Element.addUnits."
+        },
+        {
+          "t": 1788432233.2730143,
+          "type": "warning",
+          "text": "Warning, size detected as NaN on Element.addUnits."
+        },
+        {
+          "t": 1788432234.1502798,
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 404 ()"
+        },
+        {
+          "t": 1788432234.3987596,
+          "type": "log",
+          "text": "JQMIGRATE: Migrate is installed, version 1.4.1"
+        },
+        {
+          "t": 1788432234.7505646,
+          "type": "log",
+          "text": "忽略, SyntaxError: Unexpected token '{'"
+        },
+        {
+          "t": 1788432234.7508519,
+          "type": "log",
+          "text": "忽略, SyntaxError: Unexpected token '{'"
+        },
+        {
+          "t": 1788432234.9924772,
+          "type": "warning",
+          "text": "[VoiceToonBot] 尊敬的开发者您好，您当前正在使用公共授权认证，可能存在流控风险和功能限制；建议您及时申请专用授权认证，授权指南：https://robot-docs.chaoxing.com/docs/auth"
+        },
+        {
+          "t": 1788432235.3281536,
+          "type": "log",
+          "text": "https://all.chaoxing.com"
+        }
+      ]
+    },
+    "key_console": [
+      {
+        "t": 1788431473.18787,
+        "type": "info",
+        "text": "%c============'物理层下面的传输媒体' 开始播放============= color:#4CAF50"
+      },
+      {
+        "t": 1788431611.7558625,
+        "type": "info",
+        "text": "%c============'物理层下面的传输媒体' 开始播放============= color:#4CAF50"
+      },
+      {
+        "t": 1788431987.754813,
+        "type": "info",
+        "text": "%c============'物理层下面的传输媒体' 开始播放============= color:#4CAF50"
+      },
+      {
+        "t": 1788432223.555305,
+        "type": "warning",
+        "text": "%c============'物理层下面的传输媒体' 播放完成============= color:#4CAF50;font-weight:bold"
+      },
+      {
+        "t": 1788432224.5564368,
+        "type": "log",
+        "text": "%c=== 准备切换到下一小节 === color:#2196F3;font-size:14px"
+      },
+      {
+        "t": 1788432224.556829,
+        "type": "log",
+        "text": "%c切换到同章节下一个视频: 4/8 color:#FF9800"
+      },
+      {
+        "t": 1788432228.1842158,
+        "type": "info",
+        "text": "%c============'信道复用技术' 开始播放============= color:#4CAF50"
+      }
+    ],
+    "verification_10": {
+      "1_login_ok": true,
+      "2_studentstudy_loaded": true,
+      "3_cards_iframe_loaded": true,
+      "4_recursive_ananas_iframe": true,
+      "5_video_duration_ok": true,
+      "6_playback_started": true,
+      "7_currentTime_growing": true,
+      "8_ml_log_natural": true,
+      "9_isPassed_true": true,
+      "10_post_verification": true
+    },
+    "passed_count": 10,
+    "total_checks": 10,
+    "failure_stage": null,
+    "verdict": "PASS (headed GHA) — 10/10 checks passed. isPassed=true, nextUnit=triggered, banner_up=False, sidebar_down=False",
+    "finished_at_utc": "2026-09-03T10:43:57.776238+00:00"
+  }
+}
