@@ -7,6 +7,7 @@ from .scheduler import (
     determine_action,
     record_result,
     get_scheduler_summary,
+    run_scheduler,
 )
 
 __all__ = [
@@ -17,4 +18,5 @@ __all__ = [
     "determine_action",
     "record_result",
     "get_scheduler_summary",
+    "run_scheduler",
 ]
