@@ -51,6 +51,9 @@ jobs:
   learn:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
+    concurrency:
+      group: xuexitong-active-course
+      cancel-in-progress: false
     env:
       CX_USER: ${{ secrets.CX_USER }}
       CX_PASS: ${{ secrets.CX_PASS }}
