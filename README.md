@@ -35,9 +35,11 @@ gh secret set CX_PASS -b "你的密码"
 仓库 → **Actions** → 选中 `run (MVP - learn one video task naturally)` → **Run workflow**：
 
 - `course_url`（必填）：学习通**章节 studentstudy URL**，需含
-  `chapterId` / `courseId` / `clazzid` / `cpi` / `enc`。例如：
+  `chapterId` / `courseId` / `clazzid` / `cpi` / `enc`。**请从浏览器地址栏直接复制**
+  （务必保留末尾的 `hidetype=0&openc=...`——缺失时服务端不渲染视频
+  iframe，引擎会如实上报 `FAIL(video metadata not ready)`）。例如：
   ```
-  https://mooc1.chaoxing.com/mycourse/studentstudy?chapterId=1217304705&courseId=265997861&clazzid=151695658&cpi=506830460&enc=1bc1bd778f9e00d924fe97b3c63f76f4&mooc2=1
+  https://mooc1.chaoxing.com/mycourse/studentstudy?chapterId=1217304706&courseId=265997861&clazzid=151695658&cpi=506830460&enc=1bc1bd778f9e00d924fe97b3c63f76f4&mooc2=1&hidetype=0&openc=9b5661be6351e4d46bc29bfa2d69236a
   ```
 - `chapter_id`（可选）：缺省取 URL 里的 `chapterId`。
 - `max_chapters`（可选，默认 `1`）：本次最多自然完成的视频任务点数量。
