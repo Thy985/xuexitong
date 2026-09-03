@@ -281,9 +281,11 @@ def run_test(args):
             log(f"Xvfb check error: {e}")
 
         console_msgs = []
-        page.on("console", lambda msg: console_msgs.append({
-            "t": time.time(), "type": msg.type, "text": msg.text
-        }))
+        console_msgs_buffer.clear()
+        page.on("console", lambda msg: (
+            console_msgs.append({"t": time.time(), "type": msg.type, "text": msg.text}),
+            console_msgs_buffer.append({"t": time.time(), "type": msg.type, "text": msg.text})
+        ))
 
         ml_events = []
         page.on("response", lambda resp: ml_events.append({
@@ -470,29 +472,24 @@ def run_test(args):
                 log(f"[GHA] ct={max_ct:.0f}/{dur if dur else '?'} ({pct:.0f}%) "
                     f"isPassed={isPassed_seen} ended={ended_seen} ml={evidence['ml_log_count']}")
 
-            # nextUnit 检测
+            # nextUnit 检测：只认 URL chapterId 变化（唯一可靠信号）。
+            #   旧版用 .posCatalog_active/.posCatalog_current 标题启发式会误命中"当前章节标题"，
+            #   导致视频刚起播就被误判为"已切换下一章"→ 循环 5s 退出 → max_ct≈0 → isPassed 永远 False。
+            #   彻底移除 title 启发式，避免误判。
             if not nextunit_seen:
                 ch_match = re.search(r'chapterId=(\d+)', page.url)
                 cur_chap = ch_match.group(1) if ch_match else None
-                try:
-                    active = page.evaluate(
-                        """() => {
-                            const el = document.querySelector('.posCatalog_active .posCatalog_name');
-                            return el ? el.title : null;
-                        }"""
-                    )
-                except Exception:
-                    active = None
                 if cur_chap and cur_chap != args.chapter_id:
                     nextunit_seen = True
                     evidence["nextunit_chapterId"] = cur_chap
-                    evidence["nextunit_title"] = active
                     evidence["nextunit_url"] = page.url
-                    log(f"★ nextUnit triggered! chapterId={cur_chap} title={active}")
-                elif active and active not in ("计算机网络的体系结构", None) and active:
-                    nextunit_seen = True
-                    evidence["nextunit_title"] = active
-                    log(f"★ nextUnit (title)! title={active}")
+                    # 仅作诊断：尝试读取当前页标题（不参与判定）
+                    try:
+                        title_now = page.title()
+                    except Exception:
+                        title_now = None
+                    evidence["nextunit_title"] = title_now
+                    log(f"[GHA] nextUnit (URL chapterId changed): {args.chapter_id} -> {cur_chap}")
 
             if nextunit_seen:
                 page.wait_for_timeout(5000)
@@ -622,6 +619,25 @@ def run_test(args):
     evidence["passed_count"] = passed_count
     evidence["total_checks"] = 10
 
+    # ── 诊断：失败时截图 + 失败阶段推导（不再靠猜）──
+    if passed_count < 10:
+        try:
+            _capture_diagnostic(page, evidence, tag="failure_at_end")
+        except Exception as e:
+            evidence.setdefault("errors", []).append(f"diag_capture: {e}")
+        evidence["failure_stage"] = _derive_failure_stage(evidence)
+        log(f"[diag] failure_stage={evidence['failure_stage']} passed={passed_count}/10")
+    else:
+        evidence["failure_stage"] = None
+        evidence.setdefault("diagnostics", {})["success_final_state"] = {
+            "page_url": page.url, "page_title": page.title()
+        }
+        try:
+            st = get_video_state(page)
+            evidence.setdefault("diagnostics", {})["success_final_video_state"] = st
+        except Exception:
+            pass
+
     if passed_count == 10:
         evidence["verdict"] = (
             f"PASS (headed GHA) — {passed_count}/10 checks passed. "
@@ -651,6 +667,70 @@ def run_test(args):
 def _write(ev: dict, path: str):
     Path(path).write_text(json.dumps(ev, ensure_ascii=False, indent=2), encoding="utf-8")
     log(f"Evidence written: {path}")
+
+
+# ── 诊断辅助：失败阶段推导 + 截图 + 结构化上下文 ──────────────────
+def _capture_diagnostic(page, evidence: dict, tag: str):
+    """失败时自动截图 + 记录页面 URL/title + video 状态 + 最后 console 消息。"""
+    try:
+        shot_path = f"/tmp/diag_{tag}_{int(time.time())}.png"
+        page.screenshot(path=shot_path, full_page=True)
+        evidence.setdefault("diagnostics", {})[tag + "_screenshot"] = shot_path
+        log(f"[diag] screenshot saved: {shot_path}")
+    except Exception as e:
+        evidence.setdefault("errors", []).append(f"diag_screenshot_{tag}: {e}")
+    try:
+        st = get_video_state(page)
+        evidence.setdefault("diagnostics", {})[tag + "_video_state"] = st
+    except Exception:
+        pass
+    try:
+        evidence.setdefault("diagnostics", {})[tag + "_page_url"] = page.url
+        evidence.setdefault("diagnostics", {})[tag + "_page_title"] = page.title()
+    except Exception:
+        pass
+    # 最后 20 条 console 消息（全文，不截断）
+    try:
+        recent = console_msgs_buffer[-20:] if console_msgs_buffer else []
+        evidence.setdefault("diagnostics", {})[tag + "_console_tail"] = recent
+    except Exception:
+        pass
+
+
+def _derive_failure_stage(evidence: dict) -> str:
+    """从 evidence 精确推导失败发生在哪个阶段，不再靠猜。"""
+    checks = evidence.get("checks", {})
+    if not checks.get("login_ok"):
+        return "LOGIN_FAILED"
+    if not checks.get("studentstudy_loaded"):
+        return "STUDENTSTUDY_NOT_LOADED"
+    if not checks.get("cards_iframe_loaded"):
+        return "NO_CARDS_IFRAME"
+    if not checks.get("cards_has_video"):
+        return "NO_VIDEO_IN_CARDS"
+    if not checks.get("video_duration_ok"):
+        return "VIDEO_DURATION_INVALID"
+    if not checks.get("playback_started"):
+        return "PLAYBACK_NOT_STARTED"
+    max_ct = evidence.get("max_currentTime", 0) or 0
+    dur = evidence.get("video_duration", 0) or 0
+    if max_ct < 1 and not checks.get("isPassed_seen"):
+        # ct 始终≈0 且 isPassed 未 true → 视频未真正起播或 nextUnit 误判提前切走
+        return "PLAYBACK_STALLED"
+    if not checks.get("ml_log_count") or (evidence.get("ml_log_count", 0) == 0):
+        return "NO_MULTIMEDIA_LOG"
+    if not checks.get("isPassed_seen"):
+        # 视频可能没播完（max_ct 远小于 duration）
+        if dur and max_ct < dur * 0.9:
+            return "VIDEO_NOT_COMPLETED"
+        return "ISPASSED_FALSE"
+    if not checks.get("nextunit_triggered") and not checks.get("ended_seen"):
+        return "NO_NEXTUNIT_NO_ENDED"
+    return "UNKNOWN"
+
+
+# 全局 console 缓冲（用于 _capture_diagnostic 取尾部消息）
+console_msgs_buffer = []
 
 
 def main():
