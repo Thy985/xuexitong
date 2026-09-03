@@ -274,7 +274,7 @@ def main():
     ap = argparse.ArgumentParser(
         description="xuexitong MVP E5: Initialize / Run / Switch course learning"
     )
-    ap.add_argument("--action", choices=["initialize", "run", "switch"],
+    ap.add_argument("--action", choices=["initialize", "run", "scheduler", "switch"],
                     default="run", help="操作模式（默认 run）")
     ap.add_argument("--course-url", required=True,
                     help="学习通 studentstudy URL")
