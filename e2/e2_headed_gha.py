@@ -174,6 +174,8 @@ def run_test(args):
         "started_at_utc": datetime.now(timezone.utc).isoformat(),
         "chapter_id": args.chapter_id,
     }
+    evidence["checks"] = {}
+    evidence["errors"] = []
 
     # 收集系统信息
     sys_info = {}
