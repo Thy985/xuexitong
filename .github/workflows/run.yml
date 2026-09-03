@@ -19,6 +19,10 @@ on:
         description: "最多自动学习的视频任务点数量（MVP 建议 1）"
         required: false
         default: "1"
+      max_attempts:
+        description: "对视频 iframe/metadata 瞬态失败的最大尝试次数（含首次；默认 2=含 1 次重试）"
+        required: false
+        default: "2"
 
 jobs:
   learn:
@@ -30,6 +34,7 @@ jobs:
       COURSE_URL: ${{ github.event.inputs.course_url }}
       GHA_CHAPTER: ${{ github.event.inputs.chapter_id }}
       GHA_MAX: ${{ github.event.inputs.max_chapters || '1' }}
+      GHA_ATTEMPTS: ${{ github.event.inputs.max_attempts || '2' }}
       PLAYWRIGHT_JSBUNDLE: ""
       DEBIAN_FRONTEND: noninteractive
     steps:
@@ -64,7 +69,7 @@ jobs:
           export DISPLAY=:99
           sleep 2
           xdpyinfo -display :99 >/dev/null 2>&1 || echo "xdpyinfo failed"
-          ARGS="--course-url \"$COURSE_URL\" --output ./evidence/run_$(date +%s).json --xvfb-display :99"
+          ARGS="--course-url \"$COURSE_URL\" --output ./evidence/run_$(date +%s).json --xvfb-display :99 --max-attempts $GHA_ATTEMPTS"
           if [ -n "$GHA_CHAPTER" ]; then ARGS="$ARGS --chapter-id $GHA_CHAPTER"; fi
           ARGS="$ARGS --max-chapters $GHA_MAX"
           echo ">> python app/run.py $ARGS"

@@ -50,6 +50,8 @@ def main():
     ap.add_argument("--max-chapters", type=int, default=1,
                     help="最多自动学习的视频任务点数量（MVP 默认 1 个；>1 才跨章节推进）")
     ap.add_argument("--output", default="./evidence/run_<ts>.json")
+    ap.add_argument("--max-attempts", type=int, default=2,
+                    help="对视频 iframe/metadata 瞬态失败的最大尝试次数（含首次；默认 2，含 1 次重试）")
     ap.add_argument("--xvfb-display", default=os.environ.get("DISPLAY", ":99"))
     args = ap.parse_args()
 
@@ -84,23 +86,49 @@ def main():
         course_id=course["course_id"], clazz_id=course["clazz_id"],
         cpi=course["cpi"], enc=course["enc"],
     )
+
+    # ── 带限次重试的循环（针对已知"视频 iframe/metadata 初始化"偶发失败）──
+    # 约束：login 失败/kick(账密/会话) 不重试；仅对 frame/metadata/起播类瞬时
+    # 重现重试，并如实记录 retry_count。证据模式(e2/e3)保持单次，不受影响。
+    def retryable(verdict: str) -> bool:
+        v = verdict or ""
+        if "login failed" in v or "session kicked" in v:
+            return False
+        return any(k in v for k in (
+            "video metadata not ready", "no_cards_frame",
+            "ananas", "cards iframe", "Heartbeat dead", "currentTime",
+        ))
+
+    max_attempts = max(1, args.max_attempts)
     t0 = time.time()
-    ev = run_test(eargs)
+    ev = None
+    retry_count = 0
+    for attempt in range(1, max_attempts + 1):
+        if attempt > 1:
+            print(f"  retry {attempt-1}/{max_attempts-1} …", flush=True)
+        ev = run_test(eargs)            # 每次都是全新浏览器会话
+        v = ev.get("verdict", "")
+        if attempt < max_attempts and retryable(v):
+            retry_count += 1
+            continue                     # 瞬态失败 → 重试
+        break                            # 通过，或不可重试，或已达上限
     total = time.time() - t0
 
-    passed = ev.get("passed_count") == 10
+    # 若重试后仍失败，保留最后一次（也是最接近成功）的 evidence 供审计
+    passed = ev.get("passed_count") == 10 if ev is not None else False
     res = {
         "app": "xuexitong-mvp",
         "target": {"course_url": args.course_url, "chapter_id": chapter},
         "env_runner": "github-actions" if "GITHUB_RUN_ID" in os.environ else "local",
         "timing_s": round(total, 1),
-        "verdict": "PASS" if passed else ("DEGRADED" if ev.get("passed_count", 0) >= 6 else "FAIL"),
-        "passed_count": ev.get("passed_count"),
-        "failure_stage": ev.get("failure_stage"),
+        "retry_count": retry_count,
+        "verdict": "PASS" if passed else ("DEGRADED" if ev and ev.get("passed_count", 0) >= 6 else "FAIL"),
+        "passed_count": ev.get("passed_count") if ev else None,
+        "failure_stage": (ev or {}).get("failure_stage"),
         "evidence_file": out_path,
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
     }
-    final = {"result": res, "evidence": ev}
+    final = {"result": res, "evidence": ev or {}}
     Path(out_path).write_text(json.dumps(final, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(res, ensure_ascii=False, indent=2))
     print(f"Evidence saved: {out_path}")
