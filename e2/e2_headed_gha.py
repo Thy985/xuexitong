@@ -91,7 +91,7 @@ def parse_course_url(url: str | None) -> dict:
 def build_base_url(chap_id: str) -> str:
     url = (
         "https://mooc1.chaoxing.com/mycourse/studentstudy?"
-        f"chapterId={chap_id}&courseId={COURSE_ID}&clazzId={CLAZZ_ID}"
+        f"chapterId={chap_id}&courseId={COURSE_ID}&clazzid={CLAZZ_ID}"
         f"&cpi={CPI}&enc={ENC}&mooc2=1"
     )
     # 保留产品必需参数；丢失则服务端可能不渲染 cards iframe
