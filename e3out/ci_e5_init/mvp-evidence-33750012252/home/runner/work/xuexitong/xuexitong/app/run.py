@@ -37,11 +37,9 @@ _E2 = _SELF / "e2"
 if str(_E2) not in sys.path:
     sys.path.insert(0, str(_E2))
 
-# E5 模块路径（确保 CI 和本地都能导入）
-for _p in [_SELF / "resolvers", _SELF / "state", _SELF / "e2"]:
-    _ps = str(_p)
-    if _ps not in sys.path:
-        sys.path.insert(0, _ps)
+# E5 模块路径
+sys.path.insert(0, str(_SELF / "resolvers"))
+sys.path.insert(0, str(_SELF / "state"))
 
 # UTF-8 输出鲁棒性
 for _s in (sys.stdout, sys.stderr):
