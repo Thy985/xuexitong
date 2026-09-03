@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+*.pyo
+e2/__pycache__/
+.pytest_cache/
+.DS_Store
+*.log
+/tmp/*
+!/.github/workflows/
