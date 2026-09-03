@@ -53,17 +53,38 @@ from urllib.parse import urlparse, parse_qs
 from playwright.sync_api import sync_playwright
 
 
-# ── 课程配置（与 E1.2 完全一致）─────────────────────────────────
-COURSE_ID = "265997861"
-CLAZZ_ID  = "151695658"
-CPI       = "506830460"
-ENC       = "1bc1bd778f9e00d924fe97b3c63f76f4"
-CHAPTER_ID = os.environ.get("CHAPTER_ID", "1217304705")
+# ── 课程配置（演示默认值；可由 URL / env / CLI 覆盖 → 通用 fork MVP）────
+# 默认指向演示课程 1.6 章节，保持 E2/E3 证据工作流向后兼容。
+DEMO_COURSE_ID, DEMO_CLAZZ_ID = "265997861", "151695658"
+DEMO_CPI, DEMO_ENC = "506830460", "1bc1bd778f9e00d924fe97b3c63f76f4"
+DEMO_CHAPTER = "1217304705"
+
+COURSE_ID  = os.environ.get("COURSE_ID", DEMO_COURSE_ID)
+CLAZZ_ID   = os.environ.get("CLAZZ_ID", DEMO_CLAZZ_ID)
+CPI        = os.environ.get("CPI", DEMO_CPI)
+ENC        = os.environ.get("ENC", DEMO_ENC)
+CHAPTER_ID = os.environ.get("CHAPTER_ID", DEMO_CHAPTER)
+
+
+def parse_course_url(url: str | None) -> dict:
+    """从超星 studentstudy URL 提取课程/章节参数（多学共课程通用）。"""
+    if not url:
+        return {}
+    q = parse_qs(urlparse(url).query)
+    pick = lambda k: (q.get(k) or [None])[0]              # noqa: E731
+    return {
+        "course_id": pick("courseId"),
+        "clazz_id":  pick("clazzid") or pick("clazzId"),
+        "cpi":       pick("cpi"),
+        "enc":       pick("enc"),
+        "chapter_id": pick("chapterId"),
+    }
+
 
 def build_base_url(chap_id: str) -> str:
     return (
         "https://mooc1.chaoxing.com/mycourse/studentstudy?"
-        f"chapterId={chap_id}&courseId={COURSE_ID}&clazzid={CLAZZ_ID}"
+        f"chapterId={chap_id}&courseId={COURSE_ID}&clazzId={CLAZZ_ID}"
         f"&cpi={CPI}&enc={ENC}&mooc2=1"
     )
 
@@ -617,12 +638,40 @@ def _write(ev: dict, path: str):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="E2: GitHub Actions Headed Browser Compat")
-    ap.add_argument("--chapter-id", default=os.environ.get("CHAPTER_ID", "1217304705"))
+    ap = argparse.ArgumentParser(description="E2: GitHub Actions Headed Browser Compat (product/MVP: --course-url or course params)")
+    ap.add_argument("--course-url", default=os.environ.get("COURSE_URL"),
+                    help="完整 studentstudy URL，含 courseId/clazzid/cpi/enc/chapterId (通用多课程)")
+    ap.add_argument("--course-id", default=None, help="覆盖 courseId")
+    ap.add_argument("--clazz-id",  default=None, help="覆盖 clazzid")
+    ap.add_argument("--cpi",       default=None, help="覆盖 cpi")
+    ap.add_argument("--enc",       default=None, help="覆盖 enc")
+    ap.add_argument("--chapter-id", default=os.environ.get("CHAPTER_ID", DEMO_CHAPTER))
     ap.add_argument("--output", default="/tmp/evidence_e2.json")
     ap.add_argument("--xvfb-display", default=None)
     ap.add_argument("--debug-capture", action="store_true")
     args = ap.parse_args()
+
+    # 用 course-url 解析出的参数覆盖(优先级: 显式 flag > URL > 常量 > demo)
+    if args.course_url:
+        pc = parse_course_url(args.course_url)
+        args.course_id  = args.course_id  or pc.get("course_id")  or os.environ.get("COURSE_ID", DEMO_COURSE_ID)
+        args.clazz_id   = args.clazz_id   or pc.get("clazz_id")   or os.environ.get("CLAZZ_ID", DEMO_CLAZZ_ID)
+        args.cpi        = args.cpi        or pc.get("cpi")        or os.environ.get("CPI", DEMO_CPI)
+        args.enc        = args.enc        or pc.get("enc")        or os.environ.get("ENC", DEMO_ENC)
+        args.chapter_id = args.chapter_id or pc.get("chapter_id") or DEMO_CHAPTER
+    else:
+        args.course_id  = args.course_id  or os.environ.get("COURSE_ID", DEMO_COURSE_ID)
+        args.clazz_id   = args.clazz_id   or os.environ.get("CLAZZ_ID", DEMO_CLAZZ_ID)
+        args.cpi        = args.cpi        or os.environ.get("CPI", DEMO_CPI)
+        args.enc        = args.enc        or os.environ.get("ENC", DEMO_ENC)
+
+    # 使 run_test 内 build_base_url 使用解析后的课程参数
+    globals()["COURSE_ID"] = args.course_id
+    globals()["CLAZZ_ID"]  = args.clazz_id
+    globals()["CPI"]       = args.cpi
+    globals()["ENC"]       = args.enc
+    args.course_id, args.clazz_id, args.cpi, args.enc = (
+        args.course_id, args.clazz_id, args.cpi, args.enc)
 
     ev = run_test(args)
     _write(ev, args.output)
