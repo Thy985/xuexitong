@@ -53,9 +53,8 @@ for _s in (sys.stdout, sys.stderr):
 from e2_headed_gha import parse_course_url, run_test, DEMO_CHAPTER  # noqa: E402
 from resolvers.course_resolver import resolve_course, detect_course_change  # noqa: E402
 from state.course_state import (  # noqa: E402
-    load_active_course, load_course_state, save_course_state,
-    activate_course, archive_course, initialize_course,
-    run_course as state_run_course,
+    load_active_course, save_course_state, activate_course,
+    initialize_course, run_course as state_run_course,
     CourseIdentity as StateCourseIdentity, CourseProgress,
 )
 
@@ -286,11 +285,6 @@ def main():
     ap.add_argument("--max-attempts", type=int, default=2,
                     help="视频 iframe/metadata 瞬态失败的最大尝试次数（默认 2）")
     ap.add_argument("--xvfb-display", default=os.environ.get("DISPLAY", ":99"))
-    ap.add_argument("--trigger", default="manual",
-                    choices=["manual", "schedule"],
-                    help="触发类型（默认 manual）")
-    ap.add_argument("--run-id", default=os.environ.get("GITHUB_RUN_ID", "local"),
-                    help="GitHub run ID（用于记录）")
     args = ap.parse_args()
 
     # 校验 Secrets（run 模式需要）
@@ -303,40 +297,8 @@ def main():
         sys.exit(cmd_initialize(args))
     elif args.action == "switch":
         sys.exit(cmd_switch(args))
-    elif args.action == "scheduler":
-        # Scheduler 模式：由 Scheduler 模块决定是否需要执行
-        sys.exit(cmd_scheduler(args))
     else:
         sys.exit(cmd_run(args))
-
-
-def cmd_scheduler(args) -> int:
-    """Scheduler 模式：通过 scheduler 模块决定是否执行。"""
-    from scheduler import run_scheduler
-
-    trigger = getattr(args, 'trigger', 'schedule')
-    run_id = getattr(args, 'run_id', os.environ.get('GITHUB_RUN_ID', 'local'))
-
-    print(f"[scheduler] Trigger: {trigger}, Run ID: {run_id}", flush=True)
-    result = run_scheduler(args.course_url, args.chapter_id or "",
-                          trigger, run_id)
-
-    out = {
-        "action": "scheduler",
-        "decision": result.decision,
-        "result": result.result,
-        "trigger": result.trigger,
-        "course_key": result.course_key,
-        "timing_s": result.timing_s,
-        "verdict": result.verdict,
-        "error": result.error,
-    }
-    print(json.dumps(out, ensure_ascii=False, indent=2))
-
-    # 如果是 RUN 且需要实际执行学习
-    if result.decision == "RUN" and result.result in ("SUCCESS", "FAILED"):
-        return 0 if result.passed else 1
-    return 0  # NOOP/BLOCKED 不算失败
 
 
 if __name__ == "__main__":

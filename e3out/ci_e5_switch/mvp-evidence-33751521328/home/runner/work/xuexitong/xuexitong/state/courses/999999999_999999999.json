@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "status": "ACTIVE",
+  "run_count": 0,
+  "success_count": 0,
+  "failure_count": 0,
+  "course_identity": {
+    "course_id": "999999999",
+    "clazz_id": "999999999",
+    "cpi": "999999999",
+    "title": "course_999999999",
+    "raw_url": "https://mooc1.chaoxing.com/mycourse/studentstudy?chapterId=999999999&courseId=999999999&clazzid=999999999&cpi=999999999&enc=dummy&mooc2=1",
+    "resolved_at_utc": "2026-09-03T11:47:05.245710+00:00"
+  },
+  "progress": {
+    "completed": null,
+    "total": null,
+    "last_completed_task": null,
+    "active_task": null
+  },
+  "last_run": "2026-09-03T11:47:05.246309+00:00"
+}

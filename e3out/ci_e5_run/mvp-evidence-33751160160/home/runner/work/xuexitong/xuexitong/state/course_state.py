@@ -130,8 +130,7 @@ class CourseState:
     def from_dict(cls, d: dict) -> "CourseState":
         ci = d.pop("course_identity", None)
         prog = d.pop("progress", None)
-        scheduler = d.pop("scheduler", None)
-        state = cls(
+        return cls(
             schema_version=d.pop("schema_version", 1),
             course_identity=CourseIdentity.from_dict(ci) if ci else None,
             status=d.pop("status", "NEW"),
@@ -146,38 +145,6 @@ class CourseState:
             failure_count=d.pop("failure_count", 0),
             history=d.pop("history", []),
         )
-        if scheduler:
-            state.scheduler = scheduler
-        return state
-
-    def to_dict(self) -> dict:
-        d = {
-            "schema_version": self.schema_version,
-            "status": self.status,
-            "run_count": self.run_count,
-            "success_count": self.success_count,
-            "failure_count": self.failure_count,
-        }
-        if self.course_identity:
-            d["course_identity"] = self.course_identity.to_dict()
-        if self.progress:
-            d["progress"] = self.progress.to_dict()
-        if self.last_run:
-            d["last_run"] = self.last_run
-        if self.last_success:
-            d["last_success"] = self.last_success
-        if self.last_failure:
-            d["last_failure"] = self.last_failure
-        if self.last_completed_task:
-            d["last_completed_task"] = self.last_completed_task
-        if self.active_task:
-            d["active_task"] = self.active_task
-        if self.history:
-            d["history"] = self.history[-50:]  # 保留最近 50 条
-        # E6: scheduler 字段
-        if hasattr(self, 'scheduler') and self.scheduler:
-            d["scheduler"] = self.scheduler
-        return d
 
 
 # ── 公共 API ───────────────────────────────────────────────────────

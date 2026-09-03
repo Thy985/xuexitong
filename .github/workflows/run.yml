@@ -19,15 +19,18 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: "操作模式: initialize/run/switch"
+        description: "操作模式: initialize/run/scheduler/switch"
         required: false
         default: "run"
         type: choice
         options:
           - initialize
           - run
+          - scheduler
           - switch
-      course_url:
+  schedule:
+    - cron: '0 2 * * *'  # 每天 UTC 02:00 触发
+      # 注意：schedule 触发时不会传入 course_url，需要从 state 读取
         description: "学习通课程/章节 studentstudy URL"
         required: true
       chapter_id:
@@ -110,6 +113,25 @@ jobs:
             --output ./evidence/result.json
           echo "switch-complete"
 
+      # ── Scheduler 模式: 自动决定并执行 ─────────────────────────────
+      - name: Run Scheduler
+        if: github.event.inputs.action == 'scheduler' || (github.event.schedule && !github.event.inputs.action)
+        continue-on-error: true
+        run: |
+          Xvfb :99 -screen 0 1440x900x24 -ac &
+          export DISPLAY=:99
+          sleep 2
+          XD_ARGS="--xvfb-display :99 --max-attempts $GHA_ATTEMPTS"
+          if [ -n "$COURSE_URL" ]; then
+            XD_ARGS="$XD_ARGS --course-url \"$COURSE_URL\""
+          fi
+          if [ -n "$GHA_CHAPTER" ]; then XD_ARGS="$XD_ARGS --chapter-id $GHA_CHAPTER"; fi
+          SCHEDULER_ARGS="--action scheduler --output ./evidence/result.json $XD_ARGS \
+            --trigger ${{ github.event_name }} --run-id ${{ github.run_id }}"
+          echo ">> python app/run.py $SCHEDULER_ARGS"
+          eval "python app/run.py $SCHEDULER_ARGS"
+          echo "scheduler-complete"
+
       # ── Run 模式: 执行视频学习 ────────────────────────────────────
       - name: Run MVP learn (headed + Xvfb)
         if: github.event.inputs.action == 'run' || github.event.inputs.action == ''
@@ -126,15 +148,15 @@ jobs:
           eval "python app/run.py $ARGS"
           echo "mvp-run-complete"
 
-      # ── 提交状态更新（run 模式成功后）────────────────────────────
+      # ── 提交状态更新（run/scheduler 模式成功后）───────────────────
       - name: Commit state update
-        if: github.event.inputs.action == 'run' && success()
+        if: (github.event.inputs.action == 'run' || github.event.inputs.action == 'scheduler') && success()
         run: |
           echo "=== Committing state updates ==="
           git config user.name "xuexitong-mvp"
           git config user.email "mvp@xuexitong.local"
           git add state/
-          git diff --cached --quiet || git commit -m "chore(state): update course state after run"
+          git diff --cached --quiet || git commit -m "chore(state): update course state after ${{ github.event.inputs.action || 'schedule' }} run"
           git push || echo "push skipped (may be read-only fork)"
 
       # ── 诊断步骤：always 执行 ─────────────────────────────────────
