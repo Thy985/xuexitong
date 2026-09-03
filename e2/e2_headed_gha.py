@@ -224,8 +224,8 @@ def run_test(args):
             "channel": "chromium",
             "version": browser.version,
             "display": display,
-            "user_agent": ctx.evaluate("() => navigator.userAgent"),
-            "webdriver": ctx.evaluate("() => navigator.webdriver"),
+            "user_agent": page.evaluate("() => navigator.userAgent"),
+            "webdriver": page.evaluate("() => navigator.webdriver"),
         }
         log(f"Browser: chromium {browser.version} (headless=False)")
 
