@@ -64,7 +64,7 @@ jobs:
           export DISPLAY=:99
           sleep 2
           xdpyinfo -display :99 >/dev/null 2>&1 || echo "xdpyinfo failed"
-          ARGS="--course-url \"$COURSE_URL\" --output ./evidence/run_<ts>.json --xvfb-display :99"
+          ARGS="--course-url \"$COURSE_URL\" --output ./evidence/run_$(date +%s).json --xvfb-display :99"
           if [ -n "$GHA_CHAPTER" ]; then ARGS="$ARGS --chapter-id $GHA_CHAPTER"; fi
           ARGS="$ARGS --max-chapters $GHA_MAX"
           echo ">> python app/run.py $ARGS"
