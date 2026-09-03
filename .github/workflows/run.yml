@@ -128,7 +128,7 @@ jobs:
           fi
           if [ -n "$GHA_CHAPTER" ]; then XD_ARGS="$XD_ARGS --chapter-id $GHA_CHAPTER"; fi
           SCHEDULER_ARGS="--action scheduler --output ./evidence/result.json $XD_ARGS \
-            --trigger ${{ github.event_name }} --run-id ${{ github.run_id }}"
+            --trigger "${{ github.event_name == 'schedule' && 'schedule' || 'manual' }}" --run-id ${{ github.run_id }}"
           echo ">> python app/run.py $SCHEDULER_ARGS"
           eval "python app/run.py $SCHEDULER_ARGS"
           echo "scheduler-complete"
