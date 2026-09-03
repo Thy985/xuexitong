@@ -58,12 +58,16 @@ jobs:
           sleep 2
           # Verify Xvfb is running
           xdpyinfo -display :99 || echo "xdpyinfo failed"
-          # Run the test
+          # Run the test (debug_capture is a boolean flag)
+          DEBUG_FLAG=""
+          if [ "${{ github.event.inputs.debug_capture }}" = "true" ]; then
+            DEBUG_FLAG="--debug-capture"
+          fi
           python e2/e2_headed_gha.py \
             --chapter-id "$CHAPTER_ID" \
             --output /tmp/evidence_e2.json \
             --xvfb-display :99 \
-            --debug-capture "${{ github.event.inputs.debug_capture }}"
+            $DEBUG_FLAG
           # Copy evidence to workspace for upload
           cp /tmp/evidence_e2.json ./evidence_e2.json || true
           echo "test-complete"
