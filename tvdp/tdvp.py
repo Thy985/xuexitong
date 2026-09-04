@@ -276,54 +276,133 @@ def fetch_course_discovery(course_url: str, cx_user: Optional[str] = None,
             page.goto(course_url, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(5000)
 
-            # ── DOM 提取目录树（递归查找所有 frame）─────────────
+            # ── DOM 提取目录树（借鉴 xuexitongScript/v3：#coursetree 结构）──
+            # 结构： #coursetree > ul > li(章)  →  .posCatalog_select:not(.firstLayer)(小节)
+            #       .posCatalog_active = 当前激活；.posCatalog_name = 标题
             js_extract = """
             () => {
                 const results = [];
-                function walkDoc(doc) {
-                    if (!doc) return;
-                    // 查找所有含 chapterId 的链接
-                    const links = doc.querySelectorAll('a[href*="chapterId"]');
-                    links.forEach(a => {
-                        const href = a.href || '';
-                        const m = href.match(/chapterId=(\\d+)/);
-                        if (!m) return;
-                        const cid = m[1];
-                        // 向上找容器
-                        let container = a.closest('li, .catalog_list, tr, .chapter_item, [class*="item"], [class*="node"]') || a.parentElement;
-                        let status = 'unknown';
-                        let text = '';
-                        if (container) {
-                            text = container.innerText || container.textContent || '';
-                            if (text.includes('已完成')) status = 'completed';
-                            else if (text.includes('待完成')) status = 'pending';
-                        }
-                        results.push({
-                            chapter_id: cid,
-                            title: (a.innerText || a.textContent || '').trim(),
-                            status: status,
-                            text: text.slice(0, 200)
+                const seenTitles = new Set();
+
+                // 方法1：v3 脚本已知的 #coursetree 结构（超星学生学习页标准目录树）
+                const tree = document.querySelector('#coursetree');
+                if (tree) {
+                    const chapters = tree.querySelectorAll(':scope > ul > li');
+                    chapters.forEach((li, ci) => {
+                        const cells = li.querySelectorAll('.posCatalog_select:not(.firstLayer)');
+                        cells.forEach((cell, si) => {
+                            const nameEl = cell.querySelector('.posCatalog_name');
+                            const title = nameEl
+                                ? (nameEl.title || nameEl.textContent || '').trim()
+                                : (cell.textContent || '').trim();
+                            if (!title) return;
+                            const text = (cell.textContent || '').replace(/\\s+/g, ' ').trim();
+                            let status = 'unknown';
+                            // 完成标记：class 或文本
+                            if (cell.classList.contains('posCatalog_finish') ||
+                                cell.classList.contains('flip') ||
+                                /已完成/.test(text)) {
+                                status = 'completed';
+                            } else if (/待完成|未完成/.test(text)) {
+                                status = 'pending';
+                            }
+                            // 从节点的 onclick / data 属性提取 chapterId
+                            let cid = '';
+                            const nodeHtml = cell.outerHTML || '';
+                            const m1 = nodeHtml.match(/chapterId[=:'"](\\d+)/);
+                            const m2 = nodeHtml.match(/data-?chapter[-_]?id[=:'"](\\d+)/);
+                            if (m1) cid = m1[1];
+                            else if (m2) cid = m2[1];
+                            // 从激活状态推断：当前 URL 的 chapterId 就是激活节点
+                            const isActive = cell.classList.contains('posCatalog_active');
+                            results.push({
+                                chapter_id: cid,
+                                title: title,
+                                status: status,
+                                is_active: isActive,
+                                chapter_index: ci,
+                                cell_index: si,
+                                text: text.slice(0, 150),
+                                mirrored: false
+                            });
                         });
                     });
                 }
-                walkDoc(document);
-                // 递归 iframe
-                document.querySelectorAll('iframe').forEach(f => {
-                    try { walkDoc(f.contentDocument); } catch(e) {}
-                });
+
+                // 方法2：回退——任意含 chapterId 的链接
+                if (results.length === 0) {
+                    document.querySelectorAll('a[href*="chapterId"]').forEach(a => {
+                        const href = a.href || '';
+                        const m = href.match(/chapterId=(\\d+)/);
+                        if (!m) return;
+                        let container = a.closest('li, .catalog_list, tr, [class*="item"], [class*="node"]') || a.parentElement;
+                        const text = container ? (container.innerText || '') : '';
+                        results.push({
+                            chapter_id: m[1],
+                            title: (a.textContent || '').trim(),
+                            status: /已完成/.test(text) ? 'completed' : (/待完成/.test(text) ? 'pending' : 'unknown'),
+                            is_active: false,
+                            chapter_index: 0, cell_index: 0,
+                            text: text.slice(0, 150),
+                            mirrored: true
+                        });
+                    });
+                }
                 return results;
             }
             """
             chapters = page.evaluate(js_extract)
 
-            # 去重：同 chapter_id 只保留一条
-            seen = set()
-            unique = []
+            # 去重（同 title 只保留一条；有 chapterId 优先）
+            by_title = {}
             for ch in chapters:
-                cid = ch.get("chapter_id", "")
-                if cid and cid not in seen and ch.get("title"):
-                    seen.add(cid)
-                    unique.append(ch)
+                t = ch.get("title", "")
+                if not t:
+                    continue
+                if t not in by_title or ch.get("chapter_id"):
+                    by_title[t] = ch
+            unique = list(by_title.values())
+
+            # 记录当前页面 URL 的 chapterId（激活节点的兜底映射）
+            current_url = page.url
+            url_cid = ""
+            m_url = re.search(r'chapterId[=:](\d+)', current_url)
+            if m_url:
+                url_cid = m_url.group(1)
+            for ch in unique:
+                if ch.get("is_active") and not ch.get("chapter_id") and url_cid:
+                    ch["chapter_id"] = url_cid
+
+            # ── 点击探测：若存在未知节点的 chapter，但没有 chapterId → 点击 → 读 URL ──
+            # 只点击第一个非激活节点，避免干扰页面状态（不播放视频，仅切换加载）
+            picked = None
+            for ch in unique:
+                if ch.get("status") != "completed" and not ch.get("chapter_id") and not ch.get("is_active"):
+                    picked = ch
+                    break
+            if picked and picked.get("chapter_index") is not None:
+                try:
+                    clicked = page.evaluate("""(idx) => {
+                        const tree = document.querySelector('#coursetree');
+                        if (!tree) return false;
+                        const cells = tree.querySelectorAll('.posCatalog_select:not(.firstLayer)');
+                        // 按 title 匹配索引位置再取第 idx 个
+                        const list = Array.from(cells);
+                        const target = list[idx];
+                        if (!target) return false;
+                        const name = target.querySelector('.posCatalog_name');
+                        if (!name) return false;
+                        name.click();
+                        return true;
+                    }""", picked.get("cell_index", 0))
+                    if clicked:
+                        page.wait_for_timeout(4000)
+                        new_url = page.url
+                        m2 = re.search(r'chapterId[=:](\d+)', new_url)
+                        if m2:
+                            picked["chapter_id"] = m2.group(1)
+                except Exception as e:
+                    print(f"[tdvp] click-probe error: {e}", file=sys.stderr)
 
             # dump 调试信息
             try:

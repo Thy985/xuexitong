@@ -359,66 +359,70 @@ def _write_summary(summary: dict) -> None:
 
 
 def _run_tdvp_probe(course_url: str, course_key: str) -> Optional[str]:
-    """内置 TDVP Passive Probe：抓取 studentstudy 页面 HTML，解析任务列表。
+    """内置 TDVP Passive Probe：读取目录树，选择下一个未执行章节。
+
+    借鉴 xuexitongScript/v3 思路：不依赖不可靠的"已完成/待完成"标记，
+    而是按目录树顺序遍历所有小节，结合本系统 state history
+    （已 PASS 的章节列表）排除已完成章节，返回第一个未执行章节。
 
     流程：
-      1. 用 Playwright 登录后抓取页面 HTML（约 10-15s）
-      2. 解析 HTML 获取所有任务点状态（已完成/待完成/未知）
-      3. 更新 state/tdvp_tasks.json 任务注册表
-      4. 同步进度到 state/courses/<key>.json
-      5. 返回第一个 PENDING/UNKNOWN 任务的 chapter_id
+      1. Playwright 登录 → 打开 studentstudy 页面（约 10-20s）
+      2. DOM 提取 #coursetree 目录树全部小节（标题 + chapterId + 顺序）
+      3. 读取 state history 已 PASS 的 chapter_id 集合
+      4. 按目录顺序返回第一个不在已执行集合中的 chapter_id
+      5. 更新 task registry + course state
     """
     try:
         from tvdp.tdvp import (
-            load_task_registry, save_task_registry,
-            get_pending_tasks, sync_progress_to_course_state,
             fetch_course_discovery, build_tasks_from_discovery,
         )
         from resolvers.course_resolver import _parse_url_params
+        from state.course_state import load_course_state, COURSES_DIR
 
         params = _parse_url_params(course_url)
 
-        # ── 1. 在浏览器 DOM 中提取目录树章节及状态 ────────────────
+        # ── 1. 提取目录树（DOM，借鉴 v3 的 #coursetree 结构）──────
         chapters_raw = fetch_course_discovery(course_url)
         if not chapters_raw:
-            print("[scheduler] TDVP: fetch_course_discovery returned empty, "
+            print("[scheduler] TDVP: fetch returned empty, "
                    "falling back to URL chapter_id", file=sys.stderr)
             return params.get("chapter_id")
 
+        # ── 2. 构建 task registry（保留 DOM 顺序）─────────────────
         tasks = build_tasks_from_discovery(chapters_raw,
                                            fallback_chapter=params.get("chapter_id") or "")
-        print(f"[scheduler] TDVP: DOM found {len(chapters_raw)} chapters, "
-              f"{len(tasks)} tasks", flush=True)
-
-        # ── 2. 更新 task registry ─────────────────────────────────
+        from tvdp.tdvp import save_task_registry
         registry = {t.task_id: t for t in tasks}
         save_task_registry(course_key, registry)
+        print(f"[scheduler] TDVP: DOM found {len(tasks)} entries", flush=True)
 
-        # ── 3. 同步进度到 course state ────────────────────────────
-        # 构造 CourseDiscovery 供 sync 使用
-        from tvdp.tdvp import CourseDiscovery
-        disc = CourseDiscovery(
-            course_id=params.get("course_id", ""),
-            clazz_id=params.get("clazz_id", ""),
-            course_key=course_key,
-            chapters=[_chapter_info_for_task(t) for t in tasks],
-        )
-        sync_result = sync_progress_to_course_state(course_key, disc)
-        print(f"[scheduler] TDVP: synced — total={sync_result.get('total')}, "
-              f"completed={sync_result.get('completed')}, "
-              f"pending={sync_result.get('pending')}, "
-              f"next_task={sync_result.get('next_task')}", flush=True)
+        # 打印目录树前几个条目便于调试
+        for t in tasks[:6]:
+            print(f"    - {t.chapter_id} [{t.status}] {t.title}", flush=True)
 
-        # ── 4. 返回第一个 pending/unknown 任务的 chapter_id ───────
-        pending = get_pending_tasks(course_key, registry)
-        if pending:
-            # 按页面 DOM 顺序（非排序）取第一个未完成章节
-            for t in tasks:
-                if t.status in ("PENDING", "UNKNOWN"):
-                    return t.chapter_id
+        # ── 3. 读取已完成的 chapter_id 集合（state history）───────
+        done_ids = set()
+        try:
+            state = load_course_state(course_key)
+            if state and state.history:
+                for h in state.history:
+                    cid = h.get("chapter_id", "")
+                    if cid:
+                        done_ids.add(cid)
+        except Exception:
+            pass
+        print(f"[scheduler] TDVP: done={len(done_ids)} chapters: "
+              f"{sorted(done_ids)}", flush=True)
 
-        # 没有 pending → 全部完成
-        print("[scheduler] TDVP: no pending tasks found — all done", flush=True)
+        # ── 4. 按目录顺序选第一个未执行的章节 ─────────────────────
+        for t in tasks:
+            if t.chapter_id and t.chapter_id not in done_ids:
+                print(f"[scheduler] TDVP: next_chapter={t.chapter_id} "
+                      f"({t.title})", flush=True)
+                return t.chapter_id
+
+        # 全部已执行 → 无任务
+        print("[scheduler] TDVP: all chapters done — no next task", flush=True)
         return None
 
     except Exception as e:
