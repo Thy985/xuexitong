@@ -289,44 +289,43 @@ def fetch_course_discovery(course_url: str, cx_user: Optional[str] = None,
                 // 方法1：v3 脚本已知的 #coursetree 结构（超星学生学习页标准目录树）
                 const tree = document.querySelector('#coursetree');
                 if (tree) {
-                    const chapters = tree.querySelectorAll(':scope > ul > li');
-                    chapters.forEach((li, ci) => {
-                        const cells = li.querySelectorAll('.posCatalog_select:not(.firstLayer)');
-                        cells.forEach((cell, si) => {
-                            const nameEl = cell.querySelector('.posCatalog_name');
-                            const title = nameEl
-                                ? (nameEl.title || nameEl.textContent || '').trim()
-                                : (cell.textContent || '').trim();
-                            if (!title) return;
-                            const text = (cell.textContent || '').replace(/\\s+/g, ' ').trim();
-                            let status = 'unknown';
-                            // 完成标记：class 或文本
-                            if (cell.classList.contains('posCatalog_finish') ||
-                                cell.classList.contains('flip') ||
-                                /已完成/.test(text)) {
-                                status = 'completed';
-                            } else if (/待完成|未完成/.test(text)) {
-                                status = 'pending';
-                            }
-                            // 从节点的 onclick / data 属性提取 chapterId
-                            let cid = '';
-                            const nodeHtml = cell.outerHTML || '';
-                            const m1 = nodeHtml.match(/chapterId[=:'"](\\d+)/);
-                            const m2 = nodeHtml.match(/data-?chapter[-_]?id[=:'"](\\d+)/);
-                            if (m1) cid = m1[1];
-                            else if (m2) cid = m2[1];
-                            // 从激活状态推断：当前 URL 的 chapterId 就是激活节点
-                            const isActive = cell.classList.contains('posCatalog_active');
-                            results.push({
-                                chapter_id: cid,
-                                title: title,
-                                status: status,
-                                is_active: isActive,
-                                chapter_index: ci,
-                                cell_index: si,
-                                text: text.slice(0, 150),
-                                mirrored: false
-                            });
+                    // 全局遍历所有非 firstLayer 的 posCatalog_select（保持 DOM 顺序）
+                    const allCells = tree.querySelectorAll(':scope > ul > li .posCatalog_select:not(.firstLayer)');
+                    allCells.forEach((cell, gi) => {
+                        const nameEl = cell.querySelector('.posCatalog_name');
+                        const title = nameEl
+                            ? (nameEl.title || nameEl.textContent || '').trim()
+                            : (cell.textContent || '').trim();
+                        if (!title) return;
+                        if (seenTitles.has(title)) return;
+                        seenTitles.add(title);
+                        const text = (cell.textContent || '').replace(/\\s+/g, ' ').trim();
+                        let status = 'unknown';
+                        if (cell.classList.contains('posCatalog_finish') ||
+                            cell.classList.contains('flip') ||
+                            /已完成/.test(text)) {
+                            status = 'completed';
+                        } else if (/待完成|未完成/.test(text)) {
+                            status = 'pending';
+                        }
+                        // 从节点的 onclick / data 属性提取 chapterId
+                        let cid = '';
+                        const nodeHtml = cell.outerHTML || '';
+                        const m1 = nodeHtml.match(/chapterId[=:'"](\\d+)/);
+                        const m2 = nodeHtml.match(/data-?chapter[-_]?id[=:'"](\\d+)/);
+                        if (m1) cid = m1[1];
+                        else if (m2) cid = m2[1];
+                        // 从激活状态推断：当前 URL 的 chapterId 就是激活节点
+                        const isActive = cell.classList.contains('posCatalog_active');
+                        results.push({
+                            chapter_id: cid,
+                            title: title,
+                            status: status,
+                            is_active: isActive,
+                            chapter_index: gi,
+                            cell_index: gi,
+                            text: text.slice(0, 150),
+                            mirrored: false
                         });
                     });
                 }
