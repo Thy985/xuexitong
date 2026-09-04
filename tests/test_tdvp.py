@@ -159,6 +159,23 @@ class TestPassiveProbe:
             assert t.task_id.startswith("1217304706")
             assert t.title  # 标题不应为空
 
+    def test_parse_real_page_markers(self):
+        """测试学习通实际页面标记：'已完成' 和 'N个待完成任务点'。"""
+        real_html = """
+        <div>1.3 计算机网络的概念与类别 已完成</div>
+        <div>2.1 物理层的主要任务 1个待完成任务点</div>
+        <div>2.7 线上学习任务 已完成</div>
+        <div>2.2 数据通信的基础知识 3个待完成任务点</div>
+        """
+        tasks = parse_task_status_from_page(real_html, "1217304706")
+        by_title = {t.title: t for t in tasks}
+        if "计算机网络的概念与类别" in by_title:
+            assert by_title["计算机网络的概念与类别"].status == "COMPLETED"
+        if "物理层的主要任务" in by_title:
+            assert by_title["物理层的主要任务"].status == "PENDING"
+        if "线上学习任务" in by_title:
+            assert by_title["线上学习任务"].status == "COMPLETED"
+
 
 # ── 测试：Evidence Aggregator ─────────────────────────────────────
 

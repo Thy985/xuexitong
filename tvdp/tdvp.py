@@ -150,12 +150,13 @@ class CourseDiscovery:
 # ── Passive Probe ──────────────────────────────────────────────────
 
 def parse_task_status_from_page(html: str, chapter_id: str) -> list[TaskInfo]:
-    """从 studentstudy 页面 HTML 解析任务列表。
+    """从 studentstudy 页面 HTML/文本 解析任务列表。
 
-    UI 标记规则（学习通）：
-      - 数字 0 = 未完成 (pending)
-      - 数字 1+ = 已完成 (completed)
-      - 无数字标记 = unknown
+    支持学习通实际 UI 标记：
+      - 标题后跟 "已完成" → COMPLETED(UI)
+      - 标题后跟 "N个待完成任务点" → PENDING(UI)
+      - 标题后紧跟 >数字< → COMPLETED if >0 else PENDING
+      - 其他 → UNKNOWN
     """
     tasks = []
 
@@ -171,15 +172,18 @@ def parse_task_status_from_page(html: str, chapter_id: str) -> list[TaskInfo]:
         start = html.find(num)
         if start == -1:
             continue
-        snippet = html[start:start+300]
+        snippet = html[start:start+500]
 
-        digit_match = re.search(r'>\s*(\d)\s*<', snippet)
-        if digit_match:
-            val = int(digit_match.group(1))
-            if val > 0:
-                status, confidence, detail = "COMPLETED", "UI", f"UI marker={val}"
-            else:
-                status, confidence, detail = "PENDING", "UI", "UI marker=0"
+        if "已完成" in snippet[:200]:
+            status, confidence, detail = "COMPLETED", "UI", "标记=已完成"
+        elif re.search(r'(\d+)个待完成', snippet):
+            m2 = re.search(r'(\d+)个待完成', snippet)
+            status, confidence, detail = "PENDING", "UI", f"标记={m2.group(1)}个待完成"
+        elif re.search(r'>\s*(\d+)\s*<', snippet):
+            val = int(re.search(r'>\s*(\d+)\s*<', snippet).group(1))
+            status = "COMPLETED" if val > 0 else "PENDING"
+            confidence = "UI"
+            detail = f"UI marker={val}"
         else:
             status, confidence, detail = "UNKNOWN", "UI", "no status marker found"
 
@@ -196,6 +200,94 @@ def parse_task_status_from_page(html: str, chapter_id: str) -> list[TaskInfo]:
         ))
 
     return tasks
+
+
+def fetch_page_html(course_url: str, cx_user: Optional[str] = None,
+                    cx_pass: Optional[str] = None) -> Optional[str]:
+    """轻量级页面抓取：登录后获取 studentstudy 页面 HTML。
+
+    复用 e2 引擎的登录流程（Playwright headless），但只做页面加载，
+    不执行视频播放。约 10-15s 完成。
+
+    Args:
+        course_url: studentstudy URL
+        cx_user: 超星账号（默认从 env CX_USER 读取）
+        cx_pass: 超星密码（默认从 env CX_PASS 读取）
+
+    Returns:
+        页面 HTML 字符串，失败返回 None
+    """
+    import os
+    user = cx_user or os.environ.get("CX_USER")
+    pw = cx_pass or os.environ.get("CX_PASS")
+    if not user or not pw:
+        return None
+
+    try:
+        from resolvers.course_resolver import _parse_url_params
+        params = _parse_url_params(course_url)
+        chapter_id = params.get("chapter_id") or ""
+
+        sys.path.insert(0, str(Path(__file__).parent.parent / "e2"))
+        import e2_headed_gha as E
+        E.COURSE_ID = params.get("course_id", "")
+        E.CLAZZ_ID = params.get("clazz_id", "")
+        E.CPI = params.get("cpi", "")
+        E.ENC = params.get("enc", "")
+        E.OPENR = params.get("openc")
+        E.HIDETYPE = params.get("hidetype") or "0"
+
+        from playwright.sync_api import sync_playwright
+        display = os.environ.get("DISPLAY", ":99")
+
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch(
+                headless=False,
+                channel="chromium",
+                args=[f"--display={display}", "--no-sandbox",
+                      "--disable-dev-shm-usage", "--disable-gpu"],
+            )
+            ctx = browser.new_context(
+                viewport={"width": 1440, "height": 900},
+                user_agent=("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                            "AppleWebKit/537.36 (KHTML, like Gecko) "
+                            f"Chrome/{browser.version} Safari/537.36"),
+            )
+            page = ctx.new_page()
+
+            # 登录
+            base = E.build_base_url(chapter_id)
+            page.goto(base, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(3000)
+            try:
+                page.wait_for_selector("#phone", timeout=12000)
+                page.locator("#phone").first.fill(user)
+                page.locator("#pwd").first.fill(pw)
+                for sel in ["button:has-text('登录')", "a.loginbtn", ".loginbtn"]:
+                    try:
+                        if page.locator(sel).count() > 0:
+                            page.locator(sel).first.click(force=True, timeout=3000)
+                            break
+                    except Exception:
+                        pass
+                for _ in range(15):
+                    page.wait_for_timeout(1000)
+                    if "passport2.chaoxing.com/login" not in page.url:
+                        break
+            except Exception:
+                pass
+
+            # 导航到目标 URL
+            page.goto(course_url, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(5000)
+
+            # 抓取页面 HTML（包含章节目录）
+            html = page.content()
+            browser.close()
+            return html
+    except Exception as e:
+        print(f"[tdvp] fetch_page_html error: {e}", file=sys.stderr)
+        return None
 
 
 # ── Evidence Aggregator ────────────────────────────────────────────

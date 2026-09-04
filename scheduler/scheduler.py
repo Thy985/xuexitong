@@ -359,73 +359,70 @@ def _write_summary(summary: dict) -> None:
 
 
 def _run_tdvp_probe(course_url: str, course_key: str) -> Optional[str]:
-    """内置 TDVP Passive Probe：静默扫描课程任务，返回 next_task chapter_id。
+    """内置 TDVP Passive Probe：抓取 studentstudy 页面 HTML，解析任务列表。
 
     流程：
-      1. 从 state/tdvp_tasks.json 读取已有任务注册表
-      2. 如果有缓存且未过期（< 24h），直接使用
-      3. 否则运行 Passive Probe，解析当前课程的 studentstudy 页面
-      4. 更新 task registry + course state
-      5. 返回 pending/unknown 列表中的第一个 task_id（供 run 使用）
+      1. 用 Playwright 登录后抓取页面 HTML（约 10-15s）
+      2. 解析 HTML 获取所有任务点状态（已完成/待完成/未知）
+      3. 更新 state/tdvp_tasks.json 任务注册表
+      4. 同步进度到 state/courses/<key>.json
+      5. 返回第一个 PENDING/UNKNOWN 任务的 chapter_id
     """
     try:
         from tvdp.tdvp import (
             load_task_registry, save_task_registry,
             get_pending_tasks, sync_progress_to_course_state,
-            run_passive_probe, CourseDiscovery,
+            run_passive_probe, fetch_page_html,
         )
-        from resolvers.course_resolver import resolve_course
-        from state.course_state import load_course_state
+        from resolvers.course_resolver import _parse_url_params
 
-        # 检查是否有有效的缓存（24小时内）
-        registry = load_task_registry(course_key)
+        # ── 1. 抓取真实页面 HTML ──────────────────────────────────
+        html = fetch_page_html(course_url)
+        if not html:
+            print("[scheduler] TDVP: fetch_page_html returned None, "
+                   "falling back to URL chapter_id", file=sys.stderr)
+            params = _parse_url_params(course_url)
+            return params.get("chapter_id")
+
+        # ── 2. 解析任务状态 ────────────────────────────────────────
+        params = _parse_url_params(course_url)
+        chapter_id = params.get("chapter_id") or ""
+        disc = run_passive_probe(course_url, html, chapter_id=chapter_id)
+        print(f"[scheduler] TDVP: discovered {len(disc.all_tasks)} tasks, "
+              f"{len(disc.completed_tasks)} completed, "
+              f"{len(disc.pending_tasks)} pending", flush=True)
+
+        # ── 3. 更新 task registry ─────────────────────────────────
+        registry = {t.task_id: t for t in disc.all_tasks}
+        save_task_registry(course_key, registry)
+
+        # ── 4. 同步进度到 course state ────────────────────────────
+        sync_result = sync_progress_to_course_state(course_key, disc)
+        print(f"[scheduler] TDVP: synced — total={sync_result.get('total')}, "
+              f"completed={sync_result.get('completed')}, "
+              f"pending={sync_result.get('pending')}, "
+              f"next_task={sync_result.get('next_task')}", flush=True)
+
+        # ── 5. 返回第一个 pending/unknown 任务的 chapter_id ───────
         pending = get_pending_tasks(course_key, registry)
-
-        # 如果没有 pending 任务且已完成所有任务，不需要再探测
-        if not pending and registry:
-            all_completed = all(t.status == "COMPLETED" for t in registry.values())
-            if all_completed:
-                return None  # 全部完成，无需执行
-
-        # 需要重新探测
-        resolved = resolve_course(course_url)
-        if not resolved.is_ok():
-            return None
-
-        # 获取当前 chapter_id（用于探测）
-        raw = resolved.to_dict().get("identity", {})
-        current_chapter = raw.get("chapter_id") or ""
-
-        # 构造简化 HTML（从当前活跃课程的 state raw_url 中获取章节）
-        # 注意：这里我们无法在 scheduler 阶段拿到真实 HTML，
-        # 所以改用已有的 task registry + course state 的 history 来推断 next_task
-        active_state = load_course_state(course_key)
-        if active_state and active_state.progress and active_state.progress.last_completed_task:
-            last = active_state.progress.last_completed_task
-            # 基于 history 找到下一个未完成的 chapter
-            for hist_item in reversed(active_state.history):
-                cid = hist_item.get("chapter_id", "")
-                if cid and cid != last and hist_item.get("passed"):
-                    # 找到了上一个完成的章节，下一个就是 last_completed_task 所在的章节
-                    pass
-
-        # 使用 task registry 中的 pending 列表
         if pending:
             next_task = pending[0].task_id
-            # 提取 chapter_id（task_id 格式为 <chapter_id>_<section>）
-            if "_" in next_task:
-                ch_id = next_task.rsplit("_", 1)[0]
-            else:
-                ch_id = next_task
+            # task_id 格式：<chapter_id>_<section_num>
+            ch_id = next_task.rsplit("_", 1)[0] if "_" in next_task else next_task
             return ch_id
 
-        # 没有缓存，尝试从当前 URL 探测
-        # 由于无法在 scheduler 阶段获取真实 HTML，返回当前 chapter_id
-        return current_chapter if current_chapter else None
+        # 没有 pending → 全部完成
+        return None
 
     except Exception as e:
         print(f"[scheduler] TDVP probe failed (non-fatal): {e}", file=sys.stderr)
-        return None
+        # fallback：从 URL 取 chapter_id
+        try:
+            from resolvers.course_resolver import _parse_url_params
+            params = _parse_url_params(course_url)
+            return params.get("chapter_id")
+        except Exception:
+            return None
 
 
 def sync_tdvp_on_switch(new_identity, course_url: str) -> None:

@@ -1,0 +1,10 @@
+{
+  "action": "scheduler",
+  "decision": "RUN",
+  "result": "SUCCESS",
+  "trigger": "manual",
+  "course_key": "265997861_151695658",
+  "timing_s": 539.4,
+  "verdict": "PASS",
+  "error": null
+}
