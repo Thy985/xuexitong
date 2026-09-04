@@ -429,36 +429,29 @@ def _run_tdvp_probe(course_url: str, course_key: str) -> Optional[str]:
         print(f"[scheduler] TDVP: done={len(done_ids)} chapters: "
               f"{sorted(done_ids)}", flush=True)
 
-        # ── 4. 按目录顺序选第一个未执行的章节 ─────────────────────
-        # 优先选有 chapter_id 的；都没有则选第一个非 completed 且未在 history 的节点
-        best = None
+        # ── 4. 按 DOM 目录顺序选第一个未执行的章节 ─────────────────
+        # tasks 列表已是 DOM 顺序（按目录树遍历顺序），直接遍历即可
+        # 规则：
+        #   (a) 有 chapter_id 且不在 history 的 → 直接返回
+        #   (b) 无 chapter_id 的 → 返回 click_probe 信号（让 probe 点击获取）
+        #       但只找 status != COMPLETED 的（已完成节点不可能是下一个任务）
         for t in tasks:
-            if not t.chapter_id:
-                continue
-            if t.chapter_id not in done_ids:
-                best = t
-                break
-        if best is None:
-            # 没有带 chapter_id 的候选：按目录顺序（task_id 中的 cell_index）找第一个未在 history 的节点
-            sorted_tasks = sorted(tasks, key=lambda t: (
-                int(t.task_id.rsplit("_", 1)[-1]) if t.task_id.startswith("_") else 999,
-                t.task_id,
-            ))
-            for t in sorted_tasks:
-                if t.chapter_id and t.chapter_id not in done_ids:
-                    best = t
-                    break
-                # 无 chapter_id 节点：返回 click_probe 信号
-                if t.status != "COMPLETED":
-                    print(f"[scheduler] TDVP: no cid for next task, cell_idx hint "
-                          f"({t.title})", flush=True)
-                    return f"__click_probe__:{getattr(t, '_ch_idx', 0)}:{getattr(t, '_cell_idx', 0)}"
-            if best is None:
-                print("[scheduler] TDVP: all chapters done — no next task", flush=True)
-                return None
-        print(f"[scheduler] TDVP: next_chapter={best.chapter_id} "
-              f"({best.title})", flush=True)
-        return best.chapter_id
+            if t.chapter_id and t.chapter_id not in done_ids:
+                print(f"[scheduler] TDVP: next_chapter={t.chapter_id} "
+                      f"({t.title})", flush=True)
+                return t.chapter_id
+            if t.chapter_id and t.chapter_id in done_ids:
+                continue  # 已执行，跳过
+            # 无 chapter_id：检查是否可能是未完成节点
+            if t.status != "COMPLETED":
+                ch_idx = getattr(t, '_ch_idx', 0)
+                cell_idx = getattr(t, '_cell_idx', 0)
+                print(f"[scheduler] TDVP: no cid, click-probe: "
+                      f"ci={ch_idx} si={cell_idx} ({t.title})", flush=True)
+                return f"__click_probe__:{ch_idx}:{cell_idx}"
+
+        print("[scheduler] TDVP: all chapters done — no next task", flush=True)
+        return None
 
     except Exception as e:
         print(f"[scheduler] TDVP probe failed (non-fatal): {e}", file=sys.stderr)
