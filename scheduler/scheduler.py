@@ -280,22 +280,7 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
     # ── Step 2: TDVP Passive Probe（后台静默执行）────────────────
     next_chapter = _run_tdvp_probe(course_url, identity_key)
     if next_chapter:
-        if next_chapter.startswith("__click_probe__:"):
-            # 需要点击探测补 chapterId：格式 __click_probe__:chapter_index:cell_index
-            from tvdp.tdvp import resolve_click_probe_chapter_id
-            probe_params = next_chapter.split(":", 2)[1:]
-            clicked_cid = resolve_click_probe_chapter_id(
-                course_url, int(probe_params[0]), int(probe_params[1]))
-            if clicked_cid:
-                chapter_id = clicked_cid
-                print(f"[scheduler] TDVP: click-probe resolved → {chapter_id}", flush=True)
-            else:
-                print(f"[scheduler] TDVP: click-probe failed, using URL chapter_id", flush=True)
-                from resolvers.course_resolver import _parse_url_params
-                params = _parse_url_params(course_url)
-                chapter_id = params.get("chapter_id") or ""
-        else:
-            chapter_id = next_chapter  # 用发现的 next_task 覆盖传入的 chapter_id
+        chapter_id = next_chapter  # 用发现的 next_task 覆盖传入的 chapter_id
 
     # ── Step 3: 决定 action ─────────────────────────────────────
     decision, reason = determine_action(identity_key, trigger)
