@@ -266,8 +266,11 @@ def reconcile_queue(course_key: str, registry: dict[str, TaskRecord],
             continue
         ready.append(t)
 
-    # 按目录顺序排序（_ch_idx/_cell_idx 来自 DOM 原始顺序）
-    ready.sort(key=lambda t: (t._ch_idx, t._cell_idx, t.task_id))
+    # 排序：有 chapter_id 的优先（可直接执行），再按目录顺序
+    ready.sort(key=lambda t: (
+        0 if t.chapter_id else 1,   # 有 cid 的排前面
+        t._ch_idx, t._cell_idx, t.task_id,
+    ))
 
     items = []
     for i, t in enumerate(ready):
