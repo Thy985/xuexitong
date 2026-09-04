@@ -385,10 +385,35 @@ def _run_tdvp_probe(course_url: str, course_key: str) -> Optional[str]:
         # 2. 构建/合并 E6 Task Registry
         tasks = build_tasks_from_discovery(chapters_raw)
         existing = load_registry(course_key)
+        new_tids = {t.task_id for t in tasks}
+        # 清理旧 registry 中 title 匹配但 task_id 格式已变的条目（格式迁移）
+        for old_tid, old_rec in list(existing.items()):
+            if old_tid not in new_tids:
+                matched = next((t for t in tasks if t.title == old_rec.title), None)
+                if matched:
+                    # 用新 task_id 替换旧条目，保留已完成状态
+                    if old_rec.status == "COMPLETED":
+                        init_status = "COMPLETED"
+                    elif old_rec.status == "PENDING":
+                        init_status = "PENDING"
+                    else:
+                        init_status = "DISCOVERED"
+                    from e6.task_registry import TaskRecord
+                    tr = TaskRecord(
+                        task_id=matched.task_id,
+                        chapter_id=matched.chapter_id or "",
+                        title=matched.title,
+                        task_type="video",
+                        status=init_status,
+                        priority=len(existing),
+                        _ch_idx=matched._ch_idx,
+                        _cell_idx=matched._cell_idx,
+                    )
+                    existing[matched.task_id] = tr
+                    del existing[old_tid]
         for t in tasks:
             tid = t.task_id
             if tid not in existing:
-                # 新发现的节点: 继承 discovery 的 status
                 if t.status == "COMPLETED":
                     init_status = "COMPLETED"
                 elif t.status == "PENDING":
@@ -408,7 +433,6 @@ def _run_tdvp_probe(course_url: str, course_key: str) -> Optional[str]:
                 )
                 existing[tid] = tr
             else:
-                # 已有节点: 更新标题和位置索引（DOM 顺序可能变化）
                 existing[tid].title = t.title
                 existing[tid]._ch_idx = getattr(t, '_ch_idx', existing[tid]._ch_idx)
                 existing[tid]._cell_idx = getattr(t, '_cell_idx', existing[tid]._cell_idx)
