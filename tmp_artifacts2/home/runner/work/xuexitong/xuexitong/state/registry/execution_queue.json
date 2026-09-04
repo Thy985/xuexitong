@@ -1,0 +1,369 @@
+{
+  "items": [
+    {
+      "task_id": "_gi11",
+      "chapter_id": "",
+      "priority": 0,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi12",
+      "chapter_id": "",
+      "priority": 1,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi13",
+      "chapter_id": "",
+      "priority": 2,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi14",
+      "chapter_id": "",
+      "priority": 3,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi15",
+      "chapter_id": "",
+      "priority": 4,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi18",
+      "chapter_id": "",
+      "priority": 5,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi19",
+      "chapter_id": "",
+      "priority": 6,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi2",
+      "chapter_id": "",
+      "priority": 7,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi20",
+      "chapter_id": "",
+      "priority": 8,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi21",
+      "chapter_id": "",
+      "priority": 9,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi22",
+      "chapter_id": "",
+      "priority": 10,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi23",
+      "chapter_id": "",
+      "priority": 11,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi24",
+      "chapter_id": "",
+      "priority": 12,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi27",
+      "chapter_id": "",
+      "priority": 13,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi28",
+      "chapter_id": "",
+      "priority": 14,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi29",
+      "chapter_id": "",
+      "priority": 15,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi3",
+      "chapter_id": "",
+      "priority": 16,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi30",
+      "chapter_id": "",
+      "priority": 17,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi31",
+      "chapter_id": "",
+      "priority": 18,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi32",
+      "chapter_id": "",
+      "priority": 19,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi33",
+      "chapter_id": "",
+      "priority": 20,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi34",
+      "chapter_id": "",
+      "priority": 21,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi35",
+      "chapter_id": "",
+      "priority": 22,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi36",
+      "chapter_id": "",
+      "priority": 23,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi37",
+      "chapter_id": "",
+      "priority": 24,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi38",
+      "chapter_id": "",
+      "priority": 25,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi39",
+      "chapter_id": "",
+      "priority": 26,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi4",
+      "chapter_id": "",
+      "priority": 27,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi40",
+      "chapter_id": "",
+      "priority": 28,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi41",
+      "chapter_id": "",
+      "priority": 29,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi43",
+      "chapter_id": "",
+      "priority": 30,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi47",
+      "chapter_id": "",
+      "priority": 31,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi48",
+      "chapter_id": "",
+      "priority": 32,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi49",
+      "chapter_id": "",
+      "priority": 33,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi5",
+      "chapter_id": "",
+      "priority": 34,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi50",
+      "chapter_id": "",
+      "priority": 35,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi51",
+      "chapter_id": "",
+      "priority": 36,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi52",
+      "chapter_id": "",
+      "priority": 37,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi53",
+      "chapter_id": "",
+      "priority": 38,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi54",
+      "chapter_id": "",
+      "priority": 39,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi56",
+      "chapter_id": "",
+      "priority": 40,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi6",
+      "chapter_id": "",
+      "priority": 41,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi61",
+      "chapter_id": "",
+      "priority": 42,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi62",
+      "chapter_id": "",
+      "priority": 43,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi63",
+      "chapter_id": "",
+      "priority": 44,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi64",
+      "chapter_id": "",
+      "priority": 45,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi65",
+      "chapter_id": "",
+      "priority": 46,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi7",
+      "chapter_id": "",
+      "priority": 47,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi70",
+      "chapter_id": "",
+      "priority": 48,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi71",
+      "chapter_id": "",
+      "priority": 49,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi8",
+      "chapter_id": "",
+      "priority": 50,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    },
+    {
+      "task_id": "_gi9",
+      "chapter_id": "",
+      "priority": 51,
+      "state": "READY",
+      "course_key": "265997861_151695658"
+    }
+  ],
+  "reconciled_at_utc": "2026-09-04T09:56:50.609138+00:00"
+}

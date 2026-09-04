@@ -613,6 +613,8 @@ def build_tasks_from_discovery(chapters_raw: list[dict],
             confidence=conf,
             source_detail=detail,
             evidence=TaskEvidence(status, conf, detail),
+            _ch_idx=ch_idx,
+            _cell_idx=cell_idx,
         ))
     return tasks
 
