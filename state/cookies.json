@@ -58,5 +58,155 @@
     "httpOnly": false,
     "secure": false,
     "sameSite": "Lax"
+  },
+  {
+    "name": "JSESSIONID",
+    "value": "1CBF3D28D925276EDEDC161DF0FBA85D",
+    "domain": "passport2.chaoxing.com",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": true,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "route",
+    "value": "3a66e47c0ac92560e5c67cd5e1803201",
+    "domain": "passport2.chaoxing.com",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "JSESSIONID",
+    "value": "58C899188EF0353401F10FE10CE5E052",
+    "domain": "passport2-static.chaoxing.com",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": true,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "route",
+    "value": "8a74486ba4c41f9a34b828918e474ac0",
+    "domain": "passport2-static.chaoxing.com",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "retainlogin",
+    "value": "2",
+    "domain": "passport2.chaoxing.com",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "fid",
+    "value": "436",
+    "domain": ".chaoxing.com",
+    "path": "/",
+    "expires": 1791117655.624876,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "_uid",
+    "value": "421435810",
+    "domain": ".chaoxing.com",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "_d",
+    "value": "1788525655477",
+    "domain": ".chaoxing.com",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "UID",
+    "value": "421435810",
+    "domain": ".chaoxing.com",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "vc3",
+    "value": "Mz61aQhcjk9AAG1v1X53o%2BM2nwGak9tny9a9Tx%2BIINADB2mStwyp2%2FaTHzvwRQK9IY5bGKRJjTU5oOoDFgFSZVRPAjCREPtSv%2F2RPhRNCd47KKW9eaISPyjXYq03ibFosr5x5Ni15Qkd6rojKgHEVM0FJF9j0%2B9HpXFZt0f%2FMvE%3Dbbb276ab9e0159424319e289cb133e95",
+    "domain": ".chaoxing.com",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": true,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "uf",
+    "value": "d9387224d3a6095b9436305635d2bba7bde1f0bddccf3897dcdeff9cd4668b510466552bec71021085c1051d88fc0f7e5d984d23a7662dfb9b0594e13f4b452fa995cca83579031aa94b593de5d847e48e6fa52101db5a4360a524d218f637f5803567459b883d8cb5eee692737bbf462f638d149853818a6093351bbd42e96784c8b25211725b77f9c86a279e2a9862b9db9b2097fb87633f7e55a6b43826fa705057051f3de601d0332352359b6bfb577a9aa095a87b2c",
+    "domain": ".chaoxing.com",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "cx_p_token",
+    "value": "16a30e95575e66df3098e4bc5bc31174",
+    "domain": ".chaoxing.com",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "p_auth_token",
+    "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI0MjE0MzU4MTAiLCJsb2dpblRpbWUiOjE3ODg1MjU2NTU0NzgsImV4cCI6MTc4OTEzMDQ1NX0.RRa6AH2qdAKKUWEItnyXTTlstpRJvabF86itlOD3UJg",
+    "domain": ".chaoxing.com",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": true,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "xxtenc",
+    "value": "1a6fdec6506fb443f04c97f75f8ce5bf",
+    "domain": ".chaoxing.com",
+    "path": "/",
+    "expires": 1791117655.625205,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "DSSTASH_LOG",
+    "value": "C_38-UN_564-US_421435810-T_1788525655478",
+    "domain": ".chaoxing.com",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
   }
 ]
