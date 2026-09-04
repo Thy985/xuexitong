@@ -372,46 +372,53 @@ def _run_tdvp_probe(course_url: str, course_key: str) -> Optional[str]:
         from tvdp.tdvp import (
             load_task_registry, save_task_registry,
             get_pending_tasks, sync_progress_to_course_state,
-            run_passive_probe, fetch_page_html,
+            fetch_course_discovery, build_tasks_from_discovery,
         )
         from resolvers.course_resolver import _parse_url_params
 
-        # ── 1. 抓取真实页面 HTML ──────────────────────────────────
-        html = fetch_page_html(course_url)
-        if not html:
-            print("[scheduler] TDVP: fetch_page_html returned None, "
+        params = _parse_url_params(course_url)
+
+        # ── 1. 在浏览器 DOM 中提取目录树章节及状态 ────────────────
+        chapters_raw = fetch_course_discovery(course_url)
+        if not chapters_raw:
+            print("[scheduler] TDVP: fetch_course_discovery returned empty, "
                    "falling back to URL chapter_id", file=sys.stderr)
-            params = _parse_url_params(course_url)
             return params.get("chapter_id")
 
-        # ── 2. 解析任务状态 ────────────────────────────────────────
-        params = _parse_url_params(course_url)
-        chapter_id = params.get("chapter_id") or ""
-        disc = run_passive_probe(course_url, html, chapter_id=chapter_id)
-        print(f"[scheduler] TDVP: discovered {len(disc.all_tasks)} tasks, "
-              f"{len(disc.completed_tasks)} completed, "
-              f"{len(disc.pending_tasks)} pending", flush=True)
+        tasks = build_tasks_from_discovery(chapters_raw,
+                                           fallback_chapter=params.get("chapter_id") or "")
+        print(f"[scheduler] TDVP: DOM found {len(chapters_raw)} chapters, "
+              f"{len(tasks)} tasks", flush=True)
 
-        # ── 3. 更新 task registry ─────────────────────────────────
-        registry = {t.task_id: t for t in disc.all_tasks}
+        # ── 2. 更新 task registry ─────────────────────────────────
+        registry = {t.task_id: t for t in tasks}
         save_task_registry(course_key, registry)
 
-        # ── 4. 同步进度到 course state ────────────────────────────
+        # ── 3. 同步进度到 course state ────────────────────────────
+        # 构造 CourseDiscovery 供 sync 使用
+        from tvdp.tdvp import CourseDiscovery
+        disc = CourseDiscovery(
+            course_id=params.get("course_id", ""),
+            clazz_id=params.get("clazz_id", ""),
+            course_key=course_key,
+            chapters=[_chapter_info_for_task(t) for t in tasks],
+        )
         sync_result = sync_progress_to_course_state(course_key, disc)
         print(f"[scheduler] TDVP: synced — total={sync_result.get('total')}, "
               f"completed={sync_result.get('completed')}, "
               f"pending={sync_result.get('pending')}, "
               f"next_task={sync_result.get('next_task')}", flush=True)
 
-        # ── 5. 返回第一个 pending/unknown 任务的 chapter_id ───────
+        # ── 4. 返回第一个 pending/unknown 任务的 chapter_id ───────
         pending = get_pending_tasks(course_key, registry)
         if pending:
-            next_task = pending[0].task_id
-            # task_id 格式：<chapter_id>_<section_num>
-            ch_id = next_task.rsplit("_", 1)[0] if "_" in next_task else next_task
-            return ch_id
+            # 按页面 DOM 顺序（非排序）取第一个未完成章节
+            for t in tasks:
+                if t.status in ("PENDING", "UNKNOWN"):
+                    return t.chapter_id
 
         # 没有 pending → 全部完成
+        print("[scheduler] TDVP: no pending tasks found — all done", flush=True)
         return None
 
     except Exception as e:
@@ -438,3 +445,9 @@ def sync_tdvp_on_switch(new_identity, course_url: str) -> None:
 # 导入 os/Path
 import os
 from pathlib import Path
+
+
+def _chapter_info_for_task(t) -> "object":
+    """为单个 TaskInfo 构造 ChapterInfo（用于 sync_progress_to_course_state）。"""
+    from tvdp.tdvp import ChapterInfo
+    return ChapterInfo(chapter_id=t.chapter_id, title=t.title, tasks=[t])

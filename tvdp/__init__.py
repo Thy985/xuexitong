@@ -16,6 +16,8 @@ from .tdvp import (
     discover_course,
     run_passive_probe,
     fetch_page_html,
+    fetch_course_discovery,
+    build_tasks_from_discovery,
 )
 
 __all__ = [
@@ -35,4 +37,6 @@ __all__ = [
     "discover_course",
     "run_passive_probe",
     "fetch_page_html",
+    "fetch_course_discovery",
+    "build_tasks_from_discovery",
 ]

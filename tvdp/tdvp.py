@@ -150,7 +150,7 @@ class CourseDiscovery:
 # ── Passive Probe ──────────────────────────────────────────────────
 
 def parse_task_status_from_page(html: str, chapter_id: str) -> list[TaskInfo]:
-    """从 studentstudy 页面 HTML/文本 解析任务列表。
+    """从 studentstudy 页面 HTML 解析任务列表。
 
     支持学习通实际 UI 标记：
       - 标题后跟 "已完成" → COMPLETED(UI)
@@ -202,20 +202,15 @@ def parse_task_status_from_page(html: str, chapter_id: str) -> list[TaskInfo]:
     return tasks
 
 
-def fetch_page_html(course_url: str, cx_user: Optional[str] = None,
-                    cx_pass: Optional[str] = None) -> Optional[str]:
-    """轻量级页面抓取：登录后获取 studentstudy 页面 HTML。
+def fetch_course_discovery(course_url: str, cx_user: Optional[str] = None,
+                           cx_pass: Optional[str] = None) -> Optional[list[dict]]:
+    """在浏览器 DOM 中直接提取目录树章节列表 + 状态。
 
-    复用 e2 引擎的登录流程（Playwright headless），但只做页面加载，
-    不执行视频播放。约 10-15s 完成。
-
-    Args:
-        course_url: studentstudy URL
-        cx_user: 超星账号（默认从 env CX_USER 读取）
-        cx_pass: 超星密码（默认从 env CX_PASS 读取）
+    比 fetch_page_html 更可靠：不依赖 HTML 字符串正则，
+    而是在活的 DOM 里查找所有带 chapterId 的链接和它们的完成状态标记。
 
     Returns:
-        页面 HTML 字符串，失败返回 None
+        list of {chapter_id, title, status, text} 或 None
     """
     import os
     user = cx_user or os.environ.get("CX_USER")
@@ -240,8 +235,8 @@ def fetch_page_html(course_url: str, cx_user: Optional[str] = None,
         from playwright.sync_api import sync_playwright
         display = os.environ.get("DISPLAY", ":99")
 
-        with sync_playwright() as pw:
-            browser = pw.chromium.launch(
+        with sync_playwright() as pwc:
+            browser = pwc.chromium.launch(
                 headless=False,
                 channel="chromium",
                 args=[f"--display={display}", "--no-sandbox",
@@ -255,7 +250,7 @@ def fetch_page_html(course_url: str, cx_user: Optional[str] = None,
             )
             page = ctx.new_page()
 
-            # 登录
+            # ── 登录 ──────────────────────────────────────────────
             base = E.build_base_url(chapter_id)
             page.goto(base, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(3000)
@@ -277,17 +272,176 @@ def fetch_page_html(course_url: str, cx_user: Optional[str] = None,
             except Exception:
                 pass
 
-            # 导航到目标 URL
+            # ── 导航到课程目录页 ──────────────────────────────────
             page.goto(course_url, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(5000)
 
-            # 抓取页面 HTML（包含章节目录）
+            # ── DOM 提取目录树（递归查找所有 frame）─────────────
+            js_extract = """
+            () => {
+                const results = [];
+                function walkDoc(doc) {
+                    if (!doc) return;
+                    // 查找所有含 chapterId 的链接
+                    const links = doc.querySelectorAll('a[href*="chapterId"]');
+                    links.forEach(a => {
+                        const href = a.href || '';
+                        const m = href.match(/chapterId=(\\d+)/);
+                        if (!m) return;
+                        const cid = m[1];
+                        // 向上找容器
+                        let container = a.closest('li, .catalog_list, tr, .chapter_item, [class*="item"], [class*="node"]') || a.parentElement;
+                        let status = 'unknown';
+                        let text = '';
+                        if (container) {
+                            text = container.innerText || container.textContent || '';
+                            if (text.includes('已完成')) status = 'completed';
+                            else if (text.includes('待完成')) status = 'pending';
+                        }
+                        results.push({
+                            chapter_id: cid,
+                            title: (a.innerText || a.textContent || '').trim(),
+                            status: status,
+                            text: text.slice(0, 200)
+                        });
+                    });
+                }
+                walkDoc(document);
+                // 递归 iframe
+                document.querySelectorAll('iframe').forEach(f => {
+                    try { walkDoc(f.contentDocument); } catch(e) {}
+                });
+                return results;
+            }
+            """
+            chapters = page.evaluate(js_extract)
+
+            # 去重：同 chapter_id 只保留一条
+            seen = set()
+            unique = []
+            for ch in chapters:
+                cid = ch.get("chapter_id", "")
+                if cid and cid not in seen and ch.get("title"):
+                    seen.add(cid)
+                    unique.append(ch)
+
+            # dump 调试信息
+            try:
+                ev_dir = Path("./evidence")
+                ev_dir.mkdir(parents=True, exist_ok=True)
+                (ev_dir / "tdvp_discovery.json").write_text(
+                    json.dumps(unique, ensure_ascii=False, indent=2),
+                    encoding="utf-8")
+                (ev_dir / "tdvp_page.html").write_text(
+                    page.content(), encoding="utf-8")
+            except Exception:
+                pass
+
+            browser.close()
+            return unique
+    except Exception as e:
+        print(f"[tdvp] fetch_course_discovery error: {e}", file=sys.stderr)
+        return None
+
+
+def fetch_page_html(course_url: str, cx_user: Optional[str] = None,
+                    cx_pass: Optional[str] = None) -> Optional[str]:
+    """轻量级页面抓取（兼容旧接口）：返回页面 HTML 字符串。
+
+    新代码应优先用 fetch_course_discovery() 直接从 DOM 提取。
+    """
+    import os
+    user = cx_user or os.environ.get("CX_USER")
+    pw = cx_pass or os.environ.get("CX_PASS")
+    if not user or not pw:
+        return None
+
+    try:
+        from resolvers.course_resolver import _parse_url_params
+        params = _parse_url_params(course_url)
+        chapter_id = params.get("chapter_id") or ""
+
+        sys.path.insert(0, str(Path(__file__).parent.parent / "e2"))
+        import e2_headed_gha as E
+        E.COURSE_ID = params.get("course_id", "")
+        E.CLAZZ_ID = params.get("clazz_id", "")
+        E.CPI = params.get("cpi", "")
+        E.ENC = params.get("enc", "")
+        E.OPENR = params.get("openc")
+        E.HIDETYPE = params.get("hidetype") or "0"
+
+        from playwright.sync_api import sync_playwright
+        display = os.environ.get("DISPLAY", ":99")
+
+        with sync_playwright() as pwc:
+            browser = pwc.chromium.launch(
+                headless=False, channel="chromium",
+                args=[f"--display={display}", "--no-sandbox",
+                      "--disable-dev-shm-usage", "--disable-gpu"],
+            )
+            ctx = browser.new_context(viewport={"width": 1440, "height": 900})
+            page = ctx.new_page()
+            base = E.build_base_url(chapter_id)
+            page.goto(base, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(3000)
+            try:
+                page.wait_for_selector("#phone", timeout=12000)
+                page.locator("#phone").first.fill(user)
+                page.locator("#pwd").first.fill(pw)
+                for sel in ["button:has-text('登录')", "a.loginbtn", ".loginbtn"]:
+                    try:
+                        if page.locator(sel).count() > 0:
+                            page.locator(sel).first.click(force=True, timeout=3000)
+                            break
+                    except Exception:
+                        pass
+                for _ in range(15):
+                    page.wait_for_timeout(1000)
+                    if "passport2.chaoxing.com/login" not in page.url:
+                        break
+            except Exception:
+                pass
+            page.goto(course_url, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(5000)
             html = page.content()
             browser.close()
             return html
     except Exception as e:
         print(f"[tdvp] fetch_page_html error: {e}", file=sys.stderr)
         return None
+
+
+def build_tasks_from_discovery(chapters_raw: list[dict],
+                               fallback_chapter: str = "") -> list[TaskInfo]:
+    """将 DOM 提取的章节列表转换为 TaskInfo 列表。
+
+    每个 chapter_raw = {chapter_id, title, status, text}
+    """
+    tasks = []
+    for i, ch in enumerate(chapters_raw):
+        cid = str(ch.get("chapter_id", ""))
+        title = ch.get("title", "").strip()
+        if not cid or not title:
+            continue
+        status_raw = ch.get("status", "unknown")
+        if status_raw == "completed":
+            status, conf = "COMPLETED", "UI"
+        elif status_raw == "pending":
+            status, conf = "PENDING", "UI"
+        else:
+            status, conf = "UNKNOWN", "UI"
+        detail = ch.get("text", "")[:80]
+        tasks.append(TaskInfo(
+            task_id=cid,
+            chapter_id=cid,
+            title=title,
+            task_type="video",
+            status=status,
+            confidence=conf,
+            source_detail=detail,
+            evidence=TaskEvidence(status, conf, detail),
+        ))
+    return tasks
 
 
 # ── Evidence Aggregator ────────────────────────────────────────────
