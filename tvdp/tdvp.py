@@ -602,7 +602,8 @@ def build_tasks_from_discovery(chapters_raw: list[dict],
         detail = ch.get("text", "")[:80]
         ch_idx = ch.get("chapter_index", 0)
         cell_idx = ch.get("cell_index", 0)
-        task_id = cid if cid else f"_{ch_idx}_{cell_idx}"
+        # 无 cid 时用全局索引作为唯一标识，避免与旧 registry 的占位符冲突
+        task_id = cid if cid else f"_gi{ch_idx}"
         tasks.append(TaskInfo(
             task_id=task_id,
             chapter_id=cid if cid else "",

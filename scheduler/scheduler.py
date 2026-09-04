@@ -408,8 +408,10 @@ def _run_tdvp_probe(course_url: str, course_key: str) -> Optional[str]:
                 )
                 existing[tid] = tr
             else:
-                # 已有节点: 更新标题, discovery COMPLETED 时同步
+                # 已有节点: 更新标题和位置索引（DOM 顺序可能变化）
                 existing[tid].title = t.title
+                existing[tid]._ch_idx = getattr(t, '_ch_idx', existing[tid]._ch_idx)
+                existing[tid]._cell_idx = getattr(t, '_cell_idx', existing[tid]._cell_idx)
                 if t.status == "COMPLETED":
                     if existing[tid].status not in ("COMPLETED", "VERIFYING"):
                         existing[tid].status = "COMPLETED"
