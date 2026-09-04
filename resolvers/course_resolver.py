@@ -232,29 +232,10 @@ def _verify_via_browser(url: str, cx_user: str, cx_pass: str,
         )
         page = ctx.new_page()
 
-        # 登录
+        # 登录（cookie 优先，无则密码登录）
+        from utils.cookie_store import ensure_login
         base = build_base_url(p["chapter_id"])
-        page.goto(base, wait_until="domcontentloaded", timeout=30000)
-        page.wait_for_timeout(3000)
-        try:
-            page.wait_for_selector("#phone", timeout=12000)
-            page.locator("#phone").first.fill(cx_user)
-            page.locator("#pwd").first.fill(cx_pass)
-            for sel in ["button:has-text('登录')", "a.loginbtn", ".loginbtn"]:
-                try:
-                    if page.locator(sel).count() > 0:
-                        page.locator(sel).first.click(force=True, timeout=3000)
-                        break
-                except Exception:
-                    pass
-            for _ in range(15):
-                page.wait_for_timeout(1000)
-                if "passport2.chaoxing.com/login" not in page.url:
-                    break
-        except Exception as e:
-            evidence["login_error"] = str(e)
-
-        login_ok = "passport2.chaoxing.com/login" not in page.url
+        login_ok = ensure_login(page, ctx, base, cx_user, cx_pass)
         evidence["browser_login_ok"] = login_ok
 
         if not login_ok:

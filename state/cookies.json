@@ -1,0 +1,62 @@
+[
+  {
+    "name": "k8s-head",
+    "value": "1788525517.022.4658.482471",
+    "domain": "mooc1.chaoxing.com",
+    "path": "/head",
+    "expires": -1,
+    "httpOnly": true,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "k8s",
+    "value": "1788525516.77.3823.3152",
+    "domain": "mooc1.chaoxing.com",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": true,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "jrose",
+    "value": "B78B23A42F0820E302E5A38EFC2F0734.mooc-p4-2572288134-jthhj",
+    "domain": "mooc1.chaoxing.com",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "route",
+    "value": "ac9a7739314fa6817cbac7e56032374b",
+    "domain": "mooc1.chaoxing.com",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "jrosehead",
+    "value": "02856B488E66795273D70102A5BF43E6.mooc-portal-1519392517-bttg8",
+    "domain": "mooc1.chaoxing.com",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "thirdRegist",
+    "value": "0",
+    "domain": ".chaoxing.com",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  }
+]

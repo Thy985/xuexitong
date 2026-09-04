@@ -292,29 +292,13 @@ def run_test(args):
             "t": time.time(), "url": resp.url, "status": resp.status
         }) if "/mooc-ans/multimedia/log" in resp.url and resp.status == 200 else None)
 
-        # ── C. 登录 ─────────────────────────────────────────────────
-        log("--- Step C: Login ---")
-        page.goto(build_base_url(args.chapter_id), wait_until="domcontentloaded", timeout=LOGIN_TIMEOUT_S * 1000)
-        page.wait_for_timeout(3000)
-        try:
-            page.wait_for_selector("#phone", timeout=12000)
-            page.locator("#phone").first.fill(os.environ["CX_USER"])
-            page.locator("#pwd").first.fill(os.environ["CX_PASS"])
-            for sel in ["button:has-text('登录')", "a.loginbtn", ".loginbtn", "#login"]:
-                try:
-                    loc = page.locator(sel)
-                    if loc.count() > 0:
-                        loc.first.click(force=True, timeout=3000)
-                        break
-                except Exception:
-                    pass
-            for _ in range(LOGIN_TIMEOUT_S):
-                page.wait_for_timeout(1000)
-                if "passport2.chaoxing.com/login" not in page.url:
-                    break
-        except Exception as e:
-            evidence.setdefault("errors", []).append(f"login_exc: {e}")
-        login_ok = "passport2.chaoxing.com/login" not in page.url
+        # ── C. 登录（cookie 优先，无则密码登录）────────────────────
+        log("--- Step C: Login (cookie-first) ---")
+        from utils.cookie_store import ensure_login
+        base = build_base_url(args.chapter_id)
+        login_ok = ensure_login(page, ctx,
+                                base, os.environ["CX_USER"], os.environ["CX_PASS"],
+                                login_timeout_s=LOGIN_TIMEOUT_S)
         evidence["checks"]["login_ok"] = login_ok
         log(f"Login: ok={login_ok} url={page.url[:80]}")
 
