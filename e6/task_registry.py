@@ -196,7 +196,7 @@ def _ensure_dir(course_key: str) -> Path:
 
 
 def load_registry(course_key: str) -> dict[str, TaskRecord]:
-    f = TASKS_DIR / f"{course_key}.json"
+    f = _ensure_dir(course_key) / "tasks.json"
     if not f.exists():
         return {}
     try:
