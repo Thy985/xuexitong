@@ -1,7 +1,7 @@
 # xuexitong — 学习通自然学习 MVP
 
-> 对超星学习通（chaoxing）课程，**Fork → 设置 Secrets → Initialize → (可选) Switch → GitHub Actions Scheduler**，
-> 系统按计划自动唤醒 Runtime，基于持久化状态决定执行/跳过，输出可审计的 **Evidence**。
+> 对超星学习通（chaoxing）课程，**Fork → 设置 Secrets → Initialize → Scheduler / TDVP 探针 → GitHub Actions 定时**，
+> 系统按计划自动唤醒 Runtime，基于持久化状态和任务队列决定执行/跳过，输出可审计的 **Evidence**。
 
 **重要边界**：本项目仅做"真实浏览器自然播放 → 服务端完成"，**不**构造/伪造/重放
 `multimedia/log`、不修改 `enc/attDurationEnc/videoFaceCaptureEnc/playingTime/_t`、
@@ -44,7 +44,32 @@ gh secret set CX_PASS -b "你的密码"
 
 初始化完成后，`state/active_course.json` 和 `state/courses/<course_id>_<clazz_id>.json` 会自动提交到 main 分支。
 
-### 4. 触发 Scheduler 或 Schedule（自动学习）
+### 4. TDVP 探针（可选，扫描课程任务列表）
+
+**Passive Probe（纯 HTML 解析，秒级完成）**：
+- `action`: **tdvp**
+- `course_url`：课程 URL（任意章节页面均可）
+- `chapter_id`（可选）：指定章节，缺省扫描全部可见章节
+
+Passive Probe 从 studentstudy 页面提取所有章节的任务点，根据 UI 数字标记（`1`=完成，`0`=未完成）生成 `state/tdvp_tasks.json` 任务注册表，并同步课程进度到 `state/courses/<key>.json`。
+
+**结果示例**：
+```
+Total: 8, Completed: 4, Pending: 4, Unknown: 0
+  [COMPLETED] 1.1 互联网概述
+  [PENDING]   1.3 计算机网络的概念与类别   ← 待验证
+  [PENDING]   1.6 计算机网络的体系结构     ← 待验证
+  ...
+next_task: 1217304702_1_3
+```
+
+**Active Probe（对 PENDING 任务调用真实 Runtime）**：
+- `action`: **probe**
+- `course_url` + `task_id`（任务点 ID）
+
+Active Probe 只针对 pending/unknown 任务执行，确认服务端 `isPassed=true`，将 confidence 升级为 `SERVER_VERIFIED`。
+
+### 5. Scheduler 或 Schedule（自动学习）
 
 **手动触发（一次）**：
 - `action`: **scheduler**
@@ -61,13 +86,25 @@ Scheduler 会：
 
 **命令行触发**：
 ```bash
+# TDVP Passive Probe（扫描任务列表）
+gh workflow run run.yml \
+  -f action=tdvp \
+  -f course_url="https://mooc1.chaoxing.com/..."
+
+# Scheduler（执行一次学习）
 gh workflow run run.yml \
   -f action=scheduler \
   -f course_url="https://mooc1.chaoxing.com/..." \
   -f chapter_id=1217304708
+
+# Active Probe（验证单个任务）
+gh workflow run run.yml \
+  -f action=probe \
+  -f course_url="https://mooc1.chaoxing.com/..." \
+  -f task_id=1217304702_1_3
 ```
 
-### 5. 切换课程（可选）
+### 6. 切换课程（可选）
 
 如需学习另一门课程：
 - `action`: **switch**
@@ -83,8 +120,9 @@ Run 完成后，Actions 日志自动打印结构化诊断，并生成 artifact *
 
 | 产物 | 说明 |
 |------|------|
-| `evidence/result.json` | 信封（verdict/passed_count/failure_stage）+ 完整 Evidence（milient：`verification_10`、video_duration、multimedia/log count、isPassed body、nextunit） |
+| `evidence/result.json` | 信封（verdict/passed_count/failure_stage）+ 完整 Evidence |
 | `state/` | 持久化课程状态（跨 Run 有效） |
+| `state/tdvp_tasks.json` | TDVP 任务注册表（章节→任务状态） |
 | `app/` | 产品代码 |
 | `/tmp/diag_*.png` | 失败时截图 |
 
@@ -99,6 +137,20 @@ Run 完成后，Actions 日志自动打印结构化诊断，并生成 artifact *
   "timing_s": 792.5,
   "verdict": "PASS|FAIL|...",
   "error": null
+}
+```
+
+**TDVP 输出字段**：
+```json
+{
+  "action": "tdvp",
+  "course_key": "265997861_151695658",
+  "total_tasks": 8,
+  "completed": 4,
+  "pending": 4,
+  "unknown": 0,
+  "task_queue": ["1217304702_1_3", "1217304702_1_6", ...],
+  "next_task": "1217304702_1_3"
 }
 ```
 
@@ -144,33 +196,70 @@ error:           null
 ```
 xuexitong/
 ├── app/                      # MVP 产品层
-│   ├── run.py                #    入口：initialize/run/scheduler/switch → 自然学习
+│   ├── run.py                #    入口：initialize/run/scheduler/switch/tdvp/probe
 │   └── requirements.txt
-├── scheduler/                # E6: 调度决策引擎（WHEN to run / WHAT to invoke）
+├── scheduler/                # E6: 调度决策引擎
 │   ├── __init__.py
-│   ├── models.py             #    SchedulerState, ExecutionResult 等类型
+│   ├── models.py
 │   └── scheduler.py          #    determine_action(), run_scheduler(), record_result()
+├── tvdp/                     # E7: Task Discovery & Verification Protocol
+│   ├── __init__.py
+│   └── tdvp.py               #    PassiveProbe / ActiveProbe / EvidenceAggregator
 ├── state/                    # 持久化状态（git commit 跨 Run 保留）
 │   ├── active_course.json    #    当前活跃课程 identity key
+│   ├── tdvp_tasks.json       #    TDVP 任务注册表（章节→任务状态）
 │   └── courses/              #    每门课程独立状态文件
 │       └── <course_id>_<clazz_id>.json
 ├── e2/                       # 内部验证引擎（E-series 模式，保留）
-│   └── e2_headed_gha.py      # 参数化 10 项闭合验证（course-URL 通用）
+│   └── e2_headed_gha.py      # 参数化 10 项闭合验证
 ├── e3/                       # 内部可靠性实验（保留）
 │   ├── e3_ci_run.py
 │   └── E3_Final_Report.md
 ├── e6/                       # E6 Evidence Pack
 │   ├── E6_scheduler_report.md
 │   └── evidence_e6.json
+├── e7/                       # E7 Evidence Pack
+│   ├── E7_tdvp_report.md
+│   └── evidence_e7.json
 ├── tests/
 │   ├── test_scheduler.py     #    Scheduler 单元测试（12 cases）
-│   └── ...
+│   ├── test_tdvp.py          #    TDVP 单元测试（16 cases）
+│   └── test_tdvp_integration.py
 ├── .github/workflows/
-│   ├── run.yml               # 产品工作流（initialize/run/scheduler/switch + schedule cron）
+│   ├── run.yml               # 产品工作流（initialize/run/scheduler/switch/tdvp/probe + schedule cron）
 │   ├── e2.yml                # 内部证据/验证工作流（保留）
 │   └── e3.yml                # 内部可靠性工作流（保留）
 └── README.md
 ```
+
+---
+
+## TDVP 两阶段探针协议
+
+```
+Course URL
+    ↓
+Passive Probe（HTML/DOM 解析，不启动浏览器）
+    ↓  识别所有章节任务点的 UI 完成标记
+TaskStatus = COMPLETED / PENDING / UNKNOWN
+    ↓
+Evidence Aggregator
+    ├── COMPLETED(UI)  → weak evidence，无需验证
+    ├── PENDING(UI)    → 需 Active Probe
+    └── UNKNOWN        → 需 Active Probe
+    ↓
+Active Probe（仅对 PENDING/UNKNOWN，调用真实 Runtime）
+    ↓  确认 isPassed=true
+TaskStatus = COMPLETED(SERVER_VERIFIED) / PENDING / UNKNOWN
+    ↓
+Canonical Task State
+    ↓
+Persistent State（state/tdvp_tasks.json + state/courses/*.json）
+```
+
+**决策类型**：`RUN` / `NOOP` / `BLOCKED` / `ERROR`
+**结果类型**：`SUCCESS` / `NOOP` / `BLOCKED` / `FAILED`
+**并发控制**：`concurrency.group: xuexitong-active-course`（同一活跃课程同一时间只有一个执行实例）
 
 ---
 
@@ -190,31 +279,14 @@ GitHub Actions Schedule / Manual Trigger
          ├─ BLOCKED (连续失败 ≥3 次 / 课程被锁定)
          └─ RUN    (有工作，调用现有 Runtime)
               ↓
-          Browser Runtime       ← 同一 app/run.py --action run
+           Browser Runtime       ← 同一 app/run.py --action run
               ↓
-          Verification
+           Verification
               ↓
-       record_result()         ← 更新 scheduler state (consecutive_failures 等)
+        record_result()         ← 更新 scheduler state (consecutive_failures 等)
               ↓
-          Persist (git commit + push to main)
+           Persist (git commit + push to main)
 ```
-
-**决策类型**：`RUN` / `NOOP` / `BLOCKED` / `ERROR`
-**结果类型**：`SUCCESS` / `NOOP` / `BLOCKED` / `FAILED`
-**并发控制**：`concurrency.group: xuexitong-active-course`（同一活跃课程同一时间只有一个执行实例）
-
----
-
-## 内部 Evidence / 实验模式（保留入口）
-
-产品引擎的原始 E-series 实验与证据入口仍在：
-
-| 工作流 | 说明 |
-|--------|------|
-| `e2.yml` | 有头浏览器(Chromium+Xvfb)对指定 `chapter_id` 跑 10 项闭合验证（默认 1.6 演示课程） |
-| `e3.yml` | E3 可靠性连跑（`run_label`/`chapter_id`） |
-
-这些不变，仅供审计/复现原始实验；产品模式统一走 `run.yml`。
 
 ---
 
@@ -224,10 +296,19 @@ GitHub Actions Schedule / Manual Trigger
 Xvfb :99 -screen 0 1440x900x24 -ac &
 export DISPLAY=:99
 export CX_USER=... CX_PASS=...
-# Initialize（创建/切换课程状态）
+
+# Initialize（创建课程状态）
 python app/run.py --action initialize --course-url "https://mooc1.chaoxing.com/..." --output ./evidence/result.json
+
+# TDVP Passive Probe（扫描任务列表，纯 HTML 解析）
+python app/run.py --action tdvp --course-url "https://mooc1.chaoxing.com/..." --output ./evidence/result.json
+
+# Active Probe（验证单个 pending 任务）
+python app/run.py --action probe --course-url "https://mooc1.chaoxing.com/..." --task-id 1217304702_1_3 --output ./evidence/probe_result.json
+
 # Scheduler（决定并执行学习）
 python app/run.py --action scheduler --course-url "https://mooc1.chaoxing.com/..." --chapter-id 1217304706 --trigger manual --run-id local --output ./evidence/result.json
+
 # 直接 Run（单视频学习）
 python app/run.py --action run --course-url "https://mooc1.chaoxing.com/..." --chapter-id 1217304706 --output ./evidence/run_<ts>.json
 ```
@@ -250,3 +331,5 @@ python app/run.py --action run --course-url "https://mooc1.chaoxing.com/..." --c
 4. **并发限制**：同一账号同时运行多个 MVP 会互相踢会话，请使用不同账号或串行执行。
 5. **State 持久化**：`state/` 目录通过 git commit 跨 Run 保留。确保仓库 GITHUB_TOKEN 有 write 权限（已默认配置）。
 6. **Schedule 频率**：默认每日 UTC 02:00 触发一次。如需调整，修改 `.github/workflows/run.yml` 中的 cron 表达式。
+7. **TDVP Passive Probe**：依赖学习通页面 DOM 结构（`.task-item > .status` 数字标记），UI 改版可能需要调整解析正则。
+8. **Task ID 格式**：任务 ID 格式为 `<chapter_id>_<section_num>`（如 `1217304702_1_3`），由 Passive Probe 从页面标题提取。
