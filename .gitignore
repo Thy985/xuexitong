@@ -7,3 +7,7 @@ e2/__pycache__/
 *.log
 /tmp/*
 !/.github/workflows/
+e3out/
+e6_out/
+evidence/
+*.tmp
