@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "status": "BLOCKED",
-  "run_count": 13,
+  "status": "ACTIVE",
+  "run_count": 12,
   "success_count": 10,
-  "failure_count": 3,
+  "failure_count": 2,
   "course_identity": {
     "course_id": "265997861",
     "clazz_id": "151695658",
@@ -18,9 +18,9 @@
     "last_completed_task": "1217304706",
     "active_task": "__click_probe__:0:0"
   },
-  "last_run": "2026-09-04T07:24:54.722715+00:00",
+  "last_run": "2026-09-04T06:51:34.786269+00:00",
   "last_success": "2026-09-04T06:20:00.555884+00:00",
-  "last_failure": "2026-09-04T07:24:54.722715+00:00",
+  "last_failure": "2026-09-04T06:51:34.786269+00:00",
   "last_completed_task": "1217304706",
   "active_task": "__click_probe__:0:0",
   "history": [
@@ -93,38 +93,17 @@
       "passed": true,
       "verdict": "PASS",
       "chapter_id": "1217304706"
-    },
-    {
-      "run_at_utc": "2026-09-04T06:37:13.488131+00:00",
-      "timing_s": 210.8,
-      "passed": false,
-      "verdict": "FAIL",
-      "chapter_id": "__click_probe__:0:0"
-    },
-    {
-      "run_at_utc": "2026-09-04T06:51:34.786269+00:00",
-      "timing_s": 214.0,
-      "passed": false,
-      "verdict": "FAIL",
-      "chapter_id": "__click_probe__:0:0"
-    },
-    {
-      "run_at_utc": "2026-09-04T07:24:54.722715+00:00",
-      "timing_s": 209.1,
-      "passed": false,
-      "verdict": "FAIL",
-      "chapter_id": "__click_probe__:0:0"
     }
   ],
   "scheduler": {
-    "last_scheduled_at": "2026-09-04T07:24:54.747738+00:00",
-    "last_started_at": "2026-09-04T07:24:54.747738+00:00",
-    "last_finished_at": "2026-09-04T07:24:54.747918+00:00",
+    "last_scheduled_at": "2026-09-04T06:51:34.808694+00:00",
+    "last_started_at": "2026-09-04T06:51:34.808694+00:00",
+    "last_finished_at": "2026-09-04T06:51:34.808875+00:00",
     "last_result": "FAILED",
-    "last_run_id": "33848265087",
-    "last_trigger": "manual",
-    "consecutive_failures": 3,
-    "execution_id": "33848265087",
-    "attempt": 15
+    "last_run_id": "33845799601",
+    "last_trigger": "schedule",
+    "consecutive_failures": 2,
+    "execution_id": "33845799601",
+    "attempt": 14
   }
 }

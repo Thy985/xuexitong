@@ -359,48 +359,66 @@ def _write_summary(summary: dict) -> None:
 
 
 def _run_tdvp_probe(course_url: str, course_key: str) -> Optional[str]:
-    """内置 TDVP Passive Probe：读取目录树，选择下一个未执行章节。
+    """E6 TDVP Probe: Discovery -> Sync E6 Registry -> Reconcile Queue -> pick next task.
 
-    借鉴 xuexitongScript/v3 思路：不依赖不可靠的"已完成/待完成"标记，
-    而是按目录树顺序遍历所有小节，结合本系统 state history
-    （已 PASS 的章节列表）排除已完成章节，返回第一个未执行章节。
-
-    流程：
-      1. Playwright 登录 → 打开 studentstudy 页面（约 10-20s）
-      2. DOM 提取 #coursetree 目录树全部小节（标题 + chapterId + 顺序）
-      3. 读取 state history 已 PASS 的 chapter_id 集合
-      4. 按目录顺序返回第一个不在已执行集合中的 chapter_id
-      5. 更新 task registry + course state
+    Returns:
+        chapter_id string, or None if all chapters done.
     """
     try:
         from tvdp.tdvp import (
             fetch_course_discovery, build_tasks_from_discovery,
         )
+        from e6.task_registry import load_registry, save_registry, reconcile_queue
+        from e6.click_probe import click_probe_chapter_id
         from resolvers.course_resolver import _parse_url_params
-        from state.course_state import load_course_state, COURSES_DIR
+        from state.course_state import load_course_state
 
         params = _parse_url_params(course_url)
 
-        # ── 1. 提取目录树（DOM，借鉴 v3 的 #coursetree 结构）──────
+        # 1. DOM 提取目录树
         chapters_raw = fetch_course_discovery(course_url)
         if not chapters_raw:
             print("[scheduler] TDVP: fetch returned empty, "
-                   "falling back to URL chapter_id", file=sys.stderr)
+                  "falling back to URL chapter_id", file=sys.stderr)
             return params.get("chapter_id")
 
-        # ── 2. 构建 task registry（保留 DOM 顺序）─────────────────
-        tasks = build_tasks_from_discovery(chapters_raw,
-                                           fallback_chapter=params.get("chapter_id") or "")
-        from tvdp.tdvp import save_task_registry
-        registry = {t.task_id: t for t in tasks}
-        save_task_registry(course_key, registry)
-        print(f"[scheduler] TDVP: DOM found {len(tasks)} entries", flush=True)
+        # 2. 构建/合并 E6 Task Registry
+        tasks = build_tasks_from_discovery(chapters_raw)
+        existing = load_registry(course_key)
+        for t in tasks:
+            tid = t.task_id
+            if tid not in existing:
+                # 新发现的节点: 继承 discovery 的 status
+                if t.status == "COMPLETED":
+                    init_status = "COMPLETED"
+                elif t.status == "PENDING":
+                    init_status = "PENDING"
+                else:
+                    init_status = "DISCOVERED"
+                from e6.task_registry import TaskRecord
+                tr = TaskRecord(
+                    task_id=tid,
+                    chapter_id=t.chapter_id or "",
+                    title=t.title,
+                    task_type="video",
+                    status=init_status,
+                    priority=len(existing),
+                    _ch_idx=getattr(t, '_ch_idx', 0),
+                    _cell_idx=getattr(t, '_cell_idx', 0),
+                )
+                existing[tid] = tr
+            else:
+                # 已有节点: 更新标题, discovery COMPLETED 时同步
+                existing[tid].title = t.title
+                if t.status == "COMPLETED":
+                    if existing[tid].status not in ("COMPLETED", "VERIFYING"):
+                        existing[tid].status = "COMPLETED"
+        save_registry(course_key, existing)
+        print(f"[scheduler] TDVP: registry has {len(existing)} tasks", flush=True)
+        for t in list(existing.values())[:8]:
+            print(f"    - [{t.status}] cid={t.chapter_id or '?'} {t.title}", flush=True)
 
-        # 打印目录树前几个条目便于调试
-        for t in tasks[:6]:
-            print(f"    - {t.chapter_id} [{t.status}] {t.title}", flush=True)
-
-        # ── 3. 读取已完成的 chapter_id 集合（state history）───────
+        # 3. 读取已完成的 chapter_id 集合
         done_ids = set()
         try:
             state = load_course_state(course_key)
@@ -414,40 +432,67 @@ def _run_tdvp_probe(course_url: str, course_key: str) -> Optional[str]:
         print(f"[scheduler] TDVP: done={len(done_ids)} chapters: "
               f"{sorted(done_ids)}", flush=True)
 
-        # ── 4. 按 DOM 目录顺序选第一个未执行的章节 ─────────────────
-        # tasks 列表已是 DOM 顺序（按目录树遍历顺序），直接遍历即可
-        # 规则：
-        #   (a) 有 chapter_id 且不在 history 的 → 直接返回
-        #   (b) 无 chapter_id 的 → 返回 click_probe 信号（让 probe 点击获取）
-        #       但只找 status != COMPLETED 的（已完成节点不可能是下一个任务）
-        for t in tasks:
-            if t.chapter_id and t.chapter_id not in done_ids:
-                print(f"[scheduler] TDVP: next_chapter={t.chapter_id} "
-                      f"({t.title})", flush=True)
-                return t.chapter_id
-            if t.chapter_id and t.chapter_id in done_ids:
-                continue  # 已执行，跳过
-            # 无 chapter_id：检查是否可能是未完成节点
-            if t.status != "COMPLETED":
-                ch_idx = getattr(t, '_ch_idx', 0)
-                cell_idx = getattr(t, '_cell_idx', 0)
-                print(f"[scheduler] TDVP: no cid, click-probe: "
-                      f"ci={ch_idx} si={cell_idx} ({t.title})", flush=True)
-                return f"__click_probe__:{ch_idx}:{cell_idx}"
+        # 4. Reconcile Queue
+        queue = reconcile_queue(course_key, existing, done_ids)
+        print(f"[scheduler] TDVP: queue has {len(queue.items)} READY tasks", flush=True)
 
-        print("[scheduler] TDVP: all chapters done — no next task", flush=True)
+        # 5. 选下一个任务
+        if not queue.items:
+            print("[scheduler] TDVP: queue empty - all chapters done", flush=True)
+            return None
+
+        next_item = queue.items[0]
+        next_tid = next_item.get("task_id", "")
+        next_rec = existing.get(next_tid)
+        if not next_rec:
+            print(f"[scheduler] TDVP: next task {next_tid} not in registry", flush=True)
+            return None
+
+        # 有 chapter_id -> 直接返回
+        if next_rec.chapter_id:
+            print(f"[scheduler] TDVP: next_chapter={next_rec.chapter_id} "
+                  f"({next_rec.title})", flush=True)
+            return next_rec.chapter_id
+
+        # 无 chapter_id -> click_probe 获取
+        ch_idx = next_rec._ch_idx
+        cell_idx = next_rec._cell_idx
+        print(f"[scheduler] TDVP: no cid, click-probe ci={ch_idx} si={cell_idx} "
+              f"({next_rec.title})", flush=True)
+        resolved_cid = click_probe_chapter_id(course_url, ch_idx, cell_idx)
+        if resolved_cid:
+            next_rec.chapter_id = resolved_cid
+            save_registry(course_key, existing)
+            queue2 = reconcile_queue(course_key, existing, done_ids)
+            if queue2.items:
+                rec2 = existing.get(queue2.items[0]["task_id"])
+                if rec2 and rec2.chapter_id:
+                    print(f"[scheduler] TDVP: click-probe resolved -> {rec2.chapter_id}",
+                          flush=True)
+                    return rec2.chapter_id
+        else:
+            print("[scheduler] TDVP: click-probe failed, trying fallback", flush=True)
+
+        # fallback: 取队列第二个任务
+        queue3 = reconcile_queue(course_key, existing, done_ids)
+        if len(queue3.items) > 1:
+            second = queue3.items[1]
+            rec2 = existing.get(second["task_id"])
+            if rec2 and rec2.chapter_id:
+                print(f"[scheduler] TDVP: fallback to 2nd task: {rec2.chapter_id}", flush=True)
+                return rec2.chapter_id
+
+        print("[scheduler] TDVP: no executable task with chapter_id found", flush=True)
         return None
 
     except Exception as e:
         print(f"[scheduler] TDVP probe failed (non-fatal): {e}", file=sys.stderr)
-        # fallback：从 URL 取 chapter_id
         try:
             from resolvers.course_resolver import _parse_url_params
             params = _parse_url_params(course_url)
             return params.get("chapter_id")
         except Exception:
             return None
-
 
 def sync_tdvp_on_switch(new_identity, course_url: str) -> None:
     """课程切换时同步 TDVP 状态。"""
