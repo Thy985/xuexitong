@@ -308,6 +308,12 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
     proc = subprocess.run(cmd, capture_output=True, text=True, timeout=1500)
     timing = time.time() - t0
 
+    # 打印子进程输出（便于 CI 诊断执行失败原因）
+    if proc.stdout:
+        print(proc.stdout[-2000:], flush=True)
+    if proc.stderr:
+        print(f"[stderr] {proc.stderr[-2000:]}", file=sys.stderr, flush=True)
+
     passed = proc.returncode == 0
     verdict = "PASS" if passed else "FAIL"
 

@@ -286,9 +286,10 @@ def fetch_course_discovery(course_url: str, cx_user: Optional[str] = None,
                         let status = 'unknown';
                         if (cell.classList.contains('posCatalog_finish') ||
                             cell.classList.contains('flip') ||
-                            /已完成/.test(text)) {
+                            cell.querySelector('.icon_Completed') ||
+                            /已完成|Completed/i.test(text)) {
                             status = 'completed';
-                        } else if (/待完成|未完成/.test(text)) {
+                        } else if (/待完成|未完成|Pending/i.test(text)) {
                             status = 'pending';
                         }
                         // 从节点的 onclick / data 属性提取 chapterId

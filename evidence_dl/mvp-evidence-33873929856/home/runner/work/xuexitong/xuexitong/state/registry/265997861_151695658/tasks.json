@@ -1,0 +1,1597 @@
+{
+  "1217304700": {
+    "task_id": "1217304700",
+    "chapter_id": "1217304700",
+    "title": "互联网概述",
+    "task_type": "video",
+    "status": "COMPLETED",
+    "priority": 106,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T09:56:28.747708+00:00",
+    "updated_at_utc": "2026-09-04T09:56:28.747708+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 0,
+    "_cell_idx": 0
+  },
+  "1217304706": {
+    "task_id": "1217304706",
+    "chapter_id": "1217304706",
+    "title": "物理层的主要任务",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 10,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T07:36:36.732281+00:00",
+    "updated_at_utc": "2026-09-04T07:36:36.732281+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 10,
+    "_cell_idx": 10
+  },
+  "1217304701": {
+    "task_id": "1217304701",
+    "chapter_id": "1217304701",
+    "title": "互联网的组成",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160439+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160439+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 1,
+    "_cell_idx": 1
+  },
+  "1217304702": {
+    "task_id": "1217304702",
+    "chapter_id": "1217304702",
+    "title": "计算机网络的概念与类别",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160449+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160449+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 2,
+    "_cell_idx": 2
+  },
+  "1217304703": {
+    "task_id": "1217304703",
+    "chapter_id": "1217304703",
+    "title": "计算机网络的拓扑结构",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160457+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160457+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 3,
+    "_cell_idx": 3
+  },
+  "1217304704": {
+    "task_id": "1217304704",
+    "chapter_id": "1217304704",
+    "title": "计算机网络的性能",
+    "task_type": "video",
+    "status": "PENDING",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160498+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160498+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 4,
+    "_cell_idx": 4
+  },
+  "1217304705": {
+    "task_id": "1217304705",
+    "chapter_id": "1217304705",
+    "title": "计算机网络的体系结构",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160508+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160508+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 5,
+    "_cell_idx": 5
+  },
+  "1217304707": {
+    "task_id": "1217304707",
+    "chapter_id": "1217304707",
+    "title": "知识扩展",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160514+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160514+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 6,
+    "_cell_idx": 6
+  },
+  "1217304710": {
+    "task_id": "1217304710",
+    "chapter_id": "1217304710",
+    "title": "线上学习任务",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160520+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160520+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 7,
+    "_cell_idx": 7
+  },
+  "1217304711": {
+    "task_id": "1217304711",
+    "chapter_id": "1217304711",
+    "title": "思维导图简介",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160526+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160526+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 8,
+    "_cell_idx": 8
+  },
+  "1217304713": {
+    "task_id": "1217304713",
+    "chapter_id": "1217304713",
+    "title": "本章思维导图",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160531+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160531+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 9,
+    "_cell_idx": 9
+  },
+  "1217304708": {
+    "task_id": "1217304708",
+    "chapter_id": "1217304708",
+    "title": "数据通信的基础知识",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160540+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160540+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 11,
+    "_cell_idx": 11
+  },
+  "1217304712": {
+    "task_id": "1217304712",
+    "chapter_id": "1217304712",
+    "title": "物理层下面的传输媒体",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160546+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160546+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 12,
+    "_cell_idx": 12
+  },
+  "1217304714": {
+    "task_id": "1217304714",
+    "chapter_id": "1217304714",
+    "title": "信道复用技术",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160552+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160552+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 13,
+    "_cell_idx": 13
+  },
+  "1217304715": {
+    "task_id": "1217304715",
+    "chapter_id": "1217304715",
+    "title": "数字传输系统",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160557+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160557+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 14,
+    "_cell_idx": 14
+  },
+  "1217304716": {
+    "task_id": "1217304716",
+    "chapter_id": "1217304716",
+    "title": "宽带接入技术",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160563+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160563+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 15,
+    "_cell_idx": 15
+  },
+  "1217304717": {
+    "task_id": "1217304717",
+    "chapter_id": "1217304717",
+    "title": "数据链路层概述",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160569+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160569+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 18,
+    "_cell_idx": 18
+  },
+  "1217304719": {
+    "task_id": "1217304719",
+    "chapter_id": "1217304719",
+    "title": "点对点协议PPP",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160574+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160574+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 19,
+    "_cell_idx": 19
+  },
+  "1217304721": {
+    "task_id": "1217304721",
+    "chapter_id": "1217304721",
+    "title": "使用广播信道的数据链路层",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160580+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160580+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 20,
+    "_cell_idx": 20
+  },
+  "1217304722": {
+    "task_id": "1217304722",
+    "chapter_id": "1217304722",
+    "title": "扩展的以太网",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160585+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160585+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 21,
+    "_cell_idx": 21
+  },
+  "1217304724": {
+    "task_id": "1217304724",
+    "chapter_id": "1217304724",
+    "title": "高速以太网",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160591+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160591+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 22,
+    "_cell_idx": 22
+  },
+  "1217304725": {
+    "task_id": "1217304725",
+    "chapter_id": "1217304725",
+    "title": "能力提升",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160597+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160597+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 23,
+    "_cell_idx": 23
+  },
+  "1217304726": {
+    "task_id": "1217304726",
+    "chapter_id": "1217304726",
+    "title": "学习目标和重点难点",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160603+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160603+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 24,
+    "_cell_idx": 24
+  },
+  "1217304728": {
+    "task_id": "1217304728",
+    "chapter_id": "1217304728",
+    "title": "网络层概述",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160609+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160609+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 27,
+    "_cell_idx": 27
+  },
+  "1217304730": {
+    "task_id": "1217304730",
+    "chapter_id": "1217304730",
+    "title": "分类的IP地址",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160614+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160614+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 28,
+    "_cell_idx": 28
+  },
+  "1217304731": {
+    "task_id": "1217304731",
+    "chapter_id": "1217304731",
+    "title": "子网划分",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160620+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160620+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 29,
+    "_cell_idx": 29
+  },
+  "1217304732": {
+    "task_id": "1217304732",
+    "chapter_id": "1217304732",
+    "title": "无分类编址CIDR",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160626+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160626+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 30,
+    "_cell_idx": 30
+  },
+  "1217304733": {
+    "task_id": "1217304733",
+    "chapter_id": "1217304733",
+    "title": "IP数据报的格式",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160632+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160632+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 31,
+    "_cell_idx": 31
+  },
+  "1217304734": {
+    "task_id": "1217304734",
+    "chapter_id": "1217304734",
+    "title": "IP数据报的分片与重组",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160640+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160640+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 32,
+    "_cell_idx": 32
+  },
+  "1217304735": {
+    "task_id": "1217304735",
+    "chapter_id": "1217304735",
+    "title": "IP层转发分组的流程",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160646+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160646+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 33,
+    "_cell_idx": 33
+  },
+  "1217304736": {
+    "task_id": "1217304736",
+    "chapter_id": "1217304736",
+    "title": "ARP协议",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160652+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160652+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 34,
+    "_cell_idx": 34
+  },
+  "1217304737": {
+    "task_id": "1217304737",
+    "chapter_id": "1217304737",
+    "title": "ICMP协议",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160658+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160658+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 35,
+    "_cell_idx": 35
+  },
+  "1217304738": {
+    "task_id": "1217304738",
+    "chapter_id": "1217304738",
+    "title": "IPV6",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160664+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160664+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 36,
+    "_cell_idx": 36
+  },
+  "1217304739": {
+    "task_id": "1217304739",
+    "chapter_id": "1217304739",
+    "title": "路由协议概述",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160672+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160672+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 37,
+    "_cell_idx": 37
+  },
+  "1217304740": {
+    "task_id": "1217304740",
+    "chapter_id": "1217304740",
+    "title": "RIP协议",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160679+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160679+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 38,
+    "_cell_idx": 38
+  },
+  "1217304741": {
+    "task_id": "1217304741",
+    "chapter_id": "1217304741",
+    "title": "OSPF协议",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160685+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160685+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 39,
+    "_cell_idx": 39
+  },
+  "1217304742": {
+    "task_id": "1217304742",
+    "chapter_id": "1217304742",
+    "title": "IP多播",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160691+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160691+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 40,
+    "_cell_idx": 40
+  },
+  "1217304743": {
+    "task_id": "1217304743",
+    "chapter_id": "1217304743",
+    "title": "VPN和NAT",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160697+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160697+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 41,
+    "_cell_idx": 41
+  },
+  "1217304745": {
+    "task_id": "1217304745",
+    "chapter_id": "1217304745",
+    "title": "课后习题",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160703+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160703+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 43,
+    "_cell_idx": 43
+  },
+  "1217304749": {
+    "task_id": "1217304749",
+    "chapter_id": "1217304749",
+    "title": "运输层协议概述",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160709+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160709+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 47,
+    "_cell_idx": 47
+  },
+  "1217304750": {
+    "task_id": "1217304750",
+    "chapter_id": "1217304750",
+    "title": "UDP和TCP概述",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160716+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160716+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 48,
+    "_cell_idx": 48
+  },
+  "1217304751": {
+    "task_id": "1217304751",
+    "chapter_id": "1217304751",
+    "title": "TCP报文段的格式",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160722+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160722+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 49,
+    "_cell_idx": 49
+  },
+  "1217304752": {
+    "task_id": "1217304752",
+    "chapter_id": "1217304752",
+    "title": "可靠传输的工作原理",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160728+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160728+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 50,
+    "_cell_idx": 50
+  },
+  "1217304753": {
+    "task_id": "1217304753",
+    "chapter_id": "1217304753",
+    "title": "TCP可靠传输的实现",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160734+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160734+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 51,
+    "_cell_idx": 51
+  },
+  "1217304754": {
+    "task_id": "1217304754",
+    "chapter_id": "1217304754",
+    "title": "TCP的流量控制",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160740+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160740+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 52,
+    "_cell_idx": 52
+  },
+  "1217304755": {
+    "task_id": "1217304755",
+    "chapter_id": "1217304755",
+    "title": "TCP的拥塞控制",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160747+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160747+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 53,
+    "_cell_idx": 53
+  },
+  "1217304756": {
+    "task_id": "1217304756",
+    "chapter_id": "1217304756",
+    "title": "TCP的运输连接管理",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160753+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160753+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 54,
+    "_cell_idx": 54
+  },
+  "1217304758": {
+    "task_id": "1217304758",
+    "chapter_id": "1217304758",
+    "title": "扩展阅读",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160759+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160759+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 56,
+    "_cell_idx": 56
+  },
+  "1217304763": {
+    "task_id": "1217304763",
+    "chapter_id": "1217304763",
+    "title": "DNS域名服务器",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160766+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160766+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 61,
+    "_cell_idx": 61
+  },
+  "1217304764": {
+    "task_id": "1217304764",
+    "chapter_id": "1217304764",
+    "title": "文件传送协议FTP",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160772+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160772+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 62,
+    "_cell_idx": 62
+  },
+  "1217304771": {
+    "task_id": "1217304771",
+    "chapter_id": "1217304771",
+    "title": "万维网WWW",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160779+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160779+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 63,
+    "_cell_idx": 63
+  },
+  "1217304773": {
+    "task_id": "1217304773",
+    "chapter_id": "1217304773",
+    "title": "电子邮件E_mail",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160785+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160785+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 64,
+    "_cell_idx": 64
+  },
+  "1217304775": {
+    "task_id": "1217304775",
+    "chapter_id": "1217304775",
+    "title": "动态主机配置协议DHCP",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160792+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160792+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 65,
+    "_cell_idx": 65
+  },
+  "1217304781": {
+    "task_id": "1217304781",
+    "chapter_id": "1217304781",
+    "title": "目的和要求",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160799+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160799+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 70,
+    "_cell_idx": 70
+  },
+  "1217304784": {
+    "task_id": "1217304784",
+    "chapter_id": "1217304784",
+    "title": "参考资料",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 55,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160805+00:00",
+    "updated_at_utc": "2026-09-04T11:32:26.160805+00:00",
+    "last_run_at_utc": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 71,
+    "_cell_idx": 71
+  }
+}
