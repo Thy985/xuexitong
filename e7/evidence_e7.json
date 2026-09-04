@@ -1,0 +1,81 @@
+{
+  "experiment": "E7",
+  "title": "Task Discovery & Verification Protocol (TDVP)",
+  "date": "2026-09-04",
+  "verdict": "PASS",
+  "architecture": "Two-Stage Probe: Passive (HTML/DOM) + Active (Runtime Verification)",
+  "new_files": [
+    "tvdp/__init__.py",
+    "tvdp/tdvp.py",
+    "tests/test_tdvp.py",
+    "tests/test_tdvp_integration.py"
+  ],
+  "modified_files": [],
+  "evidence_pack": {
+    "report": "e7/E7_tdvp_report.md"
+  },
+  "data_model": {
+    "TaskEvidence": {
+      "fields": ["status", "confidence", "source_detail", "observed_at_utc"],
+      "status_values": ["COMPLETED", "PENDING", "UNKNOWN"],
+      "confidence_values": ["UI", "SERVER_VERIFIED", "UNKNOWN"]
+    },
+    "TaskInfo": {
+      "fields": ["task_id", "chapter_id", "title", "task_type", "status", "confidence", "source_detail", "evidence", "discovered_at_utc"]
+    },
+    "ChapterInfo": {
+      "fields": ["chapter_id", "title", "tasks"]
+    },
+    "CourseDiscovery": {
+      "fields": ["course_key", "chapters", "discovered_at_utc"],
+      "properties": ["all_tasks", "completed_tasks", "pending_tasks", "unknown_tasks"]
+    }
+  },
+  "passive_probe": {
+    "method": "HTML/DOM parsing of studentstudy page",
+    "selector": ".task-item > .title + .status",
+    "marker_rule": "0=pending, 1+=completed, absent=unknown",
+    "实测结果": {
+      "total": 8,
+      "completed": 4,
+      "pending": 4,
+      "unknown": 0
+    }
+  },
+  "evidence_aggregator": {
+    "rules": [
+      "SERVER_VERIFIED > UI",
+      "PENDING(UI) + Active->COMPLETED => COMPLETED(SERVER_VERIFIED)",
+      "COMPLETED(UI) + Active->PENDING => overwrite with active result"
+    ]
+  },
+  "task_registry": {
+    "storage": "state/tdvp_tasks.json",
+    "format": "{course_key: {task_id: TaskInfo.to_dict()}}"
+  },
+  "progress_sync": {
+    "updates_course_state": true,
+    "fields_updated": ["progress.completed", "progress.total", "progress.last_completed_task", "progress.active_task", "discoveries"]
+  },
+  "unit_tests": {
+    "total": 18,
+    "passed": 18,
+    "skipped": 0,
+    "failures": 0,
+    "full_suite": "77 passed, 1 skipped"
+  },
+  "constraints_satisfied": {
+    "not_modified_browser_runtime": true,
+    "no_automated_sequential_execution": true,
+    "no_scheduler": true
+  },
+  "api_surface": {
+    "run_passive_probe": "course_url, html, chapter_id? -> CourseDiscovery",
+    "run_active_probe": "course_url, task_id, chapter_id?, output? -> TaskInfo|None",
+    "aggregate_evidence": "passive, active? -> dict[task_id: TaskInfo]",
+    "save_task_registry": "course_key, tasks",
+    "load_task_registry": "course_key -> dict[task_id: TaskInfo]",
+    "get_pending_tasks": "course_key -> list[TaskInfo]",
+    "sync_progress_to_course_state": "course_key, discovery -> dict"
+  }
+}

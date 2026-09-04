@@ -1,0 +1,38 @@
+"""TDVP module — Task Discovery & Verification Protocol."""
+from .tdvp import (
+    TaskInfo,
+    TaskEvidence,
+    ChapterInfo,
+    CourseDiscovery,
+    TaskStatus,
+    ProbeSource,
+    parse_task_status_from_page,
+    aggregate_evidence,
+    load_task_registry,
+    save_task_registry,
+    get_pending_tasks,
+    get_completed_tasks,
+    sync_progress_to_course_state,
+    discover_course,
+    run_passive_probe,
+    run_active_probe,
+)
+
+__all__ = [
+    "TaskInfo",
+    "TaskEvidence",
+    "ChapterInfo",
+    "CourseDiscovery",
+    "TaskStatus",
+    "ProbeSource",
+    "parse_task_status_from_page",
+    "aggregate_evidence",
+    "load_task_registry",
+    "save_task_registry",
+    "get_pending_tasks",
+    "get_completed_tasks",
+    "sync_progress_to_course_state",
+    "discover_course",
+    "run_passive_probe",
+    "run_active_probe",
+]
