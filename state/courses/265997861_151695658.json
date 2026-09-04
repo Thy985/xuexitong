@@ -38,14 +38,14 @@
     }
   ],
   "scheduler": {
-    "last_scheduled_at": "2026-09-04T01:26:51.435040+00:00",
-    "last_started_at": "2026-09-04T01:26:51.435040+00:00",
-    "last_finished_at": "2026-09-04T01:26:51.435235+00:00",
-    "last_result": "SUCCESS",
-    "last_run_id": "33825191953",
+    "last_scheduled_at": "2026-09-04T02:10:31.653187+00:00",
+    "last_started_at": "2026-09-04T02:10:31.653187+00:00",
+    "last_finished_at": "2026-09-04T02:10:31.653735+00:00",
+    "last_result": "FAILED",
+    "last_run_id": "local",
     "last_trigger": "manual",
-    "consecutive_failures": 0,
-    "execution_id": "33825191953",
-    "attempt": 2
+    "consecutive_failures": 2,
+    "execution_id": "local",
+    "attempt": 4
   }
 }

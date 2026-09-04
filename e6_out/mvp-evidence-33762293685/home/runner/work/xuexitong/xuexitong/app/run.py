@@ -292,8 +292,8 @@ def main():
     )
     ap.add_argument("--action", choices=["initialize", "run", "scheduler", "switch"],
                     default="run", help="操作模式（默认 run）")
-    ap.add_argument("--course-url", default=None,
-                    help="学习通 studentstudy URL（scheduler 模式下可选，从 state 读取）")
+    ap.add_argument("--course-url", required=True,
+                    help="学习通 studentstudy URL")
     ap.add_argument("--chapter-id", default=None,
                     help="要学习的章节 id（run 模式）")
     ap.add_argument("--max-chapters", type=int, default=1,

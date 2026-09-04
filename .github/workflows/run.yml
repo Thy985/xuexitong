@@ -120,7 +120,7 @@ jobs:
             --output ./evidence/result.json
           echo "switch-complete"
 
-      # ── Scheduler 模式: 自动决定并执行 ─────────────────────────────
+      # ── Scheduler 模式: 自动决定并执行（内置 TDVP 探针）────────────
       - name: Run Scheduler
         if: github.event.inputs.action == 'scheduler' || (github.event.schedule && !github.event.inputs.action)
         continue-on-error: true

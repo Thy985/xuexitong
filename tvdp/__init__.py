@@ -15,7 +15,6 @@ from .tdvp import (
     sync_progress_to_course_state,
     discover_course,
     run_passive_probe,
-    run_active_probe,
 )
 
 __all__ = [
@@ -34,5 +33,4 @@ __all__ = [
     "sync_progress_to_course_state",
     "discover_course",
     "run_passive_probe",
-    "run_active_probe",
 ]

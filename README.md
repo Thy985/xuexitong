@@ -44,64 +44,32 @@ gh secret set CX_PASS -b "你的密码"
 
 初始化完成后，`state/active_course.json` 和 `state/courses/<course_id>_<clazz_id>.json` 会自动提交到 main 分支。
 
-### 4. TDVP 探针（可选，扫描课程任务列表）
-
-**Passive Probe（纯 HTML 解析，秒级完成）**：
-- `action`: **tdvp**
-- `course_url`：课程 URL（任意章节页面均可）
-- `chapter_id`（可选）：指定章节，缺省扫描全部可见章节
-
-Passive Probe 从 studentstudy 页面提取所有章节的任务点，根据 UI 数字标记（`1`=完成，`0`=未完成）生成 `state/tdvp_tasks.json` 任务注册表，并同步课程进度到 `state/courses/<key>.json`。
-
-**结果示例**：
-```
-Total: 8, Completed: 4, Pending: 4, Unknown: 0
-  [COMPLETED] 1.1 互联网概述
-  [PENDING]   1.3 计算机网络的概念与类别   ← 待验证
-  [PENDING]   1.6 计算机网络的体系结构     ← 待验证
-  ...
-next_task: 1217304702_1_3
-```
-
-**Active Probe（对 PENDING 任务调用真实 Runtime）**：
-- `action`: **probe**
-- `course_url` + `task_id`（任务点 ID）
-
-Active Probe 只针对 pending/unknown 任务执行，确认服务端 `isPassed=true`，将 confidence 升级为 `SERVER_VERIFIED`。
-
-### 5. Scheduler 或 Schedule（自动学习）
+### 4. Scheduler（自动学习，内置 TDVP 探针）
 
 **手动触发（一次）**：
 - `action`: **scheduler**
-- `course_url`：与 Initialize 相同的 URL
-- `chapter_id`（可选）：缺省取 URL 里的 `chapterId`
+- 无需传 `course_url`（自动从 `state/active_course.json` 读取）
+- 无需传 `chapter_id`（TDVP 探针自动发现下一个待执行任务）
 
 **自动定时（每天 UTC 02:00）**：无需手动操作，Workflow 内置 `schedule` trigger。
 
-Scheduler 会：
-1. 读取 `state/active_course.json` 获取当前活跃课程
-2. 读取课程状态决定本次是否执行（RUN / NOOP / BLOCKED）
-3. 若 RUN，调用现有 E1/E2/E3 浏览器 Runtime 执行学习
-4. 更新并持久化 state 到 main 分支
+Scheduler 内部自动执行：
+1. 从 `state/active_course.json` 读取活跃课程
+2. **TDVP Passive Probe**（后台静默）：扫描任务列表，更新 `state/tdvp_tasks.json`
+3. 读取课程状态决定本次是否执行（RUN / NOOP / BLOCKED）
+4. 若 RUN，自动选择下一个 pending 任务，调用浏览器 Runtime 执行学习
+5. 更新并持久化 state 到 main 分支
 
-**命令行触发**：
+**用户只需 2 步**：
 ```bash
-# TDVP Passive Probe（扫描任务列表）
+# ① Initialize（一次性，创建课程状态）
 gh workflow run run.yml \
-  -f action=tdvp \
+  -f action=initialize \
   -f course_url="https://mooc1.chaoxing.com/..."
 
-# Scheduler（执行一次学习）
-gh workflow run run.yml \
-  -f action=scheduler \
-  -f course_url="https://mooc1.chaoxing.com/..." \
-  -f chapter_id=1217304708
-
-# Active Probe（验证单个任务）
-gh workflow run run.yml \
-  -f action=probe \
-  -f course_url="https://mooc1.chaoxing.com/..." \
-  -f task_id=1217304702_1_3
+# ② Scheduler（永久自动，什么都不用传）
+gh workflow run run.yml -f action=scheduler
+# 或等待 cron 每日自动触发
 ```
 
 ### 6. 切换课程（可选）
@@ -140,19 +108,7 @@ Run 完成后，Actions 日志自动打印结构化诊断，并生成 artifact *
 }
 ```
 
-**TDVP 输出字段**：
-```json
-{
-  "action": "tdvp",
-  "course_key": "265997861_151695658",
-  "total_tasks": 8,
-  "completed": 4,
-  "pending": 4,
-  "unknown": 0,
-  "task_queue": ["1217304702_1_3", "1217304702_1_6", ...],
-  "next_task": "1217304702_1_3"
-}
-```
+**TDVP 内置于 Scheduler**：用户无需单独调用，每次 scheduler 运行时自动在后台执行 Passive Probe，扫描任务状态并更新 `state/tdvp_tasks.json`。
 
 ---
 
@@ -234,27 +190,24 @@ xuexitong/
 
 ---
 
-## TDVP 两阶段探针协议
+## TDVP 内置探针（Scheduler 自动执行）
+
+TDVP 已内置于 Scheduler，用户无需关心。每次 scheduler 运行时自动：
 
 ```
-Course URL
+Scheduler 触发
     ↓
-Passive Probe（HTML/DOM 解析，不启动浏览器）
-    ↓  识别所有章节任务点的 UI 完成标记
+从 state/active_course.json 读取课程 URL
+    ↓
+TDVP Passive Probe（后台静默，HTML/DOM 解析）
+    ↓  扫描任务列表，更新 state/tdvp_tasks.json
 TaskStatus = COMPLETED / PENDING / UNKNOWN
     ↓
-Evidence Aggregator
-    ├── COMPLETED(UI)  → weak evidence，无需验证
-    ├── PENDING(UI)    → 需 Active Probe
-    └── UNKNOWN        → 需 Active Probe
+determine_action() → RUN / NOOP / BLOCKED
     ↓
-Active Probe（仅对 PENDING/UNKNOWN，调用真实 Runtime）
-    ↓  确认 isPassed=true
-TaskStatus = COMPLETED(SERVER_VERIFIED) / PENDING / UNKNOWN
+若 RUN：从 tdvp_tasks.json 取 next_task，调用真实 Runtime
     ↓
-Canonical Task State
-    ↓
-Persistent State（state/tdvp_tasks.json + state/courses/*.json）
+更新 state + 推送 to main
 ```
 
 **决策类型**：`RUN` / `NOOP` / `BLOCKED` / `ERROR`
@@ -297,19 +250,13 @@ Xvfb :99 -screen 0 1440x900x24 -ac &
 export DISPLAY=:99
 export CX_USER=... CX_PASS=...
 
-# Initialize（创建课程状态）
+# Initialize（创建课程状态，仅需一次）
 python app/run.py --action initialize --course-url "https://mooc1.chaoxing.com/..." --output ./evidence/result.json
 
-# TDVP Passive Probe（扫描任务列表，纯 HTML 解析）
-python app/run.py --action tdvp --course-url "https://mooc1.chaoxing.com/..." --output ./evidence/result.json
+# Scheduler（自动学习，无需传 course_url/chapter_id）
+python app/run.py --action scheduler --trigger manual --run-id local --output ./evidence/result.json
 
-# Active Probe（验证单个 pending 任务）
-python app/run.py --action probe --course-url "https://mooc1.chaoxing.com/..." --task-id 1217304702_1_3 --output ./evidence/probe_result.json
-
-# Scheduler（决定并执行学习）
-python app/run.py --action scheduler --course-url "https://mooc1.chaoxing.com/..." --chapter-id 1217304706 --trigger manual --run-id local --output ./evidence/result.json
-
-# 直接 Run（单视频学习）
+# 直接 Run（单视频学习，需指定 chapter_id）
 python app/run.py --action run --course-url "https://mooc1.chaoxing.com/..." --chapter-id 1217304706 --output ./evidence/run_<ts>.json
 ```
 

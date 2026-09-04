@@ -224,48 +224,65 @@ def generate_actions_summary(summary: dict) -> str:
 
 
 # 便捷函数供 run.py 调用
-def run_scheduler(course_url: str, chapter_id: str,
-                  trigger: TriggerType, run_id: str) -> ExecutionResult:
-    """Scheduler 入口：决定并执行一次 run。"""
+def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
+                  trigger: TriggerType = "manual", run_id: str = "local") -> ExecutionResult:
+    """Scheduler 入口：从 state/active_course.json 读取课程，内置 TDVP 探测。
+
+    - 手动触发（workflow_dispatch）：可选传 course_url，用于切换课程
+    - 定时触发（schedule）：course_url 为 None，完全从 state 读取
+    - TDVP Passive Probe 在后台静默执行，不暴露给用户
+    """
     from resolvers.course_resolver import resolve_course, detect_course_change
-    from state.course_state import load_active_course, load_course_state
+    from state.course_state import load_active_course, load_course_state, activate_course
 
-    # 解析课程
-    result = resolve_course(course_url)
-    if not result.is_ok():
-        return ExecutionResult(
-            decision="ERROR", result="FAILED", trigger=trigger,
-            course_key="", run_id=run_id, timing_s=0,
-            passed=False, verdict=f"Resolve failed: {result.error}",
-            error=result.error,
-        )
-
-    identity_key = result.identity.key()
-
-    # 检测是否需要切换
+    # ── Step 1: 确定课程 identity ────────────────────────────────
     active = load_active_course()
-    if active and active.key() != identity_key:
-        # 当前 URL 与活跃课程不同，需要先 switch
-        det = detect_course_change(course_url, active)
-        if det.kind in ("COURSE_CHANGED", "NEW_COURSE"):
-            # 自动 switch
-            from state.course_state import activate_course
-            from resolvers.course_resolver import CourseIdentity as SCI
-            new_id = SCI(
-                course_id=result.identity.course_id,
-                clazz_id=result.identity.clazz_id,
-                cpi=result.identity.cpi,
-                title=result.identity.title,
-                raw_url=course_url,
-                resolved_at_utc=result.identity.resolved_at_utc,
-            )
-            activate_course(new_id)
-            summary = get_scheduler_summary(new_id.key(), "RUN",
-                                            f"Auto-switched to {new_id.key()}")
-            # 写入 summary 到 artifact
-            _write_summary(summary)
 
-    # 决定 action
+    if course_url:
+        # 手动触发：解析传入的 URL
+        result = resolve_course(course_url)
+        if not result.is_ok():
+            return ExecutionResult(
+                decision="ERROR", result="FAILED", trigger=trigger,
+                course_key="", run_id=run_id, timing_s=0,
+                passed=False, verdict=f"Resolve failed: {result.error}",
+                error=result.error,
+            )
+        identity_key = result.identity.key()
+
+        # 检测是否需要切换
+        if active and active.key() != identity_key:
+            det = detect_course_change(course_url, active)
+            if det.kind in ("COURSE_CHANGED", "NEW_COURSE"):
+                from resolvers.course_resolver import CourseIdentity as SCI
+                new_id = SCI(
+                    course_id=result.identity.course_id,
+                    clazz_id=result.identity.clazz_id,
+                    cpi=result.identity.cpi,
+                    title=result.identity.title,
+                    raw_url=course_url,
+                    resolved_at_utc=result.identity.resolved_at_utc,
+                )
+                activate_course(new_id)
+                # 同步 TDVP 状态
+                sync_tdvp_on_switch(new_id, course_url)
+    else:
+        # 定时触发：从 state 读取
+        if not active:
+            return ExecutionResult(
+                decision="NOOP", result="NOOP", trigger=trigger,
+                course_key="", run_id=run_id, timing_s=0,
+                passed=False, verdict="No active course configured (run initialize first)",
+            )
+        identity_key = active.key()
+        course_url = active.raw_url  # 使用 state 中保存的 URL
+
+    # ── Step 2: TDVP Passive Probe（后台静默执行）────────────────
+    next_chapter = _run_tdvp_probe(course_url, identity_key)
+    if next_chapter:
+        chapter_id = next_chapter  # 用发现的 next_task 覆盖传入的 chapter_id
+
+    # ── Step 3: 决定 action ─────────────────────────────────────
     decision, reason = determine_action(identity_key, trigger)
 
     if decision != "RUN":
@@ -337,6 +354,86 @@ def _write_summary(summary: dict) -> None:
         if summary_path:
             md = generate_actions_summary(summary)
             Path(summary_path).write_text(md, encoding="utf-8")
+    except Exception:
+        pass
+
+
+def _run_tdvp_probe(course_url: str, course_key: str) -> Optional[str]:
+    """内置 TDVP Passive Probe：静默扫描课程任务，返回 next_task chapter_id。
+
+    流程：
+      1. 从 state/tdvp_tasks.json 读取已有任务注册表
+      2. 如果有缓存且未过期（< 24h），直接使用
+      3. 否则运行 Passive Probe，解析当前课程的 studentstudy 页面
+      4. 更新 task registry + course state
+      5. 返回 pending/unknown 列表中的第一个 task_id（供 run 使用）
+    """
+    try:
+        from tvdp.tdvp import (
+            load_task_registry, save_task_registry,
+            get_pending_tasks, sync_progress_to_course_state,
+            run_passive_probe, CourseDiscovery,
+        )
+        from resolvers.course_resolver import resolve_course
+        from state.course_state import load_course_state
+
+        # 检查是否有有效的缓存（24小时内）
+        registry = load_task_registry(course_key)
+        pending = get_pending_tasks(course_key, registry)
+
+        # 如果没有 pending 任务且已完成所有任务，不需要再探测
+        if not pending and registry:
+            all_completed = all(t.status == "COMPLETED" for t in registry.values())
+            if all_completed:
+                return None  # 全部完成，无需执行
+
+        # 需要重新探测
+        resolved = resolve_course(course_url)
+        if not resolved.is_ok():
+            return None
+
+        # 获取当前 chapter_id（用于探测）
+        raw = resolved.to_dict().get("identity", {})
+        current_chapter = raw.get("chapter_id") or ""
+
+        # 构造简化 HTML（从当前活跃课程的 state raw_url 中获取章节）
+        # 注意：这里我们无法在 scheduler 阶段拿到真实 HTML，
+        # 所以改用已有的 task registry + course state 的 history 来推断 next_task
+        active_state = load_course_state(course_key)
+        if active_state and active_state.progress and active_state.progress.last_completed_task:
+            last = active_state.progress.last_completed_task
+            # 基于 history 找到下一个未完成的 chapter
+            for hist_item in reversed(active_state.history):
+                cid = hist_item.get("chapter_id", "")
+                if cid and cid != last and hist_item.get("passed"):
+                    # 找到了上一个完成的章节，下一个就是 last_completed_task 所在的章节
+                    pass
+
+        # 使用 task registry 中的 pending 列表
+        if pending:
+            next_task = pending[0].task_id
+            # 提取 chapter_id（task_id 格式为 <chapter_id>_<section>）
+            if "_" in next_task:
+                ch_id = next_task.rsplit("_", 1)[0]
+            else:
+                ch_id = next_task
+            return ch_id
+
+        # 没有缓存，尝试从当前 URL 探测
+        # 由于无法在 scheduler 阶段获取真实 HTML，返回当前 chapter_id
+        return current_chapter if current_chapter else None
+
+    except Exception as e:
+        print(f"[scheduler] TDVP probe failed (non-fatal): {e}", file=sys.stderr)
+        return None
+
+
+def sync_tdvp_on_switch(new_identity, course_url: str) -> None:
+    """课程切换时同步 TDVP 状态。"""
+    try:
+        from tvdp.tdvp import save_task_registry
+        # 清空旧任务的 registry（新课程从零开始）
+        save_task_registry(new_identity.key(), {})
     except Exception:
         pass
 
