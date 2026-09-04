@@ -1,68 +1,36 @@
 {
   "265997861_151695658": {
-    "1217304706_2026": {
-      "task_id": "1217304706_2026",
-      "chapter_id": "1217304706",
-      "title": "大医",
+    "1217304700": {
+      "task_id": "1217304700",
+      "chapter_id": "1217304700",
+      "title": "互联网概述",
       "task_type": "video",
       "status": "UNKNOWN",
       "confidence": "UI",
-      "source_detail": "no status marker found",
+      "source_detail": "1.1 互联网概述 Completed",
       "evidence": {
         "status": "UNKNOWN",
         "confidence": "UI",
-        "source_detail": "no status marker found",
-        "observed_at_utc": "2026-09-04T02:32:51.309679+00:00"
+        "source_detail": "1.1 互联网概述 Completed",
+        "observed_at_utc": "2026-09-04T03:22:45.036793+00:00"
       },
-      "discovered_at_utc": "2026-09-04T02:32:51.309697+00:00"
+      "discovered_at_utc": "2026-09-04T03:22:45.036817+00:00"
     },
-    "1217304706_2025": {
-      "task_id": "1217304706_2025",
+    "1217304706": {
+      "task_id": "1217304706",
       "chapter_id": "1217304706",
-      "title": "成都学习通教育科技有限公司 蜀ICP备2021018404号",
+      "title": "物理层的主要任务",
       "task_type": "video",
       "status": "UNKNOWN",
       "confidence": "UI",
-      "source_detail": "no status marker found",
+      "source_detail": "2.1 物理层的主要任务 1pending task point1",
       "evidence": {
         "status": "UNKNOWN",
         "confidence": "UI",
-        "source_detail": "no status marker found",
-        "observed_at_utc": "2026-09-04T02:32:51.309720+00:00"
+        "source_detail": "2.1 物理层的主要任务 1pending task point1",
+        "observed_at_utc": "2026-09-04T03:22:45.036829+00:00"
       },
-      "discovered_at_utc": "2026-09-04T02:32:51.309725+00:00"
-    },
-    "1217304706_1": {
-      "task_id": "1217304706_1",
-      "chapter_id": "1217304706",
-      "title": "川公网安备51019002009346号",
-      "task_type": "video",
-      "status": "UNKNOWN",
-      "confidence": "UI",
-      "source_detail": "no status marker found",
-      "evidence": {
-        "status": "UNKNOWN",
-        "confidence": "UI",
-        "source_detail": "no status marker found",
-        "observed_at_utc": "2026-09-04T02:32:51.309746+00:00"
-      },
-      "discovered_at_utc": "2026-09-04T02:32:51.309748+00:00"
-    },
-    "1217304706_6_0001": {
-      "task_id": "1217304706_6_0001",
-      "chapter_id": "1217304706",
-      "title": "主版本号大于等于4 隐藏扫码登录\n    let userAg",
-      "task_type": "video",
-      "status": "UNKNOWN",
-      "confidence": "UI",
-      "source_detail": "no status marker found",
-      "evidence": {
-        "status": "UNKNOWN",
-        "confidence": "UI",
-        "source_detail": "no status marker found",
-        "observed_at_utc": "2026-09-04T02:32:51.309782+00:00"
-      },
-      "discovered_at_utc": "2026-09-04T02:32:51.309785+00:00"
+      "discovered_at_utc": "2026-09-04T03:22:45.036833+00:00"
     }
   }
 }
