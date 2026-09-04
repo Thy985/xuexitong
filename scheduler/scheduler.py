@@ -127,15 +127,15 @@ def determine_action(
     if not state:
         return "NOOP", f"No state for active course {active_key}"
 
-    if state.status == "BLOCKED":
+    if state.status == "BLOCKED" and trigger != "manual":
         return "BLOCKED", f"Course {active_key} is BLOCKED"
 
     if state.status == "ARCHIVED":
         return "NOOP", f"Course {active_key} is ARCHIVED"
 
-    # 检查连续失败阈值
+    # 检查连续失败阈值（manual trigger 可 override）
     ss = load_scheduler_state(active_key)
-    if ss.consecutive_failures >= 3:
+    if ss.consecutive_failures >= 3 and trigger != "manual":
         return "BLOCKED", (f"Course {active_key} has {ss.consecutive_failures} "
                           "consecutive failures")
 
