@@ -313,8 +313,12 @@ def fetch_course_discovery(course_url: str, cx_user: Optional[str] = None,
                         const nodeHtml = cell.outerHTML || '';
                         const m1 = nodeHtml.match(/chapterId[=:'"](\\d+)/);
                         const m2 = nodeHtml.match(/data-?chapter[-_]?id[=:'"](\\d+)/);
+                        const m3 = nodeHtml.match(/getTeacherAjax\\([^)]*,\\s*'([^']+)'/);
+                        const m4 = nodeHtml.match(/getTeacherAjax\\([^)]*,\\s*"([^"]+)"/);
                         if (m1) cid = m1[1];
                         else if (m2) cid = m2[1];
+                        else if (m3) cid = m3[1];
+                        else if (m4) cid = m4[1];
                         // 从激活状态推断：当前 URL 的 chapterId 就是激活节点
                         const isActive = cell.classList.contains('posCatalog_active');
                         results.push({
