@@ -423,6 +423,95 @@ def fetch_course_discovery(course_url: str, cx_user: Optional[str] = None,
         return None
 
 
+def resolve_click_probe_chapter_id(course_url: str, ch_idx: int, cell_idx: int) -> Optional[str]:
+    """点击探测：点击目录树中指定位置的节点，从 URL 提取 chapterId。
+
+    仅在 fetch_course_discovery 拿不到节点的 chapterId 时使用。
+    点击不会自动播放视频（只触发页面内章节切换）。
+    """
+    import os
+    user = os.environ.get("CX_USER")
+    pw = os.environ.get("CX_PASS")
+    if not user or not pw:
+        return None
+    try:
+        from resolvers.course_resolver import _parse_url_params
+        params = _parse_url_params(course_url)
+        chapter_id = params.get("chapter_id") or ""
+        sys.path.insert(0, str(Path(__file__).parent.parent / "e2"))
+        import e2_headed_gha as E
+        E.COURSE_ID = params.get("course_id", "")
+        E.CLAZZ_ID = params.get("clazz_id", "")
+        E.CPI = params.get("cpi", "")
+        E.ENC = params.get("enc", "")
+        E.OPENR = params.get("openc")
+        E.HIDETYPE = params.get("hidetype") or "0"
+
+        from playwright.sync_api import sync_playwright
+        display = os.environ.get("DISPLAY", ":99")
+
+        with sync_playwright() as pwc:
+            browser = pwc.chromium.launch(
+                headless=False, channel="chromium",
+                args=[f"--display={display}", "--no-sandbox",
+                      "--disable-dev-shm-usage", "--disable-gpu"],
+            )
+            ctx = browser.new_context(viewport={"width": 1440, "height": 900})
+            page = ctx.new_page()
+            base = E.build_base_url(chapter_id)
+            page.goto(base, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(3000)
+            try:
+                page.wait_for_selector("#phone", timeout=12000)
+                page.locator("#phone").first.fill(user)
+                page.locator("#pwd").first.fill(pw)
+                for sel in ["button:has-text('登录')", "a.loginbtn", ".loginbtn"]:
+                    try:
+                        if page.locator(sel).count() > 0:
+                            page.locator(sel).first.click(force=True, timeout=3000)
+                            break
+                    except Exception:
+                        pass
+                for _ in range(15):
+                    page.wait_for_timeout(1000)
+                    if "passport2.chaoxing.com/login" not in page.url:
+                        break
+            except Exception:
+                pass
+            page.goto(course_url, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(5000)
+
+            # 点击指定位置的目录节点
+            clicked = page.evaluate("""
+                (ci, si) => {
+                    const tree = document.querySelector('#coursetree');
+                    if (!tree) return false;
+                    const cells = tree.querySelectorAll('.posCatalog_select:not(.firstLayer)');
+                    const list = Array.from(cells);
+                    const target = list[si];
+                    if (!target) return false;
+                    const name = target.querySelector('.posCatalog_name');
+                    if (!name) return false;
+                    name.click();
+                    return true;
+                }
+            """, cell_idx)
+            if not clicked:
+                print(f"[tdvp] click-probe: click failed at ci={ch_idx}, si={cell_idx}", file=sys.stderr)
+                browser.close()
+                return None
+            page.wait_for_timeout(4000)
+            new_url = page.url
+            m = re.search(r'chapterId[=:](\d+)', new_url)
+            cid = m.group(1) if m else ""
+            browser.close()
+            print(f"[tdvp] click-probe: ci={ch_idx} si={cell_idx} → chapterId={cid or 'NOT_FOUND'}", flush=True)
+            return cid or None
+    except Exception as e:
+        print(f"[tdvp] resolve_click_probe error: {e}", file=sys.stderr)
+        return None
+
+
 def fetch_page_html(course_url: str, cx_user: Optional[str] = None,
                     cx_pass: Optional[str] = None) -> Optional[str]:
     """轻量级页面抓取（兼容旧接口）：返回页面 HTML 字符串。
@@ -494,14 +583,14 @@ def build_tasks_from_discovery(chapters_raw: list[dict],
                                fallback_chapter: str = "") -> list[TaskInfo]:
     """将 DOM 提取的章节列表转换为 TaskInfo 列表。
 
-    每个 chapter_raw = {chapter_id, title, status, text}
+    每个 chapter_raw = {chapter_id, title, status, text, cell_index, chapter_index}
     """
     tasks = []
-    for i, ch in enumerate(chapters_raw):
-        cid = str(ch.get("chapter_id", ""))
+    for ch in chapters_raw:
         title = ch.get("title", "").strip()
-        if not cid or not title:
+        if not title:
             continue
+        cid = str(ch.get("chapter_id", ""))
         status_raw = ch.get("status", "unknown")
         if status_raw == "completed":
             status, conf = "COMPLETED", "UI"
@@ -510,15 +599,21 @@ def build_tasks_from_discovery(chapters_raw: list[dict],
         else:
             status, conf = "UNKNOWN", "UI"
         detail = ch.get("text", "")[:80]
+        # chapter_id 为空时用目录索引构造占位 task_id
+        ch_idx = ch.get("chapter_index", 0)
+        cell_idx = ch.get("cell_index", 0)
+        task_id = cid if cid else f"_{ch_idx}_{cell_idx}"
         tasks.append(TaskInfo(
-            task_id=cid,
-            chapter_id=cid,
+            task_id=task_id,
+            chapter_id=cid if cid else "",
             title=title,
             task_type="video",
             status=status,
             confidence=conf,
             source_detail=detail,
             evidence=TaskEvidence(status, conf, detail),
+            _ch_idx=ch_idx,
+            _cell_idx=cell_idx,
         ))
     return tasks
 

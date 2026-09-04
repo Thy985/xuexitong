@@ -280,7 +280,22 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
     # ── Step 2: TDVP Passive Probe（后台静默执行）────────────────
     next_chapter = _run_tdvp_probe(course_url, identity_key)
     if next_chapter:
-        chapter_id = next_chapter  # 用发现的 next_task 覆盖传入的 chapter_id
+        if next_chapter.startswith("__click_probe__:"):
+            # 需要点击探测补 chapterId：格式 __click_probe__:chapter_index:cell_index
+            from tvdp.tdvp import resolve_click_probe_chapter_id
+            probe_params = next_chapter.split(":", 2)[1:]
+            clicked_cid = resolve_click_probe_chapter_id(
+                course_url, int(probe_params[0]), int(probe_params[1]))
+            if clicked_cid:
+                chapter_id = clicked_cid
+                print(f"[scheduler] TDVP: click-probe resolved → {chapter_id}", flush=True)
+            else:
+                print(f"[scheduler] TDVP: click-probe failed, using URL chapter_id", flush=True)
+                from resolvers.course_resolver import _parse_url_params
+                params = _parse_url_params(course_url)
+                chapter_id = params.get("chapter_id") or ""
+        else:
+            chapter_id = next_chapter  # 用发现的 next_task 覆盖传入的 chapter_id
 
     # ── Step 3: 决定 action ─────────────────────────────────────
     decision, reason = determine_action(identity_key, trigger)
@@ -415,15 +430,35 @@ def _run_tdvp_probe(course_url: str, course_key: str) -> Optional[str]:
               f"{sorted(done_ids)}", flush=True)
 
         # ── 4. 按目录顺序选第一个未执行的章节 ─────────────────────
+        # 优先选有 chapter_id 的；都没有则选第一个非 completed 且未在 history 的节点
+        best = None
         for t in tasks:
-            if t.chapter_id and t.chapter_id not in done_ids:
-                print(f"[scheduler] TDVP: next_chapter={t.chapter_id} "
-                      f"({t.title})", flush=True)
-                return t.chapter_id
-
-        # 全部已执行 → 无任务
-        print("[scheduler] TDVP: all chapters done — no next task", flush=True)
-        return None
+            if not t.chapter_id:
+                continue
+            if t.chapter_id not in done_ids:
+                best = t
+                break
+        if best is None:
+            # 没有带 chapter_id 的候选：按目录顺序（task_id 中的 cell_index）找第一个未在 history 的节点
+            sorted_tasks = sorted(tasks, key=lambda t: (
+                int(t.task_id.rsplit("_", 1)[-1]) if t.task_id.startswith("_") else 999,
+                t.task_id,
+            ))
+            for t in sorted_tasks:
+                if t.chapter_id and t.chapter_id not in done_ids:
+                    best = t
+                    break
+                # 无 chapter_id 节点：返回 click_probe 信号
+                if t.status != "COMPLETED":
+                    print(f"[scheduler] TDVP: no cid for next task, cell_idx hint "
+                          f"({t.title})", flush=True)
+                    return f"__click_probe__:{getattr(t, '_ch_idx', 0)}:{getattr(t, '_cell_idx', 0)}"
+            if best is None:
+                print("[scheduler] TDVP: all chapters done — no next task", flush=True)
+                return None
+        print(f"[scheduler] TDVP: next_chapter={best.chapter_id} "
+              f"({best.title})", flush=True)
+        return best.chapter_id
 
     except Exception as e:
         print(f"[scheduler] TDVP probe failed (non-fatal): {e}", file=sys.stderr)

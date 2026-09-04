@@ -18,6 +18,7 @@ from .tdvp import (
     fetch_page_html,
     fetch_course_discovery,
     build_tasks_from_discovery,
+    resolve_click_probe_chapter_id,
 )
 
 __all__ = [

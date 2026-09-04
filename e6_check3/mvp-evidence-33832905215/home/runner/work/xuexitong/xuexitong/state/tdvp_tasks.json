@@ -1,0 +1,36 @@
+{
+  "265997861_151695658": {
+    "1217304700": {
+      "task_id": "1217304700",
+      "chapter_id": "1217304700",
+      "title": "互联网概述",
+      "task_type": "video",
+      "status": "UNKNOWN",
+      "confidence": "UI",
+      "source_detail": "1.1 互联网概述 Completed",
+      "evidence": {
+        "status": "UNKNOWN",
+        "confidence": "UI",
+        "source_detail": "1.1 互联网概述 Completed",
+        "observed_at_utc": "2026-09-04T03:22:45.036793+00:00"
+      },
+      "discovered_at_utc": "2026-09-04T03:22:45.036817+00:00"
+    },
+    "1217304706": {
+      "task_id": "1217304706",
+      "chapter_id": "1217304706",
+      "title": "物理层的主要任务",
+      "task_type": "video",
+      "status": "UNKNOWN",
+      "confidence": "UI",
+      "source_detail": "2.1 物理层的主要任务 1pending task point1",
+      "evidence": {
+        "status": "UNKNOWN",
+        "confidence": "UI",
+        "source_detail": "2.1 物理层的主要任务 1pending task point1",
+        "observed_at_utc": "2026-09-04T03:22:45.036829+00:00"
+      },
+      "discovered_at_utc": "2026-09-04T03:22:45.036833+00:00"
+    }
+  }
+}
