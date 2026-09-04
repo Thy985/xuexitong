@@ -50,6 +50,8 @@ class TaskInfo:
     source_detail: str
     evidence: TaskEvidence
     discovered_at_utc: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    _ch_idx: int = field(default=0, repr=False)
+    _cell_idx: int = field(default=0, repr=False)
 
     @property
     def key(self) -> str:
@@ -584,6 +586,7 @@ def build_tasks_from_discovery(chapters_raw: list[dict],
     """将 DOM 提取的章节列表转换为 TaskInfo 列表。
 
     每个 chapter_raw = {chapter_id, title, status, text, cell_index, chapter_index}
+    chapter_id 为空时 task_id 用 _{chapter_index}_{cell_index} 占位。
     """
     tasks = []
     for ch in chapters_raw:
@@ -599,7 +602,6 @@ def build_tasks_from_discovery(chapters_raw: list[dict],
         else:
             status, conf = "UNKNOWN", "UI"
         detail = ch.get("text", "")[:80]
-        # chapter_id 为空时用目录索引构造占位 task_id
         ch_idx = ch.get("chapter_index", 0)
         cell_idx = ch.get("cell_index", 0)
         task_id = cid if cid else f"_{ch_idx}_{cell_idx}"
@@ -612,8 +614,6 @@ def build_tasks_from_discovery(chapters_raw: list[dict],
             confidence=conf,
             source_detail=detail,
             evidence=TaskEvidence(status, conf, detail),
-            _ch_idx=ch_idx,
-            _cell_idx=cell_idx,
         ))
     return tasks
 
