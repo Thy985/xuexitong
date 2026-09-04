@@ -242,14 +242,18 @@ def reconcile_queue(course_key: str, registry: dict[str, TaskRecord],
     """从 Registry + 已完成的章节集合重算 Execution Queue。
 
     规则：
-      - COMPLETED / BLOCKED / VERIFYING / RUNNING 的任务不入队
-      - PENDING / UNKNOWN 且 chapter_id 不在 done_ids → READY
-      - FAILED 且未达 max_attempts → READY
-      - 按 _ch_idx（DOM 目录顺序）+ _cell_idx 排序，保证执行顺序
+      - chapter_id 在 done_ids 中的任务 → 跳过（不进入队列）
+      - status = COMPLETED → 跳过
+      - status = BLOCKED / RUNNING / VERIFYING → 跳过
+      - PENDING / UNKNOWN / FAILED（可重试）且 chapter_id 不在 done_ids → READY
+      - chapter_id 为空的任务 → 也进入队列（需要 click_probe 获取 chapterId），
+        但若其 DOM 对应节点已通过 history 判定为已完成（通过其他方式确认），则跳过
+      - 按 _ch_idx（DOM 目录顺序）+ _cell_idx 排序
     """
     ready: list[TaskRecord] = []
     for t in registry.values():
-        if t.chapter_id in done_chapter_ids:
+        # 已有 chapter_id 且在 history 中 → 直接跳过
+        if t.chapter_id and t.chapter_id in done_chapter_ids:
             continue
         if t.status == "COMPLETED":
             continue
@@ -257,12 +261,12 @@ def reconcile_queue(course_key: str, registry: dict[str, TaskRecord],
             continue
         if t.status == "BLOCKED":
             continue
-        # PENDING / UNKNOWN / FAILED（可重试）
+        # FAILED 且超重试上限 → 跳过
         if t.status == "FAILED" and t.consecutive_failures >= t.max_attempts:
             continue
         ready.append(t)
 
-    # 按目录顺序排序
+    # 按目录顺序排序（_ch_idx/_cell_idx 来自 DOM 原始顺序）
     ready.sort(key=lambda t: (t._ch_idx, t._cell_idx, t.task_id))
 
     items = []
@@ -272,6 +276,7 @@ def reconcile_queue(course_key: str, registry: dict[str, TaskRecord],
             "chapter_id": t.chapter_id or "",
             "priority": i,
             "state": "READY",
+            "course_key": course_key,
         })
 
     q = ExecutionQueue(

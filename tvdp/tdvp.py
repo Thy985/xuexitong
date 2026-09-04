@@ -384,13 +384,12 @@ def fetch_course_discovery(course_url: str, cx_user: Optional[str] = None,
                     break
             if picked and picked.get("chapter_index") is not None:
                 try:
-                    clicked = page.evaluate("""(idx) => {
+                    clicked = page.evaluate("""(si) => {
                         const tree = document.querySelector('#coursetree');
                         if (!tree) return false;
                         const cells = tree.querySelectorAll('.posCatalog_select:not(.firstLayer)');
-                        // 按 title 匹配索引位置再取第 idx 个
                         const list = Array.from(cells);
-                        const target = list[idx];
+                        const target = list[si];
                         if (!target) return false;
                         const name = target.querySelector('.posCatalog_name');
                         if (!name) return false;

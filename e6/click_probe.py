@@ -83,7 +83,7 @@ def click_probe_chapter_id(course_url: str, chapter_index: int, cell_index: int)
 
             # ── 点击目标节点 ──────────────────────────────────────
             clicked = page.evaluate("""
-                (ci, si) => {
+                (si) => {
                     const tree = document.querySelector('#coursetree');
                     if (!tree) return false;
                     const cells = tree.querySelectorAll('.posCatalog_select:not(.firstLayer)');
