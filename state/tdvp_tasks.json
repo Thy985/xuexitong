@@ -12,9 +12,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "1.1 互联网概述 Completed",
-        "observed_at_utc": "2026-09-04T06:48:00.693506+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.480905+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693527+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.480924+00:00"
     },
     "_0_1": {
       "task_id": "_0_1",
@@ -28,9 +28,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "1.2 互联网的组成 Completed",
-        "observed_at_utc": "2026-09-04T06:48:00.693537+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.480933+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693541+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.480938+00:00"
     },
     "_0_2": {
       "task_id": "_0_2",
@@ -44,9 +44,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "1.3 计算机网络的概念与类别 Completed",
-        "observed_at_utc": "2026-09-04T06:48:00.693546+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.480943+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693549+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.480945+00:00"
     },
     "_0_3": {
       "task_id": "_0_3",
@@ -60,9 +60,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "1.4 计算机网络的拓扑结构 Completed",
-        "observed_at_utc": "2026-09-04T06:48:00.693552+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.480949+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693555+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.480952+00:00"
     },
     "_0_4": {
       "task_id": "_0_4",
@@ -76,9 +76,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "1.5 计算机网络的性能 2pending task point2",
-        "observed_at_utc": "2026-09-04T06:48:00.693558+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.480955+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693561+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.480957+00:00"
     },
     "_0_5": {
       "task_id": "_0_5",
@@ -92,9 +92,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "1.6 计算机网络的体系结构 1pending task point1",
-        "observed_at_utc": "2026-09-04T06:48:00.693565+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.480961+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693568+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.480964+00:00"
     },
     "_0_6": {
       "task_id": "_0_6",
@@ -108,9 +108,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "1.7 知识扩展 Completed",
-        "observed_at_utc": "2026-09-04T06:48:00.693571+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.480968+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693573+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.480970+00:00"
     },
     "_0_7": {
       "task_id": "_0_7",
@@ -124,9 +124,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "1.8 线上学习任务 Completed",
-        "observed_at_utc": "2026-09-04T06:48:00.693577+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.480973+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693579+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.480975+00:00"
     },
     "_0_8": {
       "task_id": "_0_8",
@@ -140,9 +140,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "1.9 思维导图简介 Completed",
-        "observed_at_utc": "2026-09-04T06:48:00.693582+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.480979+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693584+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.480981+00:00"
     },
     "_0_9": {
       "task_id": "_0_9",
@@ -156,9 +156,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "1.10 本章思维导图 Completed",
-        "observed_at_utc": "2026-09-04T06:48:00.693587+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.480984+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693590+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.480986+00:00"
     },
     "1217304706": {
       "task_id": "1217304706",
@@ -172,9 +172,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "2.1 物理层的主要任务 1pending task point1",
-        "observed_at_utc": "2026-09-04T06:48:00.693593+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.480989+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693595+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.480992+00:00"
     },
     "_1_1": {
       "task_id": "_1_1",
@@ -188,9 +188,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "2.2 数据通信的基础知识 3pending task point3",
-        "observed_at_utc": "2026-09-04T06:48:00.693598+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.480995+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693601+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.480997+00:00"
     },
     "_1_2": {
       "task_id": "_1_2",
@@ -204,9 +204,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "2.3 物理层下面的传输媒体 2pending task point2",
-        "observed_at_utc": "2026-09-04T06:48:00.693604+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481000+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693606+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481003+00:00"
     },
     "_1_3": {
       "task_id": "_1_3",
@@ -220,9 +220,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "2.4 信道复用技术 2pending task point2",
-        "observed_at_utc": "2026-09-04T06:48:00.693609+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481006+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693611+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481008+00:00"
     },
     "_1_4": {
       "task_id": "_1_4",
@@ -236,9 +236,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "2.5 数字传输系统 Completed",
-        "observed_at_utc": "2026-09-04T06:48:00.693614+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481011+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693616+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481013+00:00"
     },
     "_1_5": {
       "task_id": "_1_5",
@@ -252,9 +252,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "2.6 宽带接入技术 Completed",
-        "observed_at_utc": "2026-09-04T06:48:00.693619+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481016+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693621+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481018+00:00"
     },
     "_2_0": {
       "task_id": "_2_0",
@@ -268,9 +268,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "3.1 数据链路层概述 2pending task point2",
-        "observed_at_utc": "2026-09-04T06:48:00.693624+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481021+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693627+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481023+00:00"
     },
     "_2_1": {
       "task_id": "_2_1",
@@ -284,9 +284,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "3.2 点对点协议PPP 2pending task point2",
-        "observed_at_utc": "2026-09-04T06:48:00.693630+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481026+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693632+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481028+00:00"
     },
     "_2_2": {
       "task_id": "_2_2",
@@ -300,9 +300,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "3.3 使用广播信道的数据链路层 11pending task point11",
-        "observed_at_utc": "2026-09-04T06:48:00.693635+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481031+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693637+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481033+00:00"
     },
     "_2_3": {
       "task_id": "_2_3",
@@ -316,9 +316,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "3.4 扩展的以太网 2pending task point2",
-        "observed_at_utc": "2026-09-04T06:48:00.693640+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481036+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693642+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481038+00:00"
     },
     "_2_4": {
       "task_id": "_2_4",
@@ -332,9 +332,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "3.5 高速以太网 Completed",
-        "observed_at_utc": "2026-09-04T06:48:00.693645+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481040+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693647+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481042+00:00"
     },
     "_2_5": {
       "task_id": "_2_5",
@@ -348,9 +348,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "3.6 能力提升 0",
-        "observed_at_utc": "2026-09-04T06:48:00.693650+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481045+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693652+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481047+00:00"
     },
     "_2_6": {
       "task_id": "_2_6",
@@ -364,9 +364,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "3.7 学习目标和重点难点 0",
-        "observed_at_utc": "2026-09-04T06:48:00.693655+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481050+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693657+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481052+00:00"
     },
     "_3_0": {
       "task_id": "_3_0",
@@ -380,9 +380,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "4.1 网络层概述 2pending task point2",
-        "observed_at_utc": "2026-09-04T06:48:00.693660+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481055+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693662+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481057+00:00"
     },
     "_3_1": {
       "task_id": "_3_1",
@@ -396,9 +396,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "4.2 分类的IP地址 2pending task point2",
-        "observed_at_utc": "2026-09-04T06:48:00.693666+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481060+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693668+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481062+00:00"
     },
     "_3_2": {
       "task_id": "_3_2",
@@ -412,9 +412,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "4.3 子网划分 2pending task point2",
-        "observed_at_utc": "2026-09-04T06:48:00.693671+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481065+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693673+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481067+00:00"
     },
     "_3_3": {
       "task_id": "_3_3",
@@ -428,9 +428,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "4.4 无分类编址CIDR 2pending task point2",
-        "observed_at_utc": "2026-09-04T06:48:00.693677+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481070+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693679+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481072+00:00"
     },
     "_3_4": {
       "task_id": "_3_4",
@@ -444,9 +444,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "4.5 IP数据报的格式 2pending task point2",
-        "observed_at_utc": "2026-09-04T06:48:00.693682+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481075+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693689+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481077+00:00"
     },
     "_3_5": {
       "task_id": "_3_5",
@@ -460,9 +460,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "4.6 IP数据报的分片与重组 2pending task point2",
-        "observed_at_utc": "2026-09-04T06:48:00.693692+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481080+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693694+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481082+00:00"
     },
     "_3_6": {
       "task_id": "_3_6",
@@ -476,9 +476,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "4.7 IP层转发分组的流程 1pending task point1",
-        "observed_at_utc": "2026-09-04T06:48:00.693698+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481085+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693700+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481087+00:00"
     },
     "_3_7": {
       "task_id": "_3_7",
@@ -492,9 +492,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "4.8 ARP协议 2pending task point2",
-        "observed_at_utc": "2026-09-04T06:48:00.693703+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481090+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693705+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481092+00:00"
     },
     "_3_8": {
       "task_id": "_3_8",
@@ -508,9 +508,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "4.9 ICMP协议 2pending task point2",
-        "observed_at_utc": "2026-09-04T06:48:00.693708+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481095+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693710+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481097+00:00"
     },
     "_3_9": {
       "task_id": "_3_9",
@@ -524,9 +524,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "4.10 IPV6 3pending task point3",
-        "observed_at_utc": "2026-09-04T06:48:00.693713+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481099+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693715+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481101+00:00"
     },
     "_3_10": {
       "task_id": "_3_10",
@@ -540,9 +540,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "4.11 路由协议概述 1pending task point1",
-        "observed_at_utc": "2026-09-04T06:48:00.693718+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481104+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693720+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481107+00:00"
     },
     "_3_11": {
       "task_id": "_3_11",
@@ -556,9 +556,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "4.12 RIP协议 3pending task point3",
-        "observed_at_utc": "2026-09-04T06:48:00.693723+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481109+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693726+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481112+00:00"
     },
     "_3_12": {
       "task_id": "_3_12",
@@ -572,9 +572,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "4.13 OSPF协议 3pending task point3",
-        "observed_at_utc": "2026-09-04T06:48:00.693729+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481114+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693731+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481117+00:00"
     },
     "_3_13": {
       "task_id": "_3_13",
@@ -588,9 +588,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "4.14 IP多播 1pending task point1",
-        "observed_at_utc": "2026-09-04T06:48:00.693734+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481120+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693736+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481122+00:00"
     },
     "_3_14": {
       "task_id": "_3_14",
@@ -604,9 +604,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "4.15 VPN和NAT 2pending task point2",
-        "observed_at_utc": "2026-09-04T06:48:00.693739+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481125+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693741+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481127+00:00"
     },
     "_3_16": {
       "task_id": "_3_16",
@@ -620,9 +620,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "4.17 课后习题 0",
-        "observed_at_utc": "2026-09-04T06:48:00.693743+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481129+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693746+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481131+00:00"
     },
     "_4_0": {
       "task_id": "_4_0",
@@ -636,9 +636,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "5.1 运输层协议概述 2pending task point2",
-        "observed_at_utc": "2026-09-04T06:48:00.693748+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481134+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693750+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481136+00:00"
     },
     "_4_1": {
       "task_id": "_4_1",
@@ -652,9 +652,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "5.2 UDP和TCP概述 3pending task point3",
-        "observed_at_utc": "2026-09-04T06:48:00.693753+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481139+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693755+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481141+00:00"
     },
     "_4_2": {
       "task_id": "_4_2",
@@ -668,9 +668,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "5.3 TCP报文段的格式 3pending task point3",
-        "observed_at_utc": "2026-09-04T06:48:00.693759+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481145+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693761+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481147+00:00"
     },
     "_4_3": {
       "task_id": "_4_3",
@@ -684,9 +684,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "5.4 可靠传输的工作原理 3pending task point3",
-        "observed_at_utc": "2026-09-04T06:48:00.693764+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481149+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693766+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481151+00:00"
     },
     "_4_4": {
       "task_id": "_4_4",
@@ -700,9 +700,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "5.5 TCP可靠传输的实现 2pending task point2",
-        "observed_at_utc": "2026-09-04T06:48:00.693769+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481154+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693771+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481156+00:00"
     },
     "_4_5": {
       "task_id": "_4_5",
@@ -716,9 +716,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "5.6 TCP的流量控制 3pending task point3",
-        "observed_at_utc": "2026-09-04T06:48:00.693773+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481159+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693775+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481161+00:00"
     },
     "_4_6": {
       "task_id": "_4_6",
@@ -732,9 +732,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "5.7 TCP的拥塞控制 3pending task point3",
-        "observed_at_utc": "2026-09-04T06:48:00.693778+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481163+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693780+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481165+00:00"
     },
     "_4_7": {
       "task_id": "_4_7",
@@ -748,9 +748,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "5.8 TCP的运输连接管理 2pending task point2",
-        "observed_at_utc": "2026-09-04T06:48:00.693783+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481168+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693785+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481170+00:00"
     },
     "_4_9": {
       "task_id": "_4_9",
@@ -764,9 +764,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "5.10 扩展阅读 0",
-        "observed_at_utc": "2026-09-04T06:48:00.693788+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481177+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693790+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481179+00:00"
     },
     "_5_0": {
       "task_id": "_5_0",
@@ -780,9 +780,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "6.1 DNS域名服务器 3pending task point3",
-        "observed_at_utc": "2026-09-04T06:48:00.693793+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481182+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693795+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481184+00:00"
     },
     "_5_1": {
       "task_id": "_5_1",
@@ -796,9 +796,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "6.2 文件传送协议FTP 3pending task point3",
-        "observed_at_utc": "2026-09-04T06:48:00.693798+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481187+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693800+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481189+00:00"
     },
     "_5_2": {
       "task_id": "_5_2",
@@ -812,9 +812,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "6.3 万维网WWW 3pending task point3",
-        "observed_at_utc": "2026-09-04T06:48:00.693803+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481191+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693805+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481193+00:00"
     },
     "_5_3": {
       "task_id": "_5_3",
@@ -828,9 +828,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "6.4 电子邮件E_mail 2pending task point2",
-        "observed_at_utc": "2026-09-04T06:48:00.693808+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481196+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693810+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481198+00:00"
     },
     "_5_4": {
       "task_id": "_5_4",
@@ -844,9 +844,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "6.5 动态主机配置协议DHCP 2pending task point2",
-        "observed_at_utc": "2026-09-04T06:48:00.693813+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481201+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693815+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481203+00:00"
     },
     "_6_0": {
       "task_id": "_6_0",
@@ -860,9 +860,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "7.1 目的和要求 0",
-        "observed_at_utc": "2026-09-04T06:48:00.693818+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481206+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693823+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481208+00:00"
     },
     "_6_1": {
       "task_id": "_6_1",
@@ -876,9 +876,9 @@
         "status": "UNKNOWN",
         "confidence": "UI",
         "source_detail": "7.2 参考资料 1pending task point1",
-        "observed_at_utc": "2026-09-04T06:48:00.693826+00:00"
+        "observed_at_utc": "2026-09-04T07:21:25.481210+00:00"
       },
-      "discovered_at_utc": "2026-09-04T06:48:00.693828+00:00"
+      "discovered_at_utc": "2026-09-04T07:21:25.481212+00:00"
     }
   }
 }
