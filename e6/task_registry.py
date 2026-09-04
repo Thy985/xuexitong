@@ -110,8 +110,6 @@ class TaskRecord:
 
     def to_dict(self) -> dict:
         d = asdict(self)
-        d.pop("_ch_idx", None)
-        d.pop("_cell_idx", None)
         return d
 
     @classmethod
