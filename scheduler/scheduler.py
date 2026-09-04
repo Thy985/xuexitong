@@ -481,23 +481,42 @@ def _run_tdvp_probe(course_url: str, course_key: str) -> Optional[str]:
             return next_rec.chapter_id
 
         # 无 chapter_id -> click_probe 获取
-        ch_idx = next_rec._ch_idx
-        cell_idx = next_rec._cell_idx
-        print(f"[scheduler] TDVP: no cid, click-probe ci={ch_idx} si={cell_idx} "
-              f"({next_rec.title})", flush=True)
-        resolved_cid = click_probe_chapter_id(course_url, ch_idx, cell_idx)
-        if resolved_cid:
-            next_rec.chapter_id = resolved_cid
-            save_registry(course_key, existing)
-            queue2 = reconcile_queue(course_key, existing, done_ids)
-            if queue2.items:
-                rec2 = existing.get(queue2.items[0]["task_id"])
-                if rec2 and rec2.chapter_id:
-                    print(f"[scheduler] TDVP: click-probe resolved -> {rec2.chapter_id}",
-                          flush=True)
-                    return rec2.chapter_id
-        else:
-            print("[scheduler] TDVP: click-probe failed, trying fallback", flush=True)
+        # 循环尝试无 cid 节点，跳过已在 done_ids 里的
+        max_probe_attempts = 10
+        for probe_i in range(max_probe_attempts):
+            ch_idx = next_rec._ch_idx
+            cell_idx = next_rec._cell_idx
+            print(f"[scheduler] TDVP: no cid, click-probe ci={ch_idx} si={cell_idx} "
+                  f"({next_rec.title})", flush=True)
+            resolved_cid = click_probe_chapter_id(course_url, ch_idx, cell_idx)
+            if resolved_cid:
+                next_rec.chapter_id = resolved_cid
+                save_registry(course_key, existing)
+                # 重新 reconcile，找下一个有 cid 的任务
+                queue2 = reconcile_queue(course_key, existing, done_ids)
+                if queue2.items:
+                    rec2 = existing.get(queue2.items[0]["task_id"])
+                    if rec2 and rec2.chapter_id and rec2.chapter_id not in done_ids:
+                        print(f"[scheduler] TDVP: click-probe resolved -> {rec2.chapter_id}",
+                              flush=True)
+                        return rec2.chapter_id
+                    elif rec2 and rec2.chapter_id and rec2.chapter_id in done_ids:
+                        # 这个 cid 也完成了，继续尝试下一个无 cid 节点
+                        next_tid = queue2.items[0]["task_id"]
+                        next_rec = existing.get(next_tid)
+                        if not next_rec or next_rec.chapter_id:
+                            break  # 没有更多无 cid 节点了
+                        continue
+                    else:
+                        # 下一个任务仍无 cid，继续循环
+                        next_tid = queue2.items[0]["task_id"]
+                        next_rec = existing.get(next_tid)
+                        if not next_rec or next_rec.chapter_id:
+                            break
+                        continue
+            else:
+                print("[scheduler] TDVP: click-probe failed, trying fallback", flush=True)
+                break
 
         # fallback: 取队列第二个任务
         queue3 = reconcile_queue(course_key, existing, done_ids)
