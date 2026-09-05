@@ -45,14 +45,14 @@
     },
     "verification": {
       "level": "SERVER_VERIFIED",
-      "verified_at_utc": "2026-09-05T14:01:16.412496+00:00",
-      "run_id": "33970120195",
-      "source_detail": "passed_object_ids=1"
+      "verified_at_utc": "2026-09-05T14:23:09.104814+00:00",
+      "run_id": "33970738470",
+      "source_detail": "passed_object_ids=3"
     },
     "created_at_utc": "2026-09-04T07:36:36.732281+00:00",
-    "updated_at_utc": "2026-09-05T14:01:16.412496+00:00",
+    "updated_at_utc": "2026-09-05T14:23:09.104814+00:00",
     "last_run_at_utc": null,
-    "last_success_at_utc": "2026-09-05T14:01:16.412496+00:00",
+    "last_success_at_utc": "2026-09-05T14:23:09.104814+00:00",
     "last_failure_at_utc": null,
     "_ch_idx": 10,
     "_cell_idx": 10
