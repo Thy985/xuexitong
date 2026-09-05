@@ -62,7 +62,7 @@
     "chapter_id": "1217304701",
     "title": "互联网的组成",
     "task_type": "video",
-    "status": "DISCOVERED",
+    "status": "COMPLETED",
     "priority": 55,
     "attempts": 0,
     "consecutive_failures": 0,
@@ -73,15 +73,15 @@
       "expires_at_utc": null
     },
     "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
+      "level": "SERVER_VERIFIED",
+      "verified_at_utc": "2026-09-05T13:25:02.783621+00:00",
+      "run_id": "33968374924",
+      "source_detail": "passed_object_ids=1"
     },
     "created_at_utc": "2026-09-05T12:35:58.026937+00:00",
-    "updated_at_utc": "2026-09-05T12:35:58.026937+00:00",
+    "updated_at_utc": "2026-09-05T13:25:02.783621+00:00",
     "last_run_at_utc": null,
-    "last_success_at_utc": null,
+    "last_success_at_utc": "2026-09-05T13:25:02.783621+00:00",
     "last_failure_at_utc": null,
     "_ch_idx": 1,
     "_cell_idx": 1
