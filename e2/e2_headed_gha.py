@@ -387,6 +387,7 @@ def run_test(args):
         cur_video_src = ""
         video_count = 0
         passed_object_ids = set()
+        initial_duration = evidence.get("video_duration", 0) or 0  # 记录初始视频总时长
         summary = {
             "duration": evidence["video_duration"],
             "ml_log_count": 0,
@@ -513,10 +514,10 @@ def run_test(args):
                 nextunit_seen = False  # 重置，继续等待当前章节的自然结束
             # 修复：当视频已结束（ended_seen）且已播完大部分（>95%）且有 passed 记录时，
             # 不再无限等待 nextunit，直接退出——这说明当前章节的所有视频任务点已完成
-            if ended_seen and passed_object_ids and max_ct > 0:
-                dur = summary["duration"]
-                if dur and (max_ct / dur) >= 0.95:
-                    log(f"Video ended at {max_ct:.0f}/{dur:.0f} (95%+) with {len(passed_object_ids)} passed — exiting")
+            # 注意：使用 initial_duration 而非 summary["duration"]，因为后者可能已被新卡片重置
+            if ended_seen and passed_object_ids and max_ct > 0 and initial_duration > 0:
+                if (max_ct / initial_duration) >= 0.95:
+                    log(f"Video ended at {max_ct:.0f}/{initial_duration:.0f} (95%+) with {len(passed_object_ids)} passed — exiting")
                     break
             if ended_seen and (now - ended_wall) > 30 and not nextunit_seen:
                 log("ended 30s no switch")
