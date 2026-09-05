@@ -30,18 +30,10 @@ def click_probe_chapter_id(course_url: str, chapter_index: int, cell_index: int)
         return None
 
     try:
-        from resolvers.course_resolver import _parse_url_params
-        params = _parse_url_params(course_url)
-        chapter_id = params.get("chapter_id") or ""
+        from models import CourseParams
 
         sys.path.insert(0, str(Path(__file__).parent.parent / "e2"))
         import e2_headed_gha as E
-        E.COURSE_ID = params.get("course_id", "")
-        E.CLAZZ_ID = params.get("clazz_id", "")
-        E.CPI = params.get("cpi", "")
-        E.ENC = params.get("enc", "")
-        E.OPENR = params.get("openc")
-        E.HIDETYPE = params.get("hidetype") or "0"
 
         from playwright.sync_api import sync_playwright
         display = os.environ.get("DISPLAY", ":99")
@@ -57,7 +49,8 @@ def click_probe_chapter_id(course_url: str, chapter_index: int, cell_index: int)
 
             # ── 登录（cookie 优先，无则密码登录）─────────────────
             from utils.cookie_store import ensure_login
-            base = E.build_base_url(chapter_id)
+            cp = CourseParams.from_url(course_url)
+            base = E.build_base_url(cp.chapter_id, cp)
             ensure_login(page, ctx, base, user, pw)
 
             # ── 导航到课程页面 ────────────────────────────────────

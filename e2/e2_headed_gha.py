@@ -64,45 +64,40 @@ CLAZZ_ID   = os.environ.get("CLAZZ_ID", DEMO_CLAZZ_ID)
 CPI        = os.environ.get("CPI", DEMO_CPI)
 ENC        = os.environ.get("ENC", DEMO_ENC)
 CHAPTER_ID = os.environ.get("CHAPTER_ID", DEMO_CHAPTER)
-# 由超星课程侧提供的 openc/hidetype（从 URL / env / CLI 注入）。
-# 没有这两个参数时，当前学生页面不渲染 knowledge/cards iframe → no_cards_frame。
 OPENR = os.environ.get("OPENR") or os.environ.get("OPEN_C")    # noqa: N816
 HIDETYPE = os.environ.get("HIDETYPE")
 
 
+def default_params() -> "CourseParams":
+    """从模块级默认构造 CourseParams（仅 standalone / 兜底使用）。
+
+    架构：生产 / scheduler / app.run 一律显式传入 CourseParams，
+    不再依赖 import 后改写模块级全局，避免线程/多 course 状态踩踏。
+    """
+    from models import CourseParams
+    return CourseParams(
+        course_id=COURSE_ID, clazz_id=CLAZZ_ID, cpi=CPI, enc=ENC,
+        chapter_id=CHAPTER_ID, openc=OPENR, hidetype=HIDETYPE,
+    )
+
+
 def parse_course_url(url: str | None) -> dict:
-    """从超星 studentstudy URL 提取课程/章节/附加参数（openc/hidetype 必须保留）。"""
+    """解析超星 studentstudy URL 为参数字典（与 CourseParams.from_url 等价，保留 dict 兼容）。"""
     if not url:
         return {}
-    q = parse_qs(urlparse(url).query)
-    pick = lambda k: (q.get(k) or [None])[0]              # noqa: E731
-    return {
-        "course_id": pick("courseId"),
-        "clazz_id":  pick("clazzid") or pick("clazzId"),
-        "cpi":       pick("cpi"),
-        "enc":       pick("enc"),
-        "chapter_id": pick("chapterId"),
-        # 关键：openc / hidetype 决定 cards iframe 是否被渲染
-        "openc":     pick("openc"),
-        "hidetype":  pick("hidetype"),
-    }
+    from models import CourseParams
+    return CourseParams.from_url(url).to_dict()
 
 
-def build_base_url(chap_id: str) -> str:
-    url = (
-        "https://mooc1.chaoxing.com/mycourse/studentstudy?"
-        f"chapterId={chap_id}&courseId={COURSE_ID}&clazzid={CLAZZ_ID}"
-        f"&cpi={CPI}&enc={ENC}&mooc2=1"
-    )
-    # 保留产品必需参数；丢失则服务端可能不渲染 cards iframe
-    parts = []
-    if HIDETYPE:
-        parts.append(f"hidetype={HIDETYPE}")
-    if OPENR:
-        parts.append(f"openc={OPENR}")
-    if parts:
-        url += "&" + "&".join(parts)
-    return url
+def build_base_url(chap_id: str, params: "CourseParams | None" = None) -> str:
+    """构造 studentstudy 页面 URL。
+
+    params 缺省时取模块全局默认（standalone / 兼容旧用法）；
+    生产路径务必显式传入 CourseParams。chapterId 用 chap_id 覆盖。
+    """
+    from models import CourseParams
+    p = params or default_params()
+    return CourseParams(**{**p.to_dict(), "chapter_id": chap_id}).build_base_url()
 
 V3_SCRIPT_PATH = Path(__file__).parent.parent / "xuexitongScript" / "v3_optimized.user.js"
 
@@ -196,7 +191,18 @@ def get_sidebar(page, cid: str) -> dict | None:
 
 
 # ── 主验证流程 ────────────────────────────────────────────────────
-def run_test(args):
+def run_test(args, params: "CourseParams | None" = None):
+    """执行浏览器学习验证。
+
+    params: 显式运行参数（课程 + 章节 + openc/hidetype）。缺省时从模块全局默认取，
+            仅用于 E2 standalone；生产 / scheduler / app.run 一律显式传入，
+            避免依赖跨模块改写模块级全局。
+    """
+    from models import CourseParams as _CP
+    # 取一次生效参数：显式优先，否则包一层模块默认（chapter_id 与 args 保持一致）。
+    params = params or default_params()
+    if not params.chapter_id:
+        params.chapter_id = getattr(args, "chapter_id", "") or params.chapter_id
     evidence: dict = {}
 
     # ── A. CI 环境信息 ──────────────────────────────────────────────
@@ -296,7 +302,7 @@ def run_test(args):
         # ── C. 登录（cookie 优先，无则密码登录）────────────────────
         log("--- Step C: Login (cookie-first) ---")
         from utils.cookie_store import ensure_login
-        base = build_base_url(args.chapter_id)
+        base = build_base_url(args.chapter_id, params)
         login_ok = ensure_login(page, ctx,
                                 base, os.environ["CX_USER"], os.environ["CX_PASS"],
                                 login_timeout_s=LOGIN_TIMEOUT_S)
@@ -317,7 +323,7 @@ def run_test(args):
 
         # ── D. 前置状态记录 ─────────────────────────────────────────
         log("--- Step D: Pre-state ---")
-        page.goto(build_base_url(args.chapter_id), wait_until="domcontentloaded")
+        page.goto(build_base_url(args.chapter_id, params), wait_until="domcontentloaded")
         page.wait_for_timeout(6000)
         evidence["checks"]["studentstudy_loaded"] = "studentstudy" in page.url
         log(f"studentstudy loaded: {evidence['checks']['studentstudy_loaded']}")
@@ -535,7 +541,7 @@ def run_test(args):
         # ── H. 后置复核 ─────────────────────────────────────────────
         log("--- Step H: Post-verification ---")
         try:
-            page.goto(build_base_url(args.chapter_id), wait_until="domcontentloaded")
+            page.goto(build_base_url(args.chapter_id, params), wait_until="domcontentloaded")
             page.wait_for_timeout(5000)
             evidence["banner_after"] = get_banner(page)
             m_a = re.search(r"已学习了(\d+)", evidence["banner_after"] or "")
@@ -795,17 +801,15 @@ def main():
         args.openc      = args.openc      or os.environ.get("OPENR")
         args.hidetype   = args.hidetype   or os.environ.get("HIDETYPE")
 
-    # 使 run_test 内 build_base_url 使用解析后的课程参数
-    globals()["COURSE_ID"] = args.course_id
-    globals()["CLAZZ_ID"]  = args.clazz_id
-    globals()["CPI"]       = args.cpi
-    globals()["ENC"]       = args.enc
-    globals()["OPENR"]     = args.openc
-    globals()["HIDETYPE"]  = args.hidetype
-    args.course_id, args.clazz_id, args.cpi, args.enc = (
-        args.course_id, args.clazz_id, args.cpi, args.enc)
+    # 构造显式 CourseParams 传给 run_test，不再通过改写模块级全局注入。
+    from models import CourseParams
+    run_params = CourseParams(
+        course_id=args.course_id, clazz_id=args.clazz_id, cpi=args.cpi,
+        enc=args.enc, chapter_id=args.chapter_id,
+        openc=args.openc, hidetype=args.hidetype,
+    )
 
-    ev = run_test(args)
+    ev = run_test(args, run_params)
     _write(ev, args.output)
     print(json.dumps(ev.get("verification_10", {}), ensure_ascii=False, indent=2))
     print(f"\nVERDICT: {ev.get('verdict', 'UNKNOWN')}")

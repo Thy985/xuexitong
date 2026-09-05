@@ -94,18 +94,20 @@ def load_scheduler_state(course_key: str) -> Optional[SchedulerState]:
 
 
 def save_scheduler_state(course_key: str, ss: SchedulerState) -> None:
-    """保存 scheduler 状态到 course state。"""
+    """保存 scheduler 状态到 course state（per-course 锁内原子 RMW）。"""
     try:
-        from state.course_state import load_course_state, save_course_state
-        state = load_course_state(course_key)
-        if not state:
-            return
-        # 将 scheduler 字段合并到 state
+        from state.course_state import update_course_state
         sd = ss.to_dict()
-        if not hasattr(state, 'scheduler'):
-            state.scheduler = {}
-        state.scheduler.update(sd)
-        save_course_state(state)
+
+        def _merge(state):
+            if state is None:
+                return None
+            if not hasattr(state, 'scheduler'):
+                state.scheduler = {}
+            state.scheduler.update(sd)
+            return state
+
+        update_course_state(course_key, _merge)
     except Exception as e:
         print(f"[scheduler] Error saving state: {e}", file=sys.stderr)
 
@@ -300,34 +302,37 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
             timing_s=0, passed=False, verdict=reason,
         )
 
-    # 执行 run
-    import subprocess
+    # 执行 run —— 函数级编排（替代旧版 subprocess 双层解析）
+    # 直接调用 app.cmd_run，共享同一进程上下文/日志，避免 subprocess 状态断线。
     import time
+    import argparse
+    import json as json_mod
+    from app import run as app_run
+
     t0 = time.time()
-    cmd = [
-        sys.executable, "app/run.py",
-        "--action", "run",
-        "--course-url", course_url,
-        "--chapter-id", chapter_id,
-        "--output", "./evidence/result.json",
-    ]
-    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=1500)
+    evidence_path = "./evidence/result.json"
+    run_args = argparse.Namespace(
+        course_url=course_url,
+        chapter_id=chapter_id,
+        output=evidence_path,
+        xvfb_display=os.environ.get("DISPLAY", ":99"),
+        max_attempts=2,
+    )
+    try:
+        exit_code = app_run.cmd_run(run_args)
+    except Exception as e:  # 函数级异常视为失败
+        print(f"[scheduler] run_scheduler: cmd_run raised: {type(e).__name__}: {e}",
+              file=sys.stderr, flush=True)
+        exit_code = 1
     timing = time.time() - t0
 
-    # 打印子进程输出（便于 CI 诊断执行失败原因）
-    if proc.stdout:
-        print(proc.stdout[-2000:], flush=True)
-    if proc.stderr:
-        print(f"[stderr] {proc.stderr[-2000:]}", file=sys.stderr, flush=True)
-
-    passed = proc.returncode == 0
+    passed = exit_code == 0
     verdict = "PASS" if passed else "FAIL"
 
-    # 解析实际 verdict
+    # 从 evidence 文件读取实际 verdict / failure_stage（与旧版一致）
     try:
-        import json as json_mod
-        if Path("./evidence/result.json").exists():
-            with open("./evidence/result.json") as f:
+        if Path(evidence_path).exists():
+            with open(evidence_path) as f:
                 r = json_mod.load(f)
             res = r.get("result", {})
             verdict = res.get("verdict", verdict)

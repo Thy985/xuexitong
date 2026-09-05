@@ -151,6 +151,20 @@ class CourseDiscovery:
 
 # ── Passive Probe ──────────────────────────────────────────────────
 
+def _tdvp_course_params(params: dict) -> "CourseParams":
+    """把 _parse_url_params 的 dict 转成 CourseParams（复用共享模型，替代 E.* 全局注入）。"""
+    from models import CourseParams
+    return CourseParams(
+        course_id=params.get("course_id", ""),
+        clazz_id=params.get("clazz_id", ""),
+        cpi=params.get("cpi", ""),
+        enc=params.get("enc", ""),
+        chapter_id=params.get("chapter_id", ""),
+        openc=params.get("openc"),
+        hidetype=params.get("hidetype") or "0",
+    )
+
+
 def parse_task_status_from_page(html: str, chapter_id: str) -> list[TaskInfo]:
     """从 studentstudy 页面 HTML 解析任务列表。
 
@@ -227,12 +241,7 @@ def fetch_course_discovery(course_url: str, cx_user: Optional[str] = None,
 
         sys.path.insert(0, str(Path(__file__).parent.parent / "e2"))
         import e2_headed_gha as E
-        E.COURSE_ID = params.get("course_id", "")
-        E.CLAZZ_ID = params.get("clazz_id", "")
-        E.CPI = params.get("cpi", "")
-        E.ENC = params.get("enc", "")
-        E.OPENR = params.get("openc")
-        E.HIDETYPE = params.get("hidetype") or "0"
+        cp = _tdvp_course_params(params)
 
         from playwright.sync_api import sync_playwright
         display = os.environ.get("DISPLAY", ":99")
@@ -254,7 +263,7 @@ def fetch_course_discovery(course_url: str, cx_user: Optional[str] = None,
 
             # ── 登录（cookie 优先，无则密码登录）─────────────────
             from utils.cookie_store import ensure_login
-            base = E.build_base_url(chapter_id)
+            base = E.build_base_url(chapter_id, cp)
             ensure_login(page, ctx, base, user, pw)
 
             # ── 导航到课程目录页 ──────────────────────────────────
@@ -428,12 +437,7 @@ def resolve_click_probe_chapter_id(course_url: str, ch_idx: int, cell_idx: int) 
         chapter_id = params.get("chapter_id") or ""
         sys.path.insert(0, str(Path(__file__).parent.parent / "e2"))
         import e2_headed_gha as E
-        E.COURSE_ID = params.get("course_id", "")
-        E.CLAZZ_ID = params.get("clazz_id", "")
-        E.CPI = params.get("cpi", "")
-        E.ENC = params.get("enc", "")
-        E.OPENR = params.get("openc")
-        E.HIDETYPE = params.get("hidetype") or "0"
+        cp = _tdvp_course_params(params)
 
         from playwright.sync_api import sync_playwright
         display = os.environ.get("DISPLAY", ":99")
@@ -446,7 +450,7 @@ def resolve_click_probe_chapter_id(course_url: str, ch_idx: int, cell_idx: int) 
             )
             ctx = browser.new_context(viewport={"width": 1440, "height": 900})
             page = ctx.new_page()
-            base = E.build_base_url(chapter_id)
+            base = E.build_base_url(chapter_id, cp)
             page.goto(base, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(3000)
             try:
@@ -519,12 +523,7 @@ def fetch_page_html(course_url: str, cx_user: Optional[str] = None,
 
         sys.path.insert(0, str(Path(__file__).parent.parent / "e2"))
         import e2_headed_gha as E
-        E.COURSE_ID = params.get("course_id", "")
-        E.CLAZZ_ID = params.get("clazz_id", "")
-        E.CPI = params.get("cpi", "")
-        E.ENC = params.get("enc", "")
-        E.OPENR = params.get("openc")
-        E.HIDETYPE = params.get("hidetype") or "0"
+        cp = _tdvp_course_params(params)
 
         from playwright.sync_api import sync_playwright
         display = os.environ.get("DISPLAY", ":99")
@@ -537,7 +536,7 @@ def fetch_page_html(course_url: str, cx_user: Optional[str] = None,
             )
             ctx = browser.new_context(viewport={"width": 1440, "height": 900})
             page = ctx.new_page()
-            base = E.build_base_url(chapter_id)
+            base = E.build_base_url(chapter_id, cp)
             page.goto(base, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(3000)
             try:

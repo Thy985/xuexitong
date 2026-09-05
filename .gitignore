@@ -15,3 +15,9 @@ evidence/
 # 安全：绝不把登录 Cookie/会话凭证入库或上传为 artifact
 state/cookies.json
 .cache/
+
+# 运行期推荐文件锁不入库
+*.lock
+
+# 本地环境变量/密钥（即使误存二进制也绝不入库）
+.env

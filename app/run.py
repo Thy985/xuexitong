@@ -146,7 +146,8 @@ def cmd_switch(args) -> int:
 
 def cmd_run(args) -> int:
     """Run: 加载活跃课程状态，执行视频学习。"""
-    # 解析 URL（用于设置引擎参数）
+    # 解析 URL（用于设置引擎参数）——显式传给引擎，避免依赖模块级全局
+    from models import CourseParams
     course = parse_course_url(args.course_url)
     missing = [k for k, v in course.items() if not v]
     if not course or missing:
@@ -155,14 +156,16 @@ def cmd_run(args) -> int:
 
     chapter = args.chapter_id or course["chapter_id"]
 
-    # 设置引擎全局参数
-    import e2_headed_gha as E
-    E.COURSE_ID = course["course_id"]
-    E.CLAZZ_ID = course["clazz_id"]
-    E.CPI = course["cpi"]
-    E.ENC = course["enc"]
-    E.OPENR = course.get("openc")
-    E.HIDETYPE = course.get("hidetype") or "0"
+    # 构造显式运行参数（含 openc/hidetype，缺失会导致 no_cards_frame）
+    run_params = CourseParams(
+        course_id=course.get("course_id", ""),
+        clazz_id=course.get("clazz_id", ""),
+        cpi=course.get("cpi", ""),
+        enc=course.get("enc", ""),
+        chapter_id=chapter,
+        openc=course.get("openc"),
+        hidetype=course.get("hidetype") or "0",
+    )
 
     # 加载或初始化课程状态
     active = load_active_course()
@@ -222,7 +225,7 @@ def cmd_run(args) -> int:
         if attempt > 1:
             print(f"  retry {attempt-1}/{max_attempts-1} …", flush=True)
         try:
-            ev = run_test(eargs)
+            ev = run_test(eargs, run_params)
         except Exception as e:
             crash_msg = f"{type(e).__name__}: {e}"
             print(f"[!] run_test crashed: {crash_msg}", flush=True)

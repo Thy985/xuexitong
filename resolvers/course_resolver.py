@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import re
 import sys
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
@@ -31,26 +31,7 @@ IdentityKind = Literal["SAME_COURSE", "COURSE_CHANGED", "NEW_COURSE", "INVALID"]
 ResolutionStatus = Literal["OK", "INVALID", "FAILED"]
 
 
-@dataclass
-class CourseIdentity:
-    """稳定课程身份，不随 URL 中普通参数变化而改变。"""
-    course_id: str
-    clazz_id: str
-    cpi: str
-    title: str
-    raw_url: str
-    resolved_at_utc: str
-
-    def key(self) -> str:
-        """生成稳定内部 key: course_id_class_id。"""
-        return f"{self.course_id}_{self.clazz_id}"
-
-    def to_dict(self) -> dict:
-        return asdict(self)
-
-    @classmethod
-    def from_dict(cls, d: dict) -> "CourseIdentity":
-        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+from models import CourseIdentity  # noqa: E402 —— 统一共享身份模型，替代本地重复定义
 
 
 @dataclass
@@ -197,21 +178,15 @@ def _verify_via_browser(url: str, cx_user: str, cx_pass: str,
     """通过真实浏览器验证课程页面，提取标题并确认 URL 参数与页面一致。"""
     import os
     sys.path.insert(0, str(Path(__file__).parent.parent / "e2"))
-    from e2_headed_gha import build_base_url, parse_course_url
+    from e2_headed_gha import build_base_url
+    from models import CourseParams
 
     display = os.environ.get("DISPLAY", ":99")
     os.environ["CX_USER"] = cx_user
     os.environ["CX_PASS"] = cx_pass
 
-    # 临时设置模块全局
-    import e2_headed_gha as E
-    p = parse_course_url(url)
-    E.COURSE_ID = p["course_id"]
-    E.CLAZZ_ID = p["clazz_id"]
-    E.CPI = p["cpi"]
-    E.ENC = p["enc"]
-    E.OPENR = p.get("openc")
-    E.HIDETYPE = p.get("hidetype") or "0"
+    # 显式构造运行参数，不再通过改写模块级全局注入
+    cp = CourseParams.from_url(url)
 
     from playwright.sync_api import sync_playwright
 
@@ -234,7 +209,7 @@ def _verify_via_browser(url: str, cx_user: str, cx_pass: str,
 
         # 登录（cookie 优先，无则密码登录）
         from utils.cookie_store import ensure_login
-        base = build_base_url(p["chapter_id"])
+        base = build_base_url(cp.chapter_id, cp)
         login_ok = ensure_login(page, ctx, base, cx_user, cx_pass)
         evidence["browser_login_ok"] = login_ok
 
@@ -269,13 +244,13 @@ def _verify_via_browser(url: str, cx_user: str, cx_pass: str,
         nav_params = _parse_url_params(page.url)
         evidence["nav_params"] = {k: v for k, v in nav_params.items() if v}
 
-        id_match = (nav_params.get("course_id") == p["course_id"] and
-                    nav_params.get("clazz_id") == p["clazz_id"])
+        id_match = (nav_params.get("course_id") == cp.course_id and
+                    nav_params.get("clazz_id") == cp.clazz_id)
         evidence["id_consistent"] = id_match
 
         browser.close()
 
-        return final_title or p["course_id"]
+        return final_title or cp.course_id
 
 
 def identity_key(identity: CourseIdentity) -> str:

@@ -39,32 +39,80 @@ _STATE_DIR_MODE = 0o700
 _STATE_FILE_MODE = 0o600
 
 
+# ── 文件锁（per-course 串行化 read-modify-write）─────────────────────
+# 多个 job（定时 + 手动 + switch）可能并发读写同一课程状态，
+# 用 OS 级别的推荐锁把「read → mutate → write」临界区串行化，避免丢失更新。
+try:
+    import fcntl  # POSIX: GitHub Actions / Linux
+
+    def _lock_exclusive(f):
+        fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+
+    def _unlock(f):
+        try:
+            fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+        except Exception:
+            pass
+except ImportError:  # pragma: no cover - Windows
+    import msvcrt
+
+    def _lock_exclusive(f):
+        msvcrt.locking(f.fileno(), msvcrt.LK_LOCK, 1)
+
+    def _unlock(f):
+        try:
+            f.seek(0)
+            msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
+        except Exception:
+            pass
+
+
+class _course_lock:  # noqa: N801 — 头等上下文管理器
+    """推荐文件锁：锁文件 <key>.lock，序列化 RMW。"""
+
+    def __init__(self, identity_key: str, lock_root: Optional[Path] = None):
+        _ensure_dirs()
+        self._path = (lock_root or COURSES_DIR) / f"{identity_key}.lock"
+        self._fh = None
+
+    def __enter__(self):
+        # 打开/创建锁文件（不截断），申请独占锁
+        self._fh = open(self._path, "a+b")  # noqa: SIM115
+        self._fh.seek(0)
+        _lock_exclusive(self._fh)
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        if self._fh is not None:
+            _unlock(self._fh)
+            self._fh.close()
+            self._fh = None
+        # 锁文件保留（跨 run 复用，避免频繁创建/删除竞态）
+        return False
+
+
+def update_course_state(identity_key: str, updater) -> Optional[CourseState]:
+    """在 per-course 锁内原子执行「读 → 改 → 写」，返回更新后的状态。
+
+    updater: Callable[[Optional[CourseState]], Optional[CourseState]]
+      传入当前状态（None 表示不存在），返回要持久化的新状态或 None（放弃写入）。
+    """
+    with _course_lock(identity_key):
+        state = load_course_state(identity_key)
+        new_state = updater(state)
+        if new_state is not None:
+            save_course_state(new_state)
+        return new_state
+
+
 # ── 类型定义 ───────────────────────────────────────────────────────
 CourseStatus = Literal[
     "NEW", "ACTIVE", "RUNNING", "PARTIALLY_COMPLETED",
     "COMPLETED", "ARCHIVED", "ERROR", "BLOCKED"
 ]
 
-
-@dataclass
-class CourseIdentity:
-    """课程身份信息（与 resolvers.CourseIdentity 对应但独立，避免循环依赖）。"""
-    course_id: str
-    clazz_id: str
-    cpi: str
-    title: str
-    raw_url: str
-    resolved_at_utc: str
-
-    def key(self) -> str:
-        return f"{self.course_id}_{self.clazz_id}"
-
-    def to_dict(self) -> dict:
-        return asdict(self)
-
-    @classmethod
-    def from_dict(cls, d: dict) -> "CourseIdentity":
-        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+# 课程身份 —— 统一使用 models.CourseIdentity（单一来源），消除与 resolvers 的重复定义。
+from models import CourseIdentity  # noqa: E402
 
 
 @dataclass
@@ -298,13 +346,14 @@ def activate_course(identity: CourseIdentity) -> None:
 
 
 def archive_course(identity: CourseIdentity) -> None:
-    """将课程标记为归档。"""
+    """将课程标记为归档（per-course 锁内 RMW）。"""
     _ensure_dirs()
     key = identity.key()
-    state = load_course_state(key)
-    if state:
-        state.status = "ARCHIVED"
-        save_course_state(state)
+    with _course_lock(key):
+        state = load_course_state(key)
+        if state and state.status != "ARCHIVED":
+            state.status = "ARCHIVED"
+            save_course_state(state)
 
 
 def update_state_after_run(
@@ -408,14 +457,18 @@ def run_course(identity: CourseIdentity,
                passed: bool,
                timing_s: float,
                verdict: str) -> CourseState:
-    """执行一次课程 run 并更新状态。"""
-    state = load_course_state(identity.key())
-    if not state:
-        state = CourseState(
-            schema_version=1, course_identity=identity, status="ACTIVE"
-        )
-    update_state_after_run(state, passed, timing_s, chapter_id, verdict)
-    return state
+    """执行一次课程 run 并更新状态（per-course 锁内原子 read-modify-write）。"""
+    key = identity.key()
+    with _course_lock(key):
+        state = load_course_state(key)
+        if not state:
+            state = CourseState(
+                schema_version=1, course_identity=identity, status="ACTIVE"
+            )
+            save_course_state(state)
+        # update_state_after_run 在末尾 save；此处处于同锁临界区，load→mutate→save 原子。
+        update_state_after_run(state, passed, timing_s, chapter_id, verdict)
+        return state
 
 
 # 导入 sys/os 用于错误输出
