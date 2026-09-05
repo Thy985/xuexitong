@@ -278,7 +278,7 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
         course_url = active.raw_url  # 使用 state 中保存的 URL
 
     # ── Step 2: TDVP Passive Probe（后台静默执行）────────────────
-    next_chapter = _run_tdvp_probe(course_url, identity_key)
+    next_chapter = _run_tdvp_probe(course_url, identity_key, run_id=run_id)
     if next_chapter:
         chapter_id = next_chapter  # 用发现的 next_task 覆盖传入的 chapter_id
 
@@ -394,7 +394,8 @@ def _write_summary(summary: dict) -> None:
         pass
 
 
-def _run_tdvp_probe(course_url: str, course_key: str) -> Optional[str]:
+def _run_tdvp_probe(course_url: str, course_key: str,
+                    run_id: str = "local") -> Optional[str]:
     """E6 TDVP Probe: Discovery -> Sync E6 Registry -> Reconcile Queue -> pick next task.
 
     Returns:
