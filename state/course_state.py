@@ -131,6 +131,10 @@ class CourseProgress:
         return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
 
 
+# 当前持久化 schema 版本；低于它的旧文件可读（向前兼容），高于则拒绝（向后不兼容）。
+CURRENT_SCHEMA = 1
+
+
 @dataclass
 class CourseState:
     """单个课程的完整持久化状态。"""
@@ -150,6 +154,15 @@ class CourseState:
 
     @classmethod
     def from_dict(cls, d: dict) -> "CourseState":
+        # 版本守卫：文件 schema 比当前新（未来可能有破坏性变更）→ 拒绝解析，
+        # 由上层捕获后视为「无法读取」并落为 None，避免静默用错字段。
+        if isinstance(d, dict):
+            stored_version = d.get("schema_version", CURRENT_SCHEMA)
+            if isinstance(stored_version, int) and stored_version > CURRENT_SCHEMA:
+                raise ValueError(
+                    f"course state schema v{stored_version} newer than supported "
+                    f"v{CURRENT_SCHEMA}; upgrade the app before reading this state"
+                )
         ci = d.pop("course_identity", None)
         prog = d.pop("progress", None)
         scheduler = d.pop("scheduler", None)

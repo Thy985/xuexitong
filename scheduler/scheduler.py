@@ -692,11 +692,15 @@ def _run_tdvp_probe(course_url: str, course_key: str,
             return None
 
 def sync_tdvp_on_switch(new_identity, course_url: str) -> None:
-    """课程切换时同步 TDVP 状态。"""
+    """课程切换时同步任务登记表（TDVP/E6 清空，新课程从零开始）。
+
+    架构：调度器实际使用的是 e6.task_registry（state/registry/<key>/tasks.json）。
+    旧版误写在已弃用的 tvdp_tasks.json，导致切换课程后 e6 registry 残留旧任务。
+    """
     try:
-        from tvdp.tdvp import save_task_registry
-        # 清空旧任务的 registry（新课程从零开始）
-        save_task_registry(new_identity.key(), {})
+        from e6.task_registry import save_registry
+        # 清空新课程（即将激活）的任务登记；旧课程 registry 保留作诊断
+        save_registry(new_identity.key(), {})
     except Exception:
         pass
 

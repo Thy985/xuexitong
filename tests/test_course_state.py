@@ -25,6 +25,7 @@ from state.course_state import (
     STATE_DIR,
     ACTIVE_FILE,
     COURSES_DIR,
+    CURRENT_SCHEMA,
 )
 
 
@@ -263,6 +264,35 @@ class TestGetCoursesList:
         assert len(result) == 1
         assert result[0]["key"] == sample_state.course_identity.key()
         assert result[0]["status"] == "ACTIVE"
+
+
+# ── Tests: schema 版本守卫 ─────────────────────────────────────────
+class TestSchemaGuard:
+    def _path(self, state):
+        """经 live 模块属性取 patched 的课程状态文件路径（绕过 import 时绑定的旧常量）。"""
+        import state.course_state as cs_live
+        return cs_live.COURSES_DIR / f"{state.course_identity.key()}.json"
+
+    def test_current_schema_loads(self, sample_state, state_tmp_dir):
+        save_course_state(sample_state)
+        path = self._path(sample_state)
+        assert path.exists(), f"expected state file at {path}"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        assert data["schema_version"] == CURRENT_SCHEMA
+        loaded = CourseState.from_dict(data)
+        assert loaded.schema_version == CURRENT_SCHEMA
+
+    def test_newer_schema_rejected(self, sample_state, state_tmp_dir):
+        save_course_state(sample_state)
+        path = self._path(sample_state)
+        data = json.loads(path.read_text(encoding="utf-8"))
+        data["schema_version"] = CURRENT_SCHEMA + 1
+        path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        # from_dict 直接抛错
+        with pytest.raises(ValueError):
+            CourseState.from_dict(data)
+        # load_course_state 捕获异常并按“无法读取”返回 None
+        assert load_course_state(sample_state.course_identity.key()) is None
 
 
 if __name__ == "__main__":
