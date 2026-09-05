@@ -33,7 +33,7 @@
     "chapter_id": "1217304706",
     "title": "物理层的主要任务",
     "task_type": "video",
-    "status": "DISCOVERED",
+    "status": "COMPLETED",
     "priority": 10,
     "attempts": 0,
     "consecutive_failures": 0,
@@ -44,15 +44,15 @@
       "expires_at_utc": null
     },
     "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
+      "level": "SERVER_VERIFIED",
+      "verified_at_utc": "2026-09-05T10:33:53.915539+00:00",
+      "run_id": "33959950280",
+      "source_detail": "passed_object_ids=4"
     },
     "created_at_utc": "2026-09-04T07:36:36.732281+00:00",
-    "updated_at_utc": "2026-09-04T07:36:36.732281+00:00",
+    "updated_at_utc": "2026-09-05T10:33:53.915539+00:00",
     "last_run_at_utc": null,
-    "last_success_at_utc": null,
+    "last_success_at_utc": "2026-09-05T10:33:53.915539+00:00",
     "last_failure_at_utc": null,
     "_ch_idx": 10,
     "_cell_idx": 10
