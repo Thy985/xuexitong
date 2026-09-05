@@ -326,6 +326,36 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
             res = r.get("result", {})
             verdict = res.get("verdict", verdict)
             passed = res.get("exit_code", 1) == 0
+            # 无视频节点（过渡页/无 cards）→ 自动跳过，标记 COMPLETED，
+            # 避免 done_ids 修复后对这些不可学习节点无限重试。
+            if not passed:
+                ev = r.get("evidence", {}) or {}
+                failure_stage = str(ev.get("failure_stage", "") or "")
+                v_str = str(ev.get("verdict", "") or "").lower()
+                no_video = (
+                    failure_stage in ("NO_CARDS_IFRAME", "NO_VIDEO_IN_CARDS")
+                    or any(s in v_str for s in (
+                        "video metadata not ready", "no_cards_frame",
+                        "no_video_in_cards", "cards iframe",
+                    ))
+                )
+                if no_video:
+                    try:
+                        from e6.task_registry import load_registry, save_registry
+                        reg = load_registry(identity_key)
+                        changed = False
+                        for t in reg.values():
+                            if t.chapter_id == chapter_id:
+                                t.status = "COMPLETED"
+                                changed = True
+                        if changed:
+                            save_registry(identity_key, reg)
+                            print(f"[scheduler] {chapter_id}: no-video node -> "
+                                  f"marked COMPLETED (skip)", flush=True)
+                    except Exception:
+                        pass
+                    passed = True
+                    verdict = "SKIP(no video)"
     except Exception:
         pass
 
@@ -450,15 +480,14 @@ def _run_tdvp_probe(course_url: str, course_key: str) -> Optional[str]:
         for t in list(existing.values())[:8]:
             print(f"    - [{t.status}] cid={t.chapter_id or '?'} {t.title}", flush=True)
 
-        # 3. 读取已完成的 chapter_id 集合
+        # 3. 读取已完成的 chapter_id 集合（仅统计 passed=True，失败 run 不算完成）
         done_ids = set()
         try:
             state = load_course_state(course_key)
             if state and state.history:
                 for h in state.history:
-                    cid = h.get("chapter_id", "")
-                    if cid:
-                        done_ids.add(cid)
+                    if h.get("passed") and h.get("chapter_id"):
+                        done_ids.add(h["chapter_id"])
         except Exception:
             pass
         print(f"[scheduler] TDVP: done={len(done_ids)} chapters: "
