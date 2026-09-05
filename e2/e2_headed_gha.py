@@ -151,7 +151,8 @@ def get_video_state(page) -> dict:
                 found:true, currentTime: v.currentTime,
                 duration: (isFinite(d) && d>0) ? d : null,
                 paused: v.paused, readyState: v.readyState,
-                playbackRate: v.playbackRate, ended: v.ended
+                playbackRate: v.playbackRate, ended: v.ended,
+                src: v.currentSrc || v.src || ''
             };
         }""")
     except Exception as e:
@@ -383,6 +384,9 @@ def run_test(args):
         ended_wall = None
         nextunit_seen = False
         ml_parsed = []
+        cur_video_src = ""
+        video_count = 0
+        passed_object_ids = set()
         summary = {
             "duration": evidence["video_duration"],
             "ml_log_count": 0,
@@ -400,7 +404,25 @@ def run_test(args):
             st = get_video_state(page)
             if st and st.get("found"):
                 ct = st.get("currentTime") or 0
-                dur = st.get("duration")
+                v_src = st.get("src") or ""
+                # 章节内视频任务点切换检测：同一 chapterId 下 video src 变化 = 下一个视频任务点。
+                # 超星章节可含多个视频任务点（页面目录节点后的数字），
+                # 切换时 chapterId 不变，只有 cards iframe 内 video src 变化。
+                if v_src and v_src != cur_video_src:
+                    if cur_video_src:
+                        video_count += 1
+                        log(f"★ Chapter video switch -> #{video_count + 1} "
+                            f"src={v_src[:80]}")
+                    else:
+                        video_count = 1
+                    cur_video_src = v_src
+                    # 重置视频级状态，继续播放新任务点
+                    ended_seen = False
+                    ended_wall = None
+                    last_ct = 0.0
+                    last_ct_change_at = now
+                    max_ct = 0.0
+                    summary["duration"] = st.get("duration") or summary["duration"]
                 if ct > 0 and not summary["playback_started"]:
                     summary["playback_started"] = now
                     log(f"★ Playback started: ct={ct:.1f}s (headed GHA mode)")
@@ -445,6 +467,9 @@ def run_test(args):
                 if body and '"isPassed":true' in body:
                     isPassed_seen = True
                     isPassed_at = ev["t"]
+                    obj_id = entry.get("objectId")
+                    if obj_id:
+                        passed_object_ids.add(obj_id)
                     evidence["isPassed_body"] = body[:300]
                     log(f"★ isPassed=true! body={body[:120]}")
             evidence["ml_log_count"] = len(ml_parsed)
@@ -454,7 +479,8 @@ def run_test(args):
                 dur = summary["duration"]
                 pct = (max_ct / dur * 100) if dur else 0
                 log(f"[GHA] ct={max_ct:.0f}/{dur if dur else '?'} ({pct:.0f}%) "
-                    f"isPassed={isPassed_seen} ended={ended_seen} ml={evidence['ml_log_count']}")
+                    f"isPassed={isPassed_seen} ended={ended_seen} "
+                    f"ml={evidence['ml_log_count']} videos={video_count}")
 
             # nextUnit 检测：只认 URL chapterId 变化（唯一可靠信号）。
             #   旧版用 .posCatalog_active/.posCatalog_current 标题启发式会误命中"当前章节标题"，
@@ -486,7 +512,10 @@ def run_test(args):
         summary["loop_seconds"] = time.time() - start
         evidence["max_currentTime"] = max_ct
         evidence["loop_seconds"] = summary["loop_seconds"]
-        log(f"Playback loop ended: {summary['loop_seconds']:.0f}s max_ct={max_ct:.0f}s")
+        evidence["chapter_video_count"] = video_count
+        evidence["passed_object_ids"] = sorted(passed_object_ids)
+        log(f"Playback loop ended: {summary['loop_seconds']:.0f}s "
+            f"max_ct={max_ct:.0f}s videos={video_count}")
 
         # ── H. 后置复核 ─────────────────────────────────────────────
         log("--- Step H: Post-verification ---")
