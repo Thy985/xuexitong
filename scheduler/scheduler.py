@@ -480,12 +480,9 @@ def _run_tdvp_probe(course_url: str, course_key: str) -> Optional[str]:
         for t in tasks:
             tid = t.task_id
             if tid not in existing:
-                if t.status == "COMPLETED":
-                    init_status = "COMPLETED"
-                elif t.status == "PENDING":
-                    init_status = "PENDING"
-                else:
-                    init_status = "DISCOVERED"
+                # 【架构变更】新发现的任务不设 COMPLETED，即使 DOM 显示完成
+                # 必须由引擎实际播放并通过 SERVER_VERIFIED 才能标记完成
+                init_status = "DISCOVERED"
                 from e6.task_registry import TaskRecord
                 tr = TaskRecord(
                     task_id=tid,
