@@ -91,7 +91,7 @@
     "chapter_id": "1217304702",
     "title": "计算机网络的概念与类别",
     "task_type": "video",
-    "status": "DISCOVERED",
+    "status": "COMPLETED",
     "priority": 55,
     "attempts": 0,
     "consecutive_failures": 0,
@@ -102,13 +102,13 @@
       "expires_at_utc": null
     },
     "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
+      "level": "UI",
+      "verified_at_utc": "2026-09-05T14:31:01.521985+00:00",
+      "run_id": "33971988313",
+      "source_detail": "server DOM completed marker"
     },
     "created_at_utc": "2026-09-05T12:35:58.026951+00:00",
-    "updated_at_utc": "2026-09-05T12:35:58.026951+00:00",
+    "updated_at_utc": "2026-09-05T14:31:01.521989+00:00",
     "last_run_at_utc": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
@@ -120,7 +120,7 @@
     "chapter_id": "1217304703",
     "title": "计算机网络的拓扑结构",
     "task_type": "video",
-    "status": "DISCOVERED",
+    "status": "COMPLETED",
     "priority": 55,
     "attempts": 0,
     "consecutive_failures": 0,
@@ -131,13 +131,13 @@
       "expires_at_utc": null
     },
     "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
+      "level": "UI",
+      "verified_at_utc": "2026-09-05T14:31:01.521994+00:00",
+      "run_id": "33971988313",
+      "source_detail": "server DOM completed marker"
     },
     "created_at_utc": "2026-09-05T12:35:58.026972+00:00",
-    "updated_at_utc": "2026-09-05T12:35:58.026972+00:00",
+    "updated_at_utc": "2026-09-05T14:31:01.521997+00:00",
     "last_run_at_utc": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
@@ -149,7 +149,7 @@
     "chapter_id": "1217304704",
     "title": "计算机网络的性能",
     "task_type": "video",
-    "status": "DISCOVERED",
+    "status": "COMPLETED",
     "priority": 55,
     "attempts": 0,
     "consecutive_failures": 0,
@@ -160,15 +160,15 @@
       "expires_at_utc": null
     },
     "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
+      "level": "SERVER_VERIFIED",
+      "verified_at_utc": "2026-09-05T14:36:57.385054+00:00",
+      "run_id": "33971988313",
+      "source_detail": "passed_object_ids=1"
     },
     "created_at_utc": "2026-09-05T12:35:58.027007+00:00",
-    "updated_at_utc": "2026-09-05T12:35:58.027007+00:00",
+    "updated_at_utc": "2026-09-05T14:36:57.385054+00:00",
     "last_run_at_utc": null,
-    "last_success_at_utc": null,
+    "last_success_at_utc": "2026-09-05T14:36:57.385054+00:00",
     "last_failure_at_utc": null,
     "_ch_idx": 4,
     "_cell_idx": 4
@@ -207,7 +207,7 @@
     "chapter_id": "1217304707",
     "title": "知识扩展",
     "task_type": "video",
-    "status": "DISCOVERED",
+    "status": "COMPLETED",
     "priority": 55,
     "attempts": 0,
     "consecutive_failures": 0,
@@ -218,13 +218,13 @@
       "expires_at_utc": null
     },
     "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
+      "level": "UI",
+      "verified_at_utc": "2026-09-05T14:31:01.522002+00:00",
+      "run_id": "33971988313",
+      "source_detail": "server DOM completed marker"
     },
     "created_at_utc": "2026-09-05T12:35:58.027038+00:00",
-    "updated_at_utc": "2026-09-05T12:35:58.027038+00:00",
+    "updated_at_utc": "2026-09-05T14:31:01.522005+00:00",
     "last_run_at_utc": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
@@ -236,7 +236,7 @@
     "chapter_id": "1217304710",
     "title": "线上学习任务",
     "task_type": "video",
-    "status": "DISCOVERED",
+    "status": "COMPLETED",
     "priority": 55,
     "attempts": 0,
     "consecutive_failures": 0,
@@ -247,13 +247,13 @@
       "expires_at_utc": null
     },
     "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
+      "level": "UI",
+      "verified_at_utc": "2026-09-05T14:31:01.522007+00:00",
+      "run_id": "33971988313",
+      "source_detail": "server DOM completed marker"
     },
     "created_at_utc": "2026-09-05T12:35:58.027140+00:00",
-    "updated_at_utc": "2026-09-05T12:35:58.027140+00:00",
+    "updated_at_utc": "2026-09-05T14:31:01.522009+00:00",
     "last_run_at_utc": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
@@ -265,7 +265,7 @@
     "chapter_id": "1217304711",
     "title": "思维导图简介",
     "task_type": "video",
-    "status": "DISCOVERED",
+    "status": "COMPLETED",
     "priority": 55,
     "attempts": 0,
     "consecutive_failures": 0,
@@ -276,13 +276,13 @@
       "expires_at_utc": null
     },
     "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
+      "level": "UI",
+      "verified_at_utc": "2026-09-05T14:31:01.522012+00:00",
+      "run_id": "33971988313",
+      "source_detail": "server DOM completed marker"
     },
     "created_at_utc": "2026-09-05T12:35:58.027166+00:00",
-    "updated_at_utc": "2026-09-05T12:35:58.027166+00:00",
+    "updated_at_utc": "2026-09-05T14:31:01.522014+00:00",
     "last_run_at_utc": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
@@ -294,7 +294,7 @@
     "chapter_id": "1217304713",
     "title": "本章思维导图",
     "task_type": "video",
-    "status": "DISCOVERED",
+    "status": "COMPLETED",
     "priority": 55,
     "attempts": 0,
     "consecutive_failures": 0,
@@ -305,13 +305,13 @@
       "expires_at_utc": null
     },
     "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
+      "level": "UI",
+      "verified_at_utc": "2026-09-05T14:31:01.522017+00:00",
+      "run_id": "33971988313",
+      "source_detail": "server DOM completed marker"
     },
     "created_at_utc": "2026-09-05T12:35:58.027184+00:00",
-    "updated_at_utc": "2026-09-05T12:35:58.027184+00:00",
+    "updated_at_utc": "2026-09-05T14:31:01.522019+00:00",
     "last_run_at_utc": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
@@ -410,7 +410,7 @@
     "chapter_id": "1217304715",
     "title": "数字传输系统",
     "task_type": "video",
-    "status": "DISCOVERED",
+    "status": "COMPLETED",
     "priority": 55,
     "attempts": 0,
     "consecutive_failures": 0,
@@ -421,13 +421,13 @@
       "expires_at_utc": null
     },
     "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
+      "level": "UI",
+      "verified_at_utc": "2026-09-05T14:31:01.522024+00:00",
+      "run_id": "33971988313",
+      "source_detail": "server DOM completed marker"
     },
     "created_at_utc": "2026-09-05T12:35:58.027200+00:00",
-    "updated_at_utc": "2026-09-05T12:35:58.027200+00:00",
+    "updated_at_utc": "2026-09-05T14:31:01.522026+00:00",
     "last_run_at_utc": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
@@ -439,7 +439,7 @@
     "chapter_id": "1217304716",
     "title": "宽带接入技术",
     "task_type": "video",
-    "status": "DISCOVERED",
+    "status": "COMPLETED",
     "priority": 55,
     "attempts": 0,
     "consecutive_failures": 0,
@@ -450,13 +450,13 @@
       "expires_at_utc": null
     },
     "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
+      "level": "UI",
+      "verified_at_utc": "2026-09-05T14:31:01.522029+00:00",
+      "run_id": "33971988313",
+      "source_detail": "server DOM completed marker"
     },
     "created_at_utc": "2026-09-05T12:35:58.027217+00:00",
-    "updated_at_utc": "2026-09-05T12:35:58.027217+00:00",
+    "updated_at_utc": "2026-09-05T14:31:01.522031+00:00",
     "last_run_at_utc": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
@@ -584,7 +584,7 @@
     "chapter_id": "1217304724",
     "title": "高速以太网",
     "task_type": "video",
-    "status": "DISCOVERED",
+    "status": "COMPLETED",
     "priority": 55,
     "attempts": 0,
     "consecutive_failures": 0,
@@ -595,13 +595,13 @@
       "expires_at_utc": null
     },
     "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
+      "level": "UI",
+      "verified_at_utc": "2026-09-05T14:31:01.522036+00:00",
+      "run_id": "33971988313",
+      "source_detail": "server DOM completed marker"
     },
     "created_at_utc": "2026-09-05T12:35:58.027243+00:00",
-    "updated_at_utc": "2026-09-05T12:35:58.027243+00:00",
+    "updated_at_utc": "2026-09-05T14:31:01.522038+00:00",
     "last_run_at_utc": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
