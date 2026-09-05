@@ -164,6 +164,9 @@ jobs:
           echo "=== Committing state updates ==="
           git config user.name "xuexitong-mvp"
           git config user.email "mvp@xuexitong.local"
+          # 安全防线：绝不把 Cookie / 会话 / 凭据文件加进提交
+          git rm -r --cached state/cookies.json .cache 2>/dev/null || true
+          git update-index --skip-worktree state/cookies.json .cache 2>/dev/null || true
           git add state/
           git diff --cached --quiet || git commit -m "chore(state): update course state after ${{ github.event.inputs.action || 'schedule' }} run"
           git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:main || echo "push skipped (may be read-only fork)"

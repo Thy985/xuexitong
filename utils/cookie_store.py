@@ -1,9 +1,12 @@
 """Cookie 持久化：保存/加载登录凭证，跳过重复登录。
 
 借鉴 Autovisor 的 cookie 管理模式：
-  - 登录成功后自动保存 cookie 到 state/cookies.json
+  - 登录成功后自动保存 cookie 到 .cache/cookies.json
   - 下次启动先加载 cookie，验证是否有效
   - 无效则重新登录并更新 cookie
+
+安全：cookie 是登录会话凭证，绝不写入 git 追踪的 state/ 目录，
+仅保存在本地不可追踪的 .cache/（见 .gitignore），避免随仓库/artifact 泄露。
 """
 
 from __future__ import annotations
@@ -13,12 +16,13 @@ import os
 from pathlib import Path
 from typing import Optional
 
-COOKIE_DIR = Path("state")
+# 保存在 git 不追踪的本地缓存目录，绝不入库、绝不上传 artifact
+COOKIE_DIR = Path(__file__).resolve().parent.parent / ".cache"
 COOKIE_FILE = COOKIE_DIR / "cookies.json"
 
 
 def load_cookies() -> Optional[list[dict]]:
-    """从 state/cookies.json 加载已保存的 cookies。"""
+    """从 .cache/cookies.json 加载已保存的 cookies。"""
     if not COOKIE_FILE.exists():
         return None
     try:

@@ -100,32 +100,6 @@ class CourseState:
     failure_count: int = 0
     history: list[dict] = field(default_factory=list)  # 每次 run 摘要
 
-    def to_dict(self) -> dict:
-        d = {
-            "schema_version": self.schema_version,
-            "status": self.status,
-            "run_count": self.run_count,
-            "success_count": self.success_count,
-            "failure_count": self.failure_count,
-        }
-        if self.course_identity:
-            d["course_identity"] = self.course_identity.to_dict()
-        if self.progress:
-            d["progress"] = self.progress.to_dict()
-        if self.last_run:
-            d["last_run"] = self.last_run
-        if self.last_success:
-            d["last_success"] = self.last_success
-        if self.last_failure:
-            d["last_failure"] = self.last_failure
-        if self.last_completed_task:
-            d["last_completed_task"] = self.last_completed_task
-        if self.active_task:
-            d["active_task"] = self.active_task
-        if self.history:
-            d["history"] = self.history[-50:]  # 保留最近 50 条
-        return d
-
     @classmethod
     def from_dict(cls, d: dict) -> "CourseState":
         ci = d.pop("course_identity", None)
@@ -203,7 +177,12 @@ def load_active_course() -> Optional[CourseIdentity]:
         if not key:
             return None
         # 从 key 重建 Identity（不含 title/cpi，需从状态文件补充）
-        course_id, clazz_id = key.rsplit("_", 1)
+        parts = key.rsplit("_", 1)
+        if len(parts) != 2 or not parts[0] or not parts[1]:
+            print(f"[state] Invalid active identity key: {key!r}",
+                  file=sys.stderr)
+            return None
+        course_id, clazz_id = parts
         cs = load_course_state(key)
         if cs and cs.course_identity:
             return cs.course_identity

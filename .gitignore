@@ -11,3 +11,7 @@ e3out/
 e6_out/
 evidence/
 *.tmp
+
+# 安全：绝不把登录 Cookie/会话凭证入库或上传为 artifact
+state/cookies.json
+.cache/

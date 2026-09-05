@@ -177,6 +177,8 @@ def get_scheduler_summary(
         "trigger": "scheduled" if "schedule" in reason.lower() else "manual",
         "decision": decision,
         "reason": reason,
+        # GitHub Actions 仓库名（github.repository = "owner/repo"）；本地环境取不到时为 ""
+        "repo": os.environ.get("GITHUB_REPOSITORY", "") or "",
     }
     if active_key:
         from state.course_state import load_course_state
@@ -205,9 +207,13 @@ def generate_actions_summary(summary: dict) -> str:
 
     if summary.get('last_result'):
         lines.append(f"**Previous Run**: {summary['last_result']}")
+    repo = (summary.get('repo') or '').strip()
     if summary.get('last_run_id'):
-        lines.append(f"**Last Run ID**: [{summary['last_run_id']}]("
-                     f"https://github.com/{summary.get('repo', '')}/actions/runs/{summary['last_run_id']})")
+        if repo:
+            lines.append(f"**Last Run ID**: [{summary['last_run_id']}]("
+                         f"https://github.com/{repo}/actions/runs/{summary['last_run_id']})")
+        else:
+            lines.append(f"**Last Run ID**: `{summary['last_run_id']}`")
     if summary.get('consecutive_failures') is not None:
         cf = summary['consecutive_failures']
         lines.append(f"**Consecutive Failures**: {cf}"

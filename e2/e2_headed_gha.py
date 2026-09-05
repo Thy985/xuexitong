@@ -432,7 +432,7 @@ def run_test(args):
                 if abs(ct - last_ct) > 0.5:
                     last_ct = ct
                     last_ct_change_at = now
-                elif dur and (now - last_ct_change_at) >= HEARTBEAT_DEAD_S:
+                elif summary.get("duration") and (now - last_ct_change_at) >= HEARTBEAT_DEAD_S:
                     log(f"⚠️ Heartbeat dead at ct={ct:.0f}s")
                     break
                 if st.get("ended") and not ended_seen:

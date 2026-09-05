@@ -20,6 +20,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -183,14 +184,29 @@ class ExecutionQueue:
 
 # ── 文件存储 ───────────────────────────────────────────────────────
 
-TASKS_DIR = Path("state/registry")
-QUEUE_FILE = TASKS_DIR / "execution_queue.json"
+# 固定锚定到仓库 state/registry（与 state/course_state.py 的 REPO_ROOT 一致），
+# 避免相对 CWD 在任意目录运行脚本时污染仓库。
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+TASKS_DIR = _REPO_ROOT / "state" / "registry"
+
+
+def _queue_file(course_key: str) -> Path:
+    """每个课程的队列文件独立，避免多课程互相覆盖。"""
+    return TASKS_DIR / course_key / "execution_queue.json"
 
 
 def _ensure_dir(course_key: str) -> Path:
     d = TASKS_DIR / course_key
     d.mkdir(parents=True, exist_ok=True)
     return d
+
+
+def _atomic_write_text(path: Path, text: str) -> None:
+    """原子写文本：先写同目录临时文件再 os.replace，避免半写文件。"""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(text, encoding="utf-8")
+    os.replace(str(tmp), str(path))
 
 
 def load_registry(course_key: str) -> dict[str, TaskRecord]:
@@ -206,15 +222,13 @@ def load_registry(course_key: str) -> dict[str, TaskRecord]:
 
 def save_registry(course_key: str, registry: dict[str, TaskRecord]) -> None:
     d = _ensure_dir(course_key)
-    tmp = d / "tasks.json.tmp"
-    tmp.write_text(json.dumps({k: v.to_dict() for k, v in registry.items()},
-                              ensure_ascii=False, indent=2), encoding="utf-8")
-    (d / "tasks.json").write_text(tmp.read_text(encoding="utf-8"), encoding="utf-8")
-    tmp.unlink(missing_ok=True)
+    text = json.dumps({k: v.to_dict() for k, v in registry.items()},
+                      ensure_ascii=False, indent=2)
+    _atomic_write_text(d / "tasks.json", text)
 
 
 def load_queue(course_key: str) -> ExecutionQueue:
-    f = QUEUE_FILE
+    f = _queue_for(course_key)
     if not f.exists():
         return ExecutionQueue()
     try:
@@ -225,12 +239,8 @@ def load_queue(course_key: str) -> ExecutionQueue:
 
 
 def save_queue(course_key: str, q: ExecutionQueue) -> None:
-    f = QUEUE_FILE
-    f.parent.mkdir(parents=True, exist_ok=True)
-    tmp = f.with_suffix(f.suffix + ".tmp")
-    tmp.write_text(json.dumps(q.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
-    f.write_text(tmp.read_text(encoding="utf-8"), encoding="utf-8")
-    tmp.unlink(missing_ok=True)
+    _atomic_write_text(_queue_for(course_key), json.dumps(
+        q.to_dict(), ensure_ascii=False, indent=2))
 
 
 # ── Queue Reconciliation ───────────────────────────────────────────

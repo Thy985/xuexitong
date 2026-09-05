@@ -227,6 +227,10 @@ def cmd_run(args) -> int:
             crash_msg = f"{type(e).__name__}: {e}"
             print(f"[!] run_test crashed: {crash_msg}", flush=True)
             ev = ev or {"verdict": "CRASH", "passed_count": 0, "errors": [crash_msg]}
+            # 崩溃也计入重试次数；未达上限时可用剩余 attempts 重试，而非直接放弃
+            if attempt < max_attempts:
+                retry_count += 1
+                continue
             try:
                 Path(out_path).write_text(
                     json.dumps({"result": {}, "evidence": ev},
