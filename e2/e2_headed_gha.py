@@ -501,9 +501,16 @@ def run_test(args):
                     evidence["nextunit_title"] = title_now
                     log(f"[GHA] nextUnit (URL chapterId changed): {args.chapter_id} -> {cur_chap}")
 
-            if nextunit_seen:
+            if nextunit_seen and not passed_object_ids:
+                # chapterId 变化了，但引擎还没收到任何 isPassed=true → 视为有效切换，退出
                 page.wait_for_timeout(5000)
                 break
+            if nextunit_seen and passed_object_ids:
+                # ⚠️ 页面 JS 自动跳转了下一章，但引擎仍在当前章节内收到了 isPassed=true
+                # 说明当前章节的视频任务点已经完成，不应把跳转当作下一章节的开始
+                log(f"[GHA] chapterId changed but {len(passed_object_ids)} passed_object_id(s) recorded — "
+                    f"current chapter still active, continuing playback")
+                nextunit_seen = False  # 重置，继续等待当前章节的自然结束
             if ended_seen and (now - ended_wall) > 30 and not nextunit_seen:
                 log("ended 30s no switch")
                 break
@@ -607,7 +614,9 @@ def run_test(args):
         "isPassed_seen": isPassed_seen,
         "isPassed_body": evidence.get("isPassed_body"),
         "ended_seen": ended_seen,
-        "nextunit_triggered": nextunit_seen,
+        # 若播放期间收到了 passed_object_ids，则 URL chapterId 变化是页面自动跳转的副作用
+        # 不应视为"下一章节触发"，重置为 False 避免误判
+        "nextunit_triggered": nextunit_seen and not passed_object_ids,
         "nextunit_chapterId": evidence.get("nextunit_chapterId"),
         "nextunit_title": evidence.get("nextunit_title"),
         "banner_before": evidence.get("banner_learned_before"),
