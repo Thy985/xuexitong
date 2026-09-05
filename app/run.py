@@ -250,6 +250,46 @@ def cmd_run(args) -> int:
         else ("DEGRADED" if ev and ev.get("passed_count", 0) >= 6 else "FAIL")
     )
 
+    # 【架构变更】Postflight: 如果 PASS 且有 passed_object_ids，更新 Task Registry
+    # 确保 done 状态来自 SERVER_VERIFIED 证据，而非 history
+    if passed and identity:
+        try:
+            from e6.task_registry import load_registry, save_registry
+            reg = load_registry(identity.key())
+            passed_obj_ids = ev.get("passed_object_ids", [])
+            if passed_obj_ids:
+                # 找到匹配的 task 并标记为 SERVER_VERIFIED
+                updated = False
+                for t in reg.values():
+                    if t.chapter_id == chapter:
+                        t.mark_completed(
+                            run_id=os.environ.get("GITHUB_RUN_ID", "local"),
+                            evidence_level="SERVER_VERIFIED",
+                            detail=f"passed_object_ids={len(passed_obj_ids)}",
+                        )
+                        updated = True
+                        print(f"[run] Task {chapter} marked SERVER_VERIFIED "
+                              f"(passed_object_ids={len(passed_obj_ids)})", flush=True)
+                        break
+                if updated:
+                    save_registry(identity.key(), reg)
+            else:
+                # 无 passed_object_ids 但仍 PASS（可能是旧版引擎）
+                # 降级为 UI 级别验证
+                for t in reg.values():
+                    if t.chapter_id == chapter:
+                        t.mark_completed(
+                            run_id=os.environ.get("GITHUB_RUN_ID", "local"),
+                            evidence_level="UI",
+                            detail="PASS but no passed_object_ids",
+                        )
+                        print(f"[run] Task {chapter} marked UI (no passed_object_ids)",
+                              flush=True)
+                        break
+        except Exception as e:
+            print(f"[run] Task registry update failed (non-fatal): {e}",
+                  file=sys.stderr, flush=True)
+
     # 更新课程状态
     if identity:
         state = state_run_course(

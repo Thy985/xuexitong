@@ -418,7 +418,39 @@ def _run_tdvp_probe(course_url: str, course_key: str) -> Optional[str]:
                   "falling back to URL chapter_id", file=sys.stderr)
             return params.get("chapter_id")
 
-        # 2. 构建/合并 E6 Task Registry
+        # 2. Preflight Reconciliation: 校准历史状态
+        #    【架构变更】将 verification.level=NONE 的 COMPLETED 降级为 DISCOVERED，
+        #    确保只有 SERVER_VERIFIED 的任务被视为真正完成。
+        #    这是对历史污染的修复，每次启动时自动执行。
+        reconciliation_count = 0
+        try:
+            reg_check = load_registry(course_key)
+            for tid, t in reg_check.items():
+                if t.status == "COMPLETED" and t.verification.level == "NONE":
+                    # 无验证证据的 COMPLETED → 降级为 DISCOVERED
+                    from e6.task_registry import TaskRecord
+                    reg_check[tid] = TaskRecord(
+                        task_id=t.task_id,
+                        chapter_id=t.chapter_id,
+                        title=t.title,
+                        task_type=t.task_type,
+                        status="DISCOVERED",
+                        priority=t.priority,
+                        _ch_idx=t._ch_idx,
+                        _cell_idx=t._cell_idx,
+                    )
+                    reconciliation_count += 1
+                    print(f"[scheduler] Reconcile: {tid} ({t.title}) "
+                          f"COMPLETED(NONE) → DISCOVERED", flush=True)
+            if reconciliation_count > 0:
+                save_registry(course_key, reg_check)
+                print(f"[scheduler] Reconciled {reconciliation_count} unverified tasks",
+                      flush=True)
+        except Exception as e:
+            print(f"[scheduler] Reconciliation failed (non-fatal): {e}",
+                  file=sys.stderr, flush=True)
+
+        # 3. 构建/合并 E6 Task Registry
         tasks = build_tasks_from_discovery(chapters_raw)
         existing = load_registry(course_key)
         new_tids = {t.task_id for t in tasks}
@@ -427,14 +459,12 @@ def _run_tdvp_probe(course_url: str, course_key: str) -> Optional[str]:
             if old_tid not in new_tids:
                 matched = next((t for t in tasks if t.title == old_rec.title), None)
                 if matched:
-                    # 用新 task_id 替换旧条目，保留已完成状态
-                    if old_rec.status == "COMPLETED":
-                        init_status = "COMPLETED"
-                    elif old_rec.status == "PENDING":
-                        init_status = "PENDING"
-                    else:
-                        init_status = "DISCOVERED"
+                    # 【架构变更】迁移时不保留 DOM COMPLETED 状态。
+                    # 只有 SERVER_VERIFIED 的旧记录才保留 COMPLETED，否则降级为 DISCOVERED。
                     from e6.task_registry import TaskRecord
+                    init_status = ("COMPLETED"
+                                   if old_rec.verification.level == "SERVER_VERIFIED"
+                                   else "DISCOVERED")
                     tr = TaskRecord(
                         task_id=matched.task_id,
                         chapter_id=matched.chapter_id or "",
@@ -472,25 +502,31 @@ def _run_tdvp_probe(course_url: str, course_key: str) -> Optional[str]:
                 existing[tid].title = t.title
                 existing[tid]._ch_idx = getattr(t, '_ch_idx', existing[tid]._ch_idx)
                 existing[tid]._cell_idx = getattr(t, '_cell_idx', existing[tid]._cell_idx)
-                if t.status == "COMPLETED":
-                    if existing[tid].status not in ("COMPLETED", "VERIFYING"):
-                        existing[tid].status = "COMPLETED"
+                # 【架构变更】不直接用 DOM 的 COMPLETED 覆盖状态。
+                # DOM 观察 ≠ 服务器端验证。只有 SERVER_VERIFIED 的任务才算完成。
+                # 如果已有 SERVER_VERIFIED 证据则保持，否则标记为 DISCOVERED（需要重新验证）。
+                if existing[tid].verification.level != "SERVER_VERIFIED":
+                    existing[tid].status = "DISCOVERED"
         save_registry(course_key, existing)
         print(f"[scheduler] TDVP: registry has {len(existing)} tasks", flush=True)
         for t in list(existing.values())[:8]:
             print(f"    - [{t.status}] cid={t.chapter_id or '?'} {t.title}", flush=True)
 
-        # 3. 读取已完成的 chapter_id 集合（仅统计 passed=True，失败 run 不算完成）
+        # 3. 读取已完成的 chapter_id 集合
+        #    【架构变更】done_ids 必须来源于 Task Registry 中 verification.level=SERVER_VERIFIED
+        #    的任务，而非 history.passed=True。这避免 false nextunit 污染 done_ids。
+        #    history 仅用于诊断和统计，不直接决定"已完成"。
         done_ids = set()
         try:
-            state = load_course_state(course_key)
-            if state and state.history:
-                for h in state.history:
-                    if h.get("passed") and h.get("chapter_id"):
-                        done_ids.add(h["chapter_id"])
+            from e6.task_registry import load_registry
+            reg = load_registry(course_key)
+            for t in reg.values():
+                if (t.chapter_id and t.status == "COMPLETED"
+                        and t.verification.level == "SERVER_VERIFIED"):
+                    done_ids.add(t.chapter_id)
         except Exception:
             pass
-        print(f"[scheduler] TDVP: done={len(done_ids)} chapters: "
+        print(f"[scheduler] TDVP: done={len(done_ids)} chapters (SERVER_VERIFIED): "
               f"{sorted(done_ids)}", flush=True)
 
         # 4. Reconcile Queue
