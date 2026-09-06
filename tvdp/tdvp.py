@@ -218,6 +218,125 @@ def parse_task_status_from_page(html: str, chapter_id: str) -> list[TaskInfo]:
     return tasks
 
 
+_CATALOG_EXTRACT_JS = """
+() => {
+    const results = [];
+    const seenTitles = new Set();
+    const tree = document.querySelector('#coursetree');
+    if (tree) {
+        const allCells = tree.querySelectorAll(':scope > ul > li .posCatalog_select:not(.firstLayer)');
+        allCells.forEach((cell, gi) => {
+            const nameEl = cell.querySelector('.posCatalog_name');
+            const title = nameEl
+                ? (nameEl.title || nameEl.textContent || '').trim()
+                : (cell.textContent || '').trim();
+            if (!title) return;
+            if (seenTitles.has(title)) return;
+            seenTitles.add(title);
+            const text = (cell.textContent || '').replace(/\\s+/g, ' ').trim();
+            let status = 'unknown';
+            if (cell.classList.contains('posCatalog_finish') ||
+                cell.classList.contains('flip') ||
+                cell.querySelector('.icon_Completed') ||
+                /已完成|Completed/i.test(text)) {
+                status = 'completed';
+            } else if (/待完成|未完成|Pending/i.test(text)) {
+                status = 'pending';
+            }
+            let cid = '';
+            const nodeHtml = cell.outerHTML || '';
+            const m1 = nodeHtml.match(/chapterId[=:'"](\\d+)/);
+            const m2 = nodeHtml.match(/data-?chapter[-_]?id[=:'"](\\d+)/);
+            const m3 = nodeHtml.match(/getTeacherAjax\\([^)]*,\\s*'([^']+)'/);
+            const m4 = nodeHtml.match(/getTeacherAjax\\('[^']*',\\s*"([^"]+)"/);
+            if (m1) cid = m1[1];
+            else if (m2) cid = m2[1];
+            else if (m3) cid = m3[1];
+            else if (m4) cid = m4[1];
+            const isActive = cell.classList.contains('posCatalog_active');
+            let jobRemaining = 0;
+            const unf = cell.querySelector('input[type="hidden"][class*="UnfinishCount"], input[type="hidden"][class*="unfinish"], input[name*="job"]');
+            if (unf && unf.value) {
+                jobRemaining = parseInt(unf.value, 10) || 0;
+            }
+            results.push({
+                chapter_id: cid, title: title, status: status,
+                is_active: isActive, chapter_index: gi, cell_index: gi,
+                text: text.slice(0, 150), mirrored: false,
+                job_remaining: jobRemaining,
+            });
+        });
+    }
+    if (results.length === 0) {
+        document.querySelectorAll('a[href*="chapterId"]').forEach(a => {
+            const href = a.href || '';
+            const m = href.match(/chapterId=(\\d+)/);
+            if (!m) return;
+            let container = a.closest('li, .catalog_list, tr, [class*="item"], [class*="node"]') || a.parentElement;
+            const text = container ? (container.innerText || '') : '';
+            results.push({
+                chapter_id: m[1], title: (a.textContent || '').trim(),
+                status: /已完成/.test(text) ? 'completed' : (/待完成/.test(text) ? 'pending' : 'unknown'),
+                is_active: false, chapter_index: 0, cell_index: 0,
+                text: text.slice(0, 150), mirrored: true,
+            });
+        });
+    }
+    return results;
+}
+"""
+
+
+def extract_catalog_from_page(page, course_url: str) -> list[dict]:
+    """从已登录的课程目录页提取章节列表（可在已打开的同 browser 里复用）。"""
+    import re as _re
+    chapters = page.evaluate(_CATALOG_EXTRACT_JS)
+
+    by_title = {}
+    for ch in chapters:
+        t = ch.get("title", "")
+        if not t:
+            continue
+        if t not in by_title or ch.get("chapter_id"):
+            by_title[t] = ch
+    unique = list(by_title.values())
+
+    # 激活节点 chapterId 兜底
+    current_url = page.url
+    url_cid = ""
+    m_url = _re.search(r'chapterId[=:](\d+)', current_url)
+    if m_url:
+        url_cid = m_url.group(1)
+    for ch in unique:
+        if ch.get("is_active") and not ch.get("chapter_id") and url_cid:
+            ch["chapter_id"] = url_cid
+
+    # 点击探测第一个缺 id 的非完成节点（仅切页，不播放）
+    for ch in unique:
+        if ch.get("status") != "completed" and not ch.get("chapter_id") and not ch.get("is_active"):
+            try:
+                clicked = page.evaluate("""(si) => {
+                    const tree = document.querySelector('#coursetree');
+                    if (!tree) return false;
+                    const cells = tree.querySelectorAll('.posCatalog_select:not(.firstLayer)');
+                    const list = Array.from(cells);
+                    const target = list[si];
+                    if (!target) return false;
+                    const name = target.querySelector('.posCatalog_name');
+                    if (!name) return false;
+                    name.click(); return true;
+                }""", ch.get("cell_index", 0))
+                if clicked:
+                    page.wait_for_timeout(4000)
+                    m2 = _re.search(r'chapterId[=:](\d+)', page.url)
+                    if m2:
+                        ch["chapter_id"] = m2.group(1)
+            except Exception:
+                pass
+            break
+    return unique
+
+
 def fetch_course_discovery(course_url: str, cx_user: Optional[str] = None,
                            cx_pass: Optional[str] = None) -> Optional[list[dict]]:
     """在浏览器 DOM 中直接提取目录树章节列表 + 状态。
@@ -425,6 +544,80 @@ def fetch_course_discovery(course_url: str, cx_user: Optional[str] = None,
             return unique
     except Exception as e:
         print(f"[tdvp] fetch_course_discovery error: {e}", file=sys.stderr)
+        return None
+
+
+def fetch_course_detail_and_verify(
+    course_url: str,
+    target_cid: str = "",
+    cx_user: Optional[str] = None,
+    cx_pass: Optional[str] = None,
+) -> Optional[dict]:
+    """洞3：把「目录发现 + 队首章点级深读」合并进**一次**浏览器会话。
+
+    只登录一次、只开一个 browser/context，既拿目录树（发现），又顺便对
+    target_cid 打开其 cards 帧读真实点（L2 深度验证）。相比 `fetch_course_discovery`
+    再单独 `live_verify_chapter`（两次 launch + 两次登录），显著降低 CI 的双开抖动。
+
+    Returns:
+        {"chapters": [...], "points": [{...}] }  （points 为空列表表示非 target/no 卡帧）
+        失败返回 None。
+    """
+    import os
+    user = cx_user or os.environ.get("CX_USER")
+    pw = cx_pass or os.environ.get("CX_PASS")
+    if not user or not pw:
+        return None
+    try:
+        from resolvers.course_resolver import _parse_url_params
+        params = _parse_url_params(course_url)
+        chapter_id = params.get("chapter_id") or ""
+        sys.path.insert(0, str(Path(__file__).parent.parent / "e2"))
+        import e2_headed_gha as E
+        cp = _tdvp_course_params(params)
+        from playwright.sync_api import sync_playwright
+        import re as _re
+        display = os.environ.get("DISPLAY", ":99")
+
+        with sync_playwright() as pwc:
+            browser = pwc.chromium.launch(
+                headless=False, channel="chromium",
+                args=[f"--display={display}", "--no-sandbox",
+                      "--disable-dev-shm-usage", "--disable-gpu"],
+            )
+            ctx = browser.new_context(
+                viewport={"width": 1440, "height": 900},
+                user_agent=("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                            "AppleWebKit/537.36 (KHTML, like Gecko) "
+                            f"Chrome/{browser.version} Safari/537.36"),
+            )
+            page = ctx.new_page()
+            from utils.cookie_store import ensure_login
+            ensure_login(page, ctx, E.build_base_url(chapter_id, cp), user, pw)
+
+            page.goto(course_url, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(5000)
+            chapters = extract_catalog_from_page(page, course_url)
+
+            points = []
+            if target_cid:
+                try:
+                    loaded = read_chapter_job_points(
+                        page, target_cid,
+                        params.get("course_id", ""),
+                        params.get("clazz_id", ""),
+                        params.get("cpi", ""),
+                    )
+                    points = loaded or []
+                except Exception as pe:
+                    # 洞3弹：点级 deep-read 失败不影响已拿到的目录；后续由
+                    # step4.5 的 live_verify 兜底（不在"一次读取"里多开一次浏览器前丢目录）。
+                    print(f"[tdvp] combined point-read failed (catalog kept): {pe}",
+                          file=sys.stderr)
+            browser.close()
+            return {"chapters": chapters or [], "points": points}
+    except Exception as e:
+        print(f"[tdvp] fetch_course_detail_and_verify error: {e}", file=sys.stderr)
         return None
 
 

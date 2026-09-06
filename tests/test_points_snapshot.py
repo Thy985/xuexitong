@@ -71,3 +71,20 @@ def test_reconcile_points_exclude_non_video_chapter(tmp_registry):
     ids2 = {i["task_id"] for i in reconcile_queue(
         "k", reg, set(), points_map=pts_no_video).items}
     assert cid not in ids2                              # 已确认非视频 → 不进待播队列
+
+
+def test_chapter_video_summary_from_points(tmp_registry):
+    """洞3 复用路径: 从同一浏览器已读点级 → 得到 video_total/finished/live_pending。"""
+    from tvdp.tdvp import chapter_video_summary, build_live_pending
+    cid = "1217304708"
+    points = [
+        {"task_id": cid, "type": "video", "isFinished": True},          # v1 finished
+        {"task_id": f"{cid}:video2", "type": "video", "isFinished": False},  # v2 not
+        {"task_id": f"{cid}:quiz", "type": "quiz", "isFinished": False},
+    ]
+    total, finished = chapter_video_summary(points)
+    assert total == 2 and finished == 1
+    livep = build_live_pending(points)
+    assert f"{cid}:video2" in livep          # 未完成的视频点 → live pending
+    assert cid not in livep                  # v1 已 finished → 不在 pending
+    assert f"{cid}:quiz" in livep

@@ -405,8 +405,35 @@ def _run_tdvp_probe(course_url: str, course_key: str,
 
         params = _parse_url_params(course_url)
 
-        # 1. DOM 提取目录树
-        chapters_raw = fetch_course_discovery(course_url)
+        # 洞3：先读现有 registry 预测一个「疑似队首章」。
+        from e6.task_registry import load_chapter_points, merge_done_with_points
+        _pts_map = load_chapter_points(course_key)
+        _current_reg = load_registry(course_key)
+        _pred_head = params.get("chapter_id")
+        if _current_reg:
+            try:
+                _done0 = merge_done_with_points(
+                    done_chapter_ids_from_registry(_current_reg), set(), _pts_map)
+                _q0 = reconcile_queue(course_key, _current_reg, _done0,
+                                      points_map=_pts_map)
+                if _q0.items:
+                    _c0 = _q0.items[0].get("chapter_id") or ""
+                    if _c0:
+                        _pred_head = _c0
+            except Exception:
+                pass
+
+        combined = None
+        from tvdp.tdvp import fetch_course_detail_and_verify
+        combined = fetch_course_detail_and_verify(course_url, _pred_head)
+        if combined is not None:
+            chapters_raw = combined.get("chapters") or []
+            _combined_points = combined.get("points") or []
+        else:
+            from tvdp.tdvp import fetch_course_discovery
+            chapters_raw = fetch_course_discovery(course_url)
+            _combined_points = []
+        # 回退：目录拉不到 → 用 URL chapterId
         if not chapters_raw:
             print("[scheduler] TDVP: fetch returned empty, "
                   "falling back to URL chapter_id", file=sys.stderr)
@@ -472,14 +499,26 @@ def _run_tdvp_probe(course_url: str, course_key: str,
                             next((t.chapter_id for t in tasks
                                   if t.task_id == head.get("task_id")), "")) or "")
             if head_cid:
-                verify = live_verify_chapter(
-                    head_cid,
-                    params.get("course_id", ""),
-                    params.get("clazz_id", ""),
-                    params.get("cpi", ""),
-                    os.environ.get("CX_USER", ""),
-                    os.environ.get("CX_PASS", ""),
-                )
+                from tvdp.tdvp import chapter_video_summary, build_live_pending
+                verify = None
+                # 洞3：目录发现阶段已顺带读到的该章点级（同一次浏览器），直接复用，
+                #     避免再开一次浏览器（live_verify_chapter）去重复深读。
+                if _combined_points and head_cid == _pred_head:
+                    tv, tf = chapter_video_summary(_combined_points)
+                    verify = {
+                        "video_total": tv,
+                        "video_finished": tf,
+                        "live_pending": build_live_pending(_combined_points),
+                    }
+                if verify is None:
+                    verify = live_verify_chapter(
+                        head_cid,
+                        params.get("course_id", ""),
+                        params.get("clazz_id", ""),
+                        params.get("cpi", ""),
+                        os.environ.get("CX_USER", ""),
+                        os.environ.get("CX_PASS", ""),
+                    )
                 if verify is not None:
                     total_v = verify.get("video_total", 0)
                     live_pending = verify.get("live_pending") or set()
