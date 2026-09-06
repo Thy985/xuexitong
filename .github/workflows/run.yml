@@ -53,7 +53,7 @@ permissions:
 jobs:
   learn:
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 50
     concurrency:
       group: xuexitong-active-course
       cancel-in-progress: false
