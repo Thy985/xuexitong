@@ -300,6 +300,30 @@ def pick_conflict_chapters(
     return [c for c in chapter_ids if c in conflicted]
 
 
+def stale_completed_by_catalog(
+    existing: dict[str, TaskRecord],
+    chapters_raw: list[dict],
+) -> list[str]:
+    """目录层校准：凡是 raw 目录显示「仍有待完成任务点」(job_remaining>0) 的章，
+    其 COMPLETED video task 一律降级为 STALE（真实还有未完成点 ⇒ 完成态可疑）。
+
+    只返回被降级任务的 task_id；调用方负责 mark_stale + save_registry。
+    这是不依赖逐章浏览器复核的库一级校准（L1），成本仅为目录解析。
+    """
+    pending_cids = {
+        str(c.get("chapter_id") or "")
+        for c in (chapters_raw or [])
+        if int(c.get("job_remaining", 0) or 0) > 0
+    }
+    downgraded = []
+    for tid, t in existing.items():
+        if t.status != "COMPLETED":
+            continue
+        if t.chapter_id in pending_cids:
+            downgraded.append(tid)
+    return downgraded
+
+
 def run_calibrated_reconcile(
     course_key: str,
     existing: dict[str, TaskRecord],

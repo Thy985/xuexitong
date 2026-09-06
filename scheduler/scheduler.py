@@ -429,6 +429,22 @@ def _run_tdvp_probe(course_url: str, course_key: str,
               f"downgraded={report.downgraded} upgraded_ui={report.upgraded_ui})",
               flush=True)
 
+        # 2.5 E6.2/L1：目录层校准——raw 显示「仍有待完成任务点」的章，其 COMPLETED
+        #     一律降级 STALE 重新入队（否则 4706/4708 这类"章节点未播完但曾被 isPassed
+        #     标完成"的章会被当成 done 永久跳过）。
+        from e6.reconcile import stale_completed_by_catalog
+        stale_ids = stale_completed_by_catalog(existing, chapters_raw)
+        if stale_ids:
+            from e6.task_registry import TaskRecord
+            for sid in stale_ids:
+                rec = existing.get(sid)
+                if rec is not None:
+                    rec.mark_stale(detail="catalog job_remaining>0 (L1)")
+            save_registry(course_key, existing)
+            print(f"[scheduler] TDVP: catalog-stale={len(stale_ids)} "
+                  f"chapters re-queued: {sorted({existing[s].chapter_id for s in stale_ids if s in existing})}",
+                  flush=True)
+
         # 3. done_ids 仅为 derived cache（canonical 状态在 registry.completion）
         done_ids = done_chapter_ids_from_registry(existing)
         print(f"[scheduler] TDVP: done={len(done_ids)} chapters: {sorted(done_ids)}",

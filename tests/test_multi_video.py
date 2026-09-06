@@ -99,3 +99,41 @@ def test_reconcile_does_not_keep_done_video_ahead_of_pending_video(tmp_registry)
     ids = {i["task_id"] for i in q.items}
     assert cid not in ids             # v1 已完成 → 不重放
     assert f"{cid}:video2" in ids     # v2 仍 READY
+
+
+def test_catalog_stale_downgrades_completed_when_jobs_remain(tmp_registry):
+    """E6.2/L1: 目录层 job_remaining>0 ⇒ COMPLETED 降级 STALE，重新入队。
+
+    真实回归：4706/4708 各自 2 个视频点都没播完，但 registry 是 COMPLETED
+    （被旧代码 isPassed 一次性标完成）→ 现在必须被目录校准重新拉起，
+    而不是当 done 永久跳过（用户报告：遗留视频总是被跳过）。
+    """
+    from e6.task_registry import (TaskRecord, reconcile_queue, done_chapter_ids_from_registry)
+    from e6.reconcile import stale_completed_by_catalog
+
+    cid = "1217304708"
+    # 旧协议把整章标成单个 COMPLETED video task
+    done_task = TaskRecord(cid, cid, "数据通信基础知识", task_type="video")
+    done_task.mark_completed(run_id="old-run", source="isPassed")
+    reg = {cid: done_task}
+
+    # 真实目录：该章仍有 2 个未完成任务点
+    chapters = [{"chapter_id": cid, "status": "pending", "job_remaining": 2}]
+    stale = stale_completed_by_catalog(reg, chapters)
+    assert stale == [cid]                       # 本章的 COMPLETED 被点名降级
+    for sid in stale:
+        reg[sid].mark_stale(detail="catalog job_remaining>0 (L1)")
+    assert reg[cid].status == "STALE"           # 完成态被推翻
+    # 章不再是 done → 该 video 回到 READY 队列
+    done_ids = done_chapter_ids_from_registry(reg)
+    assert cid not in done_ids
+    q = reconcile_queue("k1", reg, done_ids)
+    ids = {i["task_id"] for i in q.items}
+    assert cid in ids                            # 重新入队（不再跳过）
+
+    # 对照：确无剩余任务的章 → COMPLETED 保持，不入 stale
+    ok = TaskRecord("1217304700", "1217304700", "互联网概述", task_type="video")
+    ok.mark_completed(run_id="x", source="isPassed")
+    reg_ok = {"1217304700": ok}
+    chapters_ok = [{"chapter_id": "1217304700", "job_remaining": 0}]
+    assert stale_completed_by_catalog(reg_ok, chapters_ok) == []
