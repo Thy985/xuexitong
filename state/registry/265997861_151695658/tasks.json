@@ -6,6 +6,7 @@
     "task_type": "video",
     "status": "COMPLETED",
     "priority": 106,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -20,9 +21,27 @@
       "run_id": "33966450863",
       "source_detail": "passed_object_ids=3"
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.624481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.624481+00:00"
+    },
     "created_at_utc": "2026-09-05T12:35:58.026909+00:00",
     "updated_at_utc": "2026-09-05T12:57:12.012853+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": "2026-09-05T12:57:12.012853+00:00",
     "last_failure_at_utc": null,
     "_ch_idx": 0,
@@ -35,6 +54,7 @@
     "task_type": "video",
     "status": "COMPLETED",
     "priority": 10,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -49,9 +69,27 @@
       "run_id": "33970738470",
       "source_detail": "passed_object_ids=3"
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.624481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.624481+00:00"
+    },
     "created_at_utc": "2026-09-04T07:36:36.732281+00:00",
     "updated_at_utc": "2026-09-05T14:23:09.104814+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": "2026-09-05T14:23:09.104814+00:00",
     "last_failure_at_utc": null,
     "_ch_idx": 10,
@@ -64,6 +102,7 @@
     "task_type": "video",
     "status": "COMPLETED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -78,9 +117,27 @@
       "run_id": "33968374924",
       "source_detail": "passed_object_ids=1"
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.624481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.624481+00:00"
+    },
     "created_at_utc": "2026-09-05T12:35:58.026937+00:00",
     "updated_at_utc": "2026-09-05T13:25:02.783621+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": "2026-09-05T13:25:02.783621+00:00",
     "last_failure_at_utc": null,
     "_ch_idx": 1,
@@ -91,8 +148,9 @@
     "chapter_id": "1217304702",
     "title": "计算机网络的概念与类别",
     "task_type": "video",
-    "status": "COMPLETED",
+    "status": "UNKNOWN",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -107,9 +165,27 @@
       "run_id": "33971988313",
       "source_detail": "server DOM completed marker"
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.624481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.624481+00:00"
+    },
     "created_at_utc": "2026-09-05T12:35:58.026951+00:00",
-    "updated_at_utc": "2026-09-05T14:31:01.521989+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.625482+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 2,
@@ -122,6 +198,7 @@
     "task_type": "video",
     "status": "COMPLETED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -136,9 +213,27 @@
       "run_id": "33971988313",
       "source_detail": "server DOM completed marker"
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.624481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.624481+00:00"
+    },
     "created_at_utc": "2026-09-05T12:35:58.026972+00:00",
     "updated_at_utc": "2026-09-05T14:31:01.521997+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 3,
@@ -151,6 +246,7 @@
     "task_type": "video",
     "status": "COMPLETED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -165,9 +261,27 @@
       "run_id": "33971988313",
       "source_detail": "passed_object_ids=1"
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.624481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.624481+00:00"
+    },
     "created_at_utc": "2026-09-05T12:35:58.027007+00:00",
     "updated_at_utc": "2026-09-05T14:36:57.385054+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": "2026-09-05T14:36:57.385054+00:00",
     "last_failure_at_utc": null,
     "_ch_idx": 4,
@@ -180,6 +294,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -194,9 +309,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.624481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.624481+00:00"
+    },
     "created_at_utc": "2026-09-05T12:35:58.027026+00:00",
     "updated_at_utc": "2026-09-05T12:35:58.027026+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 5,
@@ -209,6 +342,7 @@
     "task_type": "video",
     "status": "COMPLETED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -223,9 +357,27 @@
       "run_id": "33971988313",
       "source_detail": "server DOM completed marker"
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.624481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.624481+00:00"
+    },
     "created_at_utc": "2026-09-05T12:35:58.027038+00:00",
     "updated_at_utc": "2026-09-05T14:31:01.522005+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 6,
@@ -238,6 +390,7 @@
     "task_type": "video",
     "status": "COMPLETED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -252,9 +405,27 @@
       "run_id": "33971988313",
       "source_detail": "server DOM completed marker"
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.624481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.624481+00:00"
+    },
     "created_at_utc": "2026-09-05T12:35:58.027140+00:00",
     "updated_at_utc": "2026-09-05T14:31:01.522009+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 7,
@@ -267,6 +438,7 @@
     "task_type": "video",
     "status": "COMPLETED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -281,9 +453,27 @@
       "run_id": "33971988313",
       "source_detail": "server DOM completed marker"
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.624481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.624481+00:00"
+    },
     "created_at_utc": "2026-09-05T12:35:58.027166+00:00",
     "updated_at_utc": "2026-09-05T14:31:01.522014+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 8,
@@ -296,6 +486,7 @@
     "task_type": "video",
     "status": "COMPLETED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -310,9 +501,27 @@
       "run_id": "33971988313",
       "source_detail": "server DOM completed marker"
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.624481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.624481+00:00"
+    },
     "created_at_utc": "2026-09-05T12:35:58.027184+00:00",
     "updated_at_utc": "2026-09-05T14:31:01.522019+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 9,
@@ -325,6 +534,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -339,9 +549,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.624481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.624481+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160540+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160540+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 11,
@@ -354,6 +582,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -368,9 +597,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.624481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.624481+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160546+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160546+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 12,
@@ -383,6 +630,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -397,9 +645,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.624481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.624481+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160552+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160552+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 13,
@@ -412,6 +678,7 @@
     "task_type": "video",
     "status": "COMPLETED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -426,9 +693,27 @@
       "run_id": "33971988313",
       "source_detail": "server DOM completed marker"
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.624481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.624481+00:00"
+    },
     "created_at_utc": "2026-09-05T12:35:58.027200+00:00",
     "updated_at_utc": "2026-09-05T14:31:01.522026+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 14,
@@ -441,6 +726,7 @@
     "task_type": "video",
     "status": "COMPLETED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -455,9 +741,27 @@
       "run_id": "33971988313",
       "source_detail": "server DOM completed marker"
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.624481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.624481+00:00"
+    },
     "created_at_utc": "2026-09-05T12:35:58.027217+00:00",
     "updated_at_utc": "2026-09-05T14:31:01.522031+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 15,
@@ -470,6 +774,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -484,9 +789,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.624481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.624481+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160569+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160569+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 18,
@@ -499,6 +822,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -513,9 +837,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.624481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.624481+00:00"
+    },
     "created_at_utc": "2026-09-05T12:35:58.027231+00:00",
     "updated_at_utc": "2026-09-05T12:35:58.027231+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 19,
@@ -528,6 +870,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -542,9 +885,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.624481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.624481+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160580+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160580+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 20,
@@ -557,6 +918,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -571,9 +933,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.624481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.624481+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160585+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160585+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 21,
@@ -586,6 +966,7 @@
     "task_type": "video",
     "status": "COMPLETED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -600,9 +981,27 @@
       "run_id": "33971988313",
       "source_detail": "server DOM completed marker"
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.624481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.624481+00:00"
+    },
     "created_at_utc": "2026-09-05T12:35:58.027243+00:00",
     "updated_at_utc": "2026-09-05T14:31:01.522038+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 22,
@@ -615,6 +1014,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -629,9 +1029,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.624481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.624481+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160597+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160597+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 23,
@@ -644,6 +1062,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -658,9 +1077,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.624481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.624481+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160603+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160603+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 24,
@@ -673,6 +1110,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -687,9 +1125,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.624481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.624481+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160609+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160609+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 27,
@@ -702,6 +1158,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -716,9 +1173,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160614+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160614+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 28,
@@ -731,6 +1206,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -745,9 +1221,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160620+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160620+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 29,
@@ -760,6 +1254,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -774,9 +1269,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160626+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160626+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 30,
@@ -789,6 +1302,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -803,9 +1317,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160632+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160632+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 31,
@@ -818,6 +1350,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -832,9 +1365,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160640+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160640+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 32,
@@ -847,6 +1398,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -861,9 +1413,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160646+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160646+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 33,
@@ -876,6 +1446,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -890,9 +1461,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160652+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160652+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 34,
@@ -905,6 +1494,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -919,9 +1509,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160658+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160658+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 35,
@@ -934,6 +1542,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -948,9 +1557,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160664+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160664+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 36,
@@ -963,6 +1590,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -977,9 +1605,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160672+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160672+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 37,
@@ -992,6 +1638,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -1006,9 +1653,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160679+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160679+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 38,
@@ -1021,6 +1686,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -1035,9 +1701,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160685+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160685+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 39,
@@ -1050,6 +1734,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -1064,9 +1749,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160691+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160691+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 40,
@@ -1079,6 +1782,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -1093,9 +1797,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160697+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160697+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 41,
@@ -1108,6 +1830,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -1122,9 +1845,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160703+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160703+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 43,
@@ -1137,6 +1878,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -1151,9 +1893,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160709+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160709+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 47,
@@ -1166,6 +1926,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -1180,9 +1941,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160716+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160716+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 48,
@@ -1195,6 +1974,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -1209,9 +1989,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160722+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160722+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 49,
@@ -1224,6 +2022,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -1238,9 +2037,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160728+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160728+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 50,
@@ -1253,6 +2070,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -1267,9 +2085,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160734+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160734+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 51,
@@ -1282,6 +2118,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -1296,9 +2133,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160740+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160740+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 52,
@@ -1311,6 +2166,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -1325,9 +2181,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160747+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160747+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 53,
@@ -1340,6 +2214,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -1354,9 +2229,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160753+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160753+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 54,
@@ -1369,6 +2262,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -1383,9 +2277,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160759+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160759+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 56,
@@ -1398,6 +2310,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -1412,9 +2325,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160766+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160766+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 61,
@@ -1427,6 +2358,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -1441,9 +2373,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160772+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160772+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 62,
@@ -1456,6 +2406,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -1470,9 +2421,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160779+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160779+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 63,
@@ -1485,6 +2454,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -1499,9 +2469,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160785+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160785+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 64,
@@ -1514,6 +2502,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -1528,9 +2517,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160792+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160792+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 65,
@@ -1543,6 +2550,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -1557,9 +2565,27 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160799+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160799+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 70,
@@ -1572,6 +2598,7 @@
     "task_type": "video",
     "status": "DISCOVERED",
     "priority": 55,
+    "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
@@ -1586,9 +2613,2139 @@
       "run_id": null,
       "source_detail": ""
     },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
     "created_at_utc": "2026-09-04T11:32:26.160805+00:00",
     "updated_at_utc": "2026-09-04T11:32:26.160805+00:00",
+    "last_run_id": null,
     "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 71,
+    "_cell_idx": 71
+  },
+  "1217304702:other": {
+    "task_id": "1217304702:other",
+    "chapter_id": "1217304702",
+    "title": "计算机网络的概念与类别",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.625482+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.625482+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 2,
+    "_cell_idx": 2
+  },
+  "1217304705:other": {
+    "task_id": "1217304705:other",
+    "chapter_id": "1217304705",
+    "title": "计算机网络的体系结构",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.625482+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.625482+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 5,
+    "_cell_idx": 5
+  },
+  "1217304706:other": {
+    "task_id": "1217304706:other",
+    "chapter_id": "1217304706",
+    "title": "物理层的主要任务",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.625482+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.625482+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 10,
+    "_cell_idx": 10
+  },
+  "1217304708:other": {
+    "task_id": "1217304708:other",
+    "chapter_id": "1217304708",
+    "title": "数据通信的基础知识",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.625482+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.625482+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 11,
+    "_cell_idx": 11
+  },
+  "1217304712:other": {
+    "task_id": "1217304712:other",
+    "chapter_id": "1217304712",
+    "title": "物理层下面的传输媒体",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.625482+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.625482+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 12,
+    "_cell_idx": 12
+  },
+  "1217304714:other": {
+    "task_id": "1217304714:other",
+    "chapter_id": "1217304714",
+    "title": "信道复用技术",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.625482+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.625482+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 13,
+    "_cell_idx": 13
+  },
+  "1217304717:other": {
+    "task_id": "1217304717:other",
+    "chapter_id": "1217304717",
+    "title": "数据链路层概述",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.625482+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.625482+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 18,
+    "_cell_idx": 18
+  },
+  "1217304719:other": {
+    "task_id": "1217304719:other",
+    "chapter_id": "1217304719",
+    "title": "点对点协议PPP",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.625482+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.625482+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 19,
+    "_cell_idx": 19
+  },
+  "1217304721:other": {
+    "task_id": "1217304721:other",
+    "chapter_id": "1217304721",
+    "title": "使用广播信道的数据链路层",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.626481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.626481+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 20,
+    "_cell_idx": 20
+  },
+  "1217304722:other": {
+    "task_id": "1217304722:other",
+    "chapter_id": "1217304722",
+    "title": "扩展的以太网",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.626481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.626481+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 21,
+    "_cell_idx": 21
+  },
+  "1217304725:other": {
+    "task_id": "1217304725:other",
+    "chapter_id": "1217304725",
+    "title": "能力提升",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.626481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.626481+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 23,
+    "_cell_idx": 23
+  },
+  "1217304726:other": {
+    "task_id": "1217304726:other",
+    "chapter_id": "1217304726",
+    "title": "学习目标和重点难点",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.626481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.626481+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 24,
+    "_cell_idx": 24
+  },
+  "1217304728:other": {
+    "task_id": "1217304728:other",
+    "chapter_id": "1217304728",
+    "title": "网络层概述",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.626481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.626481+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 27,
+    "_cell_idx": 27
+  },
+  "1217304730:other": {
+    "task_id": "1217304730:other",
+    "chapter_id": "1217304730",
+    "title": "分类的IP地址",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.626481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.626481+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 28,
+    "_cell_idx": 28
+  },
+  "1217304731:other": {
+    "task_id": "1217304731:other",
+    "chapter_id": "1217304731",
+    "title": "子网划分",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.626481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.626481+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 29,
+    "_cell_idx": 29
+  },
+  "1217304732:other": {
+    "task_id": "1217304732:other",
+    "chapter_id": "1217304732",
+    "title": "无分类编址CIDR",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.626481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.626481+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 30,
+    "_cell_idx": 30
+  },
+  "1217304733:other": {
+    "task_id": "1217304733:other",
+    "chapter_id": "1217304733",
+    "title": "IP数据报的格式",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.626481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.626481+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 31,
+    "_cell_idx": 31
+  },
+  "1217304734:other": {
+    "task_id": "1217304734:other",
+    "chapter_id": "1217304734",
+    "title": "IP数据报的分片与重组",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.626481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.626481+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 32,
+    "_cell_idx": 32
+  },
+  "1217304735:other": {
+    "task_id": "1217304735:other",
+    "chapter_id": "1217304735",
+    "title": "IP层转发分组的流程",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.626481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.626481+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 33,
+    "_cell_idx": 33
+  },
+  "1217304736:other": {
+    "task_id": "1217304736:other",
+    "chapter_id": "1217304736",
+    "title": "ARP协议",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.626481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.626481+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 34,
+    "_cell_idx": 34
+  },
+  "1217304737:other": {
+    "task_id": "1217304737:other",
+    "chapter_id": "1217304737",
+    "title": "ICMP协议",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.626481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.626481+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 35,
+    "_cell_idx": 35
+  },
+  "1217304738:other": {
+    "task_id": "1217304738:other",
+    "chapter_id": "1217304738",
+    "title": "IPV6",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.626481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.626481+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 36,
+    "_cell_idx": 36
+  },
+  "1217304739:other": {
+    "task_id": "1217304739:other",
+    "chapter_id": "1217304739",
+    "title": "路由协议概述",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.626481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.626481+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 37,
+    "_cell_idx": 37
+  },
+  "1217304740:other": {
+    "task_id": "1217304740:other",
+    "chapter_id": "1217304740",
+    "title": "RIP协议",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.626481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.626481+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 38,
+    "_cell_idx": 38
+  },
+  "1217304741:other": {
+    "task_id": "1217304741:other",
+    "chapter_id": "1217304741",
+    "title": "OSPF协议",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.626481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.626481+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 39,
+    "_cell_idx": 39
+  },
+  "1217304742:other": {
+    "task_id": "1217304742:other",
+    "chapter_id": "1217304742",
+    "title": "IP多播",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.626481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.626481+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 40,
+    "_cell_idx": 40
+  },
+  "1217304743:other": {
+    "task_id": "1217304743:other",
+    "chapter_id": "1217304743",
+    "title": "VPN和NAT",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.626481+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.626481+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.626481+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 41,
+    "_cell_idx": 41
+  },
+  "1217304745:other": {
+    "task_id": "1217304745:other",
+    "chapter_id": "1217304745",
+    "title": "课后习题",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.627509+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.627509+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 43,
+    "_cell_idx": 43
+  },
+  "1217304749:other": {
+    "task_id": "1217304749:other",
+    "chapter_id": "1217304749",
+    "title": "运输层协议概述",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.627509+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.627509+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 47,
+    "_cell_idx": 47
+  },
+  "1217304750:other": {
+    "task_id": "1217304750:other",
+    "chapter_id": "1217304750",
+    "title": "UDP和TCP概述",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.627509+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.627509+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 48,
+    "_cell_idx": 48
+  },
+  "1217304751:other": {
+    "task_id": "1217304751:other",
+    "chapter_id": "1217304751",
+    "title": "TCP报文段的格式",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.627509+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.627509+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 49,
+    "_cell_idx": 49
+  },
+  "1217304752:other": {
+    "task_id": "1217304752:other",
+    "chapter_id": "1217304752",
+    "title": "可靠传输的工作原理",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.627509+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.627509+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 50,
+    "_cell_idx": 50
+  },
+  "1217304753:other": {
+    "task_id": "1217304753:other",
+    "chapter_id": "1217304753",
+    "title": "TCP可靠传输的实现",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.627509+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.627509+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 51,
+    "_cell_idx": 51
+  },
+  "1217304754:other": {
+    "task_id": "1217304754:other",
+    "chapter_id": "1217304754",
+    "title": "TCP的流量控制",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.627509+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.627509+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 52,
+    "_cell_idx": 52
+  },
+  "1217304755:other": {
+    "task_id": "1217304755:other",
+    "chapter_id": "1217304755",
+    "title": "TCP的拥塞控制",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.627509+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.627509+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 53,
+    "_cell_idx": 53
+  },
+  "1217304756:other": {
+    "task_id": "1217304756:other",
+    "chapter_id": "1217304756",
+    "title": "TCP的运输连接管理",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.627509+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.627509+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 54,
+    "_cell_idx": 54
+  },
+  "1217304758:other": {
+    "task_id": "1217304758:other",
+    "chapter_id": "1217304758",
+    "title": "扩展阅读",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.627509+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.627509+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 56,
+    "_cell_idx": 56
+  },
+  "1217304763:other": {
+    "task_id": "1217304763:other",
+    "chapter_id": "1217304763",
+    "title": "DNS域名服务器",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.627509+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.627509+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 61,
+    "_cell_idx": 61
+  },
+  "1217304764:other": {
+    "task_id": "1217304764:other",
+    "chapter_id": "1217304764",
+    "title": "文件传送协议FTP",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.627509+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.627509+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 62,
+    "_cell_idx": 62
+  },
+  "1217304771:other": {
+    "task_id": "1217304771:other",
+    "chapter_id": "1217304771",
+    "title": "万维网WWW",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.627509+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.627509+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 63,
+    "_cell_idx": 63
+  },
+  "1217304773:other": {
+    "task_id": "1217304773:other",
+    "chapter_id": "1217304773",
+    "title": "电子邮件E_mail",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.627509+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.627509+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 64,
+    "_cell_idx": 64
+  },
+  "1217304775:other": {
+    "task_id": "1217304775:other",
+    "chapter_id": "1217304775",
+    "title": "动态主机配置协议DHCP",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.627509+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.627509+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 65,
+    "_cell_idx": 65
+  },
+  "1217304781:other": {
+    "task_id": "1217304781:other",
+    "chapter_id": "1217304781",
+    "title": "目的和要求",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.627509+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.627509+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 70,
+    "_cell_idx": 70
+  },
+  "1217304784:other": {
+    "task_id": "1217304784:other",
+    "chapter_id": "1217304784",
+    "title": "参考资料",
+    "task_type": "other",
+    "status": "PENDING",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.627509+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-06T01:52:26.627509+00:00"
+    },
+    "created_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "updated_at_utc": "2026-09-06T01:52:26.627509+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 71,
