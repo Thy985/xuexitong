@@ -123,6 +123,7 @@ def reconcile_registry(
     existing: dict[str, TaskRecord],
     discovery_tasks: list,
     dom_status: Optional[dict] = None,
+    live_pending: Optional[set] = None,
 ) -> tuple[dict[str, TaskRecord], ReconcileReport]:
     """将现有 Registry 与最新 Discovery 校准为 canonical 状态。
 
@@ -130,11 +131,14 @@ def reconcile_registry(
         existing: 现有 registry（{task_id: TaskRecord}）
         discovery_tasks: build_tasks_from_discovery() 输出的 TaskInfo 列表
         dom_status: {chapter_id: 'completed'|'pending'|'unknown'} 服务器 DOM 渲染状态
+        live_pending: 由 live verification（L2/L3）确认「当前确实未完成」的 task_id 集合。
+                      非 None 时用于「COMPLETED 被实时状态覆盖」的校准（E6.2）
 
     Returns:
         (new_registry, report)
     """
     dom_status = dom_status or {}
+    live_pending = live_pending if live_pending is not None else set()
     report = ReconcileReport(course_key=course_key)
 
     # 迁移旧 task_id（title 匹配但 task_id 格式已变）
@@ -241,8 +245,18 @@ def reconcile_registry(
                 else:
                     result[tid] = _make_discovered(t)
                     report.upcoming += 1
-            elif old.status == "COMPLETED":
-                if has_strong_evidence(old):
+            elif old.status in ("COMPLETED", "STALE"):
+                if tid in live_pending:
+                    # E6.2：COMPLETED 被「实时状态」明确推翻（live verification 确认未完成）。
+                    # 强证据也服从实时真相 —— 否则 registry 会变成错误缓存（4706 案例）。
+                    old.mark_stale(detail="live verification: now pending")
+                    old.downgrade_to_pending(detail="live re-check confirmed pending")
+                    result[tid] = old
+                    report.downgraded += 1
+                    report.repair_map[tid] = {
+                        "before": "COMPLETED", "after": "PENDING",
+                        "reason": "live status override: server now shows task unfinished"}
+                elif has_strong_evidence(old):
                     # 强证据保留（服务器 DOM 可能延迟 / 不稳定）
                     result[tid] = old
                     report.kept_completed += 1
@@ -258,3 +272,72 @@ def reconcile_registry(
                 result[tid] = old
 
     return result, report
+
+
+def pick_conflict_chapters(
+    chapter_ids: list[str],
+    existing: dict[str, TaskRecord],
+    dom_pending: set[str],
+) -> list[str]:
+    """选「需要 L2 live 复核」的章节：registry 里有 COMPLETED（视频已完成/强证据）
+    但服务器 DOM 此刻显示该章待完成 → 存在 COMPLETED 被实时状态推翻的嫌疑。
+
+    返回该章 id 列表；只对这些章做 read_chapter_job_points（成本梯度）。
+    """
+    conflicted = set()
+    for cid in chapter_ids:
+        if cid not in dom_pending:
+            continue
+        recs = [r for t, r in existing.items() if r.chapter_id == cid]
+        completed = [r for r in recs if r.status == "COMPLETED"]
+        completed_video = [
+            r for r in completed
+            if (getattr(r, "task_type", "video") or "video") == "video"
+        ]
+        if completed or completed_video:
+            conflicted.add(cid)
+    # 按原有章节顺序返回，保持确定性
+    return [c for c in chapter_ids if c in conflicted]
+
+
+def run_calibrated_reconcile(
+    course_key: str,
+    existing: dict[str, TaskRecord],
+    discovery_tasks: list,
+    dom_status: Optional[dict] = None,
+    chapter_ids: Optional[list[str]] = None,
+    page=None,
+    course_params: Optional[dict] = None,
+    live_pending_override: Optional[set] = None,
+) -> tuple[dict[str, TaskRecord], ReconcileReport]:
+    """Discovery → (可选) L2 live 复核冲突章 → Reconcile。
+
+    对「有 COMPLETED 且服务器 DOM 待完成」的冲突章节，若传入 page 与 course_params，
+    则调用 tdvp.read_chapter_job_points() 读取实时任务点，把其「未完成」的 task_id
+    汇入 live_pending，交给 reconcile_registry 在 reconcile 内把强证据 COMPLETED
+    降级为 PENDING（E6.2：完成状态可被实时状态推翻）。
+
+    live_pending_override 用于测试在无浏览器时手动注入 live_pending。
+    """
+    dom = dom_status or {}
+    dom_pending = {cid for cid, s in dom.items() if s == "pending"}
+    chapter_ids = chapter_ids or [
+        t.chapter_id for t in discovery_tasks if t.chapter_id
+    ]
+    live = set(live_pending_override or set())
+
+    conflicted = pick_conflict_chapters(chapter_ids, existing, dom_pending)
+    if page is not None and course_params and conflicted:
+        from tvdp.tdvp import build_live_pending, read_chapter_job_points
+        for cid in conflicted:
+            job_pts = read_chapter_job_points(
+                page, cid,
+                course_params.get("course_id", ""),
+                course_params.get("clazz_id", ""),
+                course_params.get("cpi", ""),
+            )
+            live |= build_live_pending(job_pts)
+
+    return reconcile_registry(
+        course_key, existing, discovery_tasks, dom_status=dom, live_pending=live,
+    )

@@ -31,8 +31,8 @@ from tvdp.tdvp import TaskStatus as TdvpStatus, TaskInfo as TdvpTaskInfo
 
 # ── 类型定义 ───────────────────────────────────────────────────────
 TaskPhase = Literal["DISCOVERED", "PENDING", "READY", "RUNNING", "VERIFYING",
-                    "COMPLETED", "FAILED", "BLOCKED", "UNKNOWN"]
-EvidenceLevel = Literal["NONE", "UI", "SERVER_VERIFIED", "RECHECK"]
+                    "COMPLETED", "FAILED", "BLOCKED", "UNKNOWN", "STALE"]
+EvidenceLevel = Literal["NONE", "UI", "SERVER_VERIFIED", "RECHECK", "CONFLICT"]
 
 
 # ── 数据模型 ───────────────────────────────────────────────────────
@@ -168,8 +168,8 @@ class TaskRecord:
 
     @property
     def is_executable(self) -> bool:
-        """任务是否可执行（READY、PENDING、刚发现的 DISCOVERED，或可重试的 FAILED）。"""
-        if self.status in ("READY", "PENDING", "DISCOVERED"):
+        """任务是否可执行（READY、PENDING、STALE、刚发现的 DISCOVERED，或可重试的 FAILED）。"""
+        if self.status in ("READY", "PENDING", "STALE", "DISCOVERED"):
             return True
         if self.status == "FAILED" and self.consecutive_failures < self.max_attempts:
             return True
@@ -271,6 +271,38 @@ class TaskRecord:
         self.last_failure_at_utc = now
         self.updated_at_utc = now
         return self.status
+
+    def mark_stale(self, detail: str = "") -> None:
+        """E6.2 校准：实时状态覆盖历史完成。
+
+        当「实时服务端/DOM 显示该 task 未完成」而 registry 却记着 COMPLETED 时，
+        先把其完成证据降级为 CONFLICT 并标记 STALE（不立刻丢完成状态，
+        保留证据以便溯源），由 reconcile 决定是保留还是真正回退 PENDING。
+        """
+        now = self._now()
+        self.status = "STALE"
+        if self.completion_evidence and self.completion_evidence.type not in ("NONE", ""):
+            self.completion_evidence = CompletionEvidence(
+                type="CONFLICT",
+                source=self.completion_evidence.source,
+                run_id=self.completion_evidence.run_id,
+                observed_at_utc=now,
+                detail=(detail or "live status overrides prior completion")[:400],
+                passed_object_ids=list(self.completion_evidence.passed_object_ids or []),
+            )
+        self.updated_at_utc = now
+
+    def downgrade_to_pending(self, detail: str = "") -> None:
+        """E6.2：完成状态被实时状态推翻，回退为 PENDING（可重入队列）。
+
+        保留 completion_evidence/verification 以便审计（不删除历史），
+        但 status 回到 PENDING → is_executable 为真 → 队列重选。
+        """
+        now = self._now()
+        self.status = "PENDING"
+        self.verification = Verification(level="CONFLICT", verified_at_utc=now,
+                                         run_id="", source_detail=detail or "live re-check pending")
+        self.updated_at_utc = now
 
     def to_dict(self) -> dict:
         d = asdict(self)
@@ -413,8 +445,11 @@ def chapter_aggregate_status(registry: dict[str, TaskRecord], chapter_id: str) -
     if not recs:
         return "UNKNOWN"
     statuses = {r.status for r in recs}
-    if statuses == {"COMPLETED"}:
+    if statuses <= {"COMPLETED"}:
         return "COMPLETED"
+    if "STALE" in statuses:
+        # 有任务被实时状态标记 STALE → 章节不等于完成，需复核
+        return "STALE"
     if statuses & {"RUNNING", "VERIFYING"}:
         return "RUNNING"
     if "FAILED" in statuses:

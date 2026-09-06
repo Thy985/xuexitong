@@ -642,7 +642,102 @@ def build_tasks_from_discovery(chapters_raw: list[dict],
     return tasks
 
 
-# ── Evidence Aggregator ────────────────────────────────────────────
+# ── Live per-chapter calibration (E6.2) ───────────────────────────
+
+# 该章内每个任务点由 .ans-job-icon 承载，完成与否看其 parent 是否带
+# .ans-job-finished；类型看 icon 的附加类（.ans-job-video 已确认，quiz 等按约定）。
+
+
+def _classify_job(marker_class: str) -> str:
+    """从 .ans-job-icon 的 class 推断任务点类型。video 已确认，其余按约定。"""
+    for t in ("video", "quiz", "exam", "document", "discussion", "homework"):
+        if f"ans-job-{t}" in (marker_class or ""):
+            return t
+    return "other"
+
+
+def read_chapter_job_points(
+    page,
+    knowledge_id: str,
+    course_id: str,
+    clazz_id: str,
+    cpi: str,
+) -> list[dict]:
+    """L2 live verification：打开指定章节的 cards 帧，读其真实任务点列表。
+
+    返回 [{task_id, type, title, finished}]，task_id 形如 <chapterId>（video）或
+    <chapterId>:<type>。只对 conflict/STALE 的章节做，不用于被动 discovery
+    （成本梯度：L1 catalog 便宜，L2 每章一次，L3 才真正重播）。
+    """
+    page.goto(
+        f"https://mooc1.chaoxing.com/mycourse/studentstudy?chapterId={knowledge_id}"
+        f"&courseId={course_id}&clazzid={clazz_id}&cpi={cpi}"
+        "&enc=1bc1bd778f9e00d924fe97b3c63f76f4&mooc2=1&hidetype=0",
+        wait_until="domcontentloaded", timeout=30000,
+    )
+    page.wait_for_timeout(7000)
+
+    points: list[dict] = []
+    for fr in page.frames:
+        if "knowledge/cards" not in fr.url:
+            continue
+        try:
+            fr.wait_for_selector(".ans-job-item, .ans-job-icon", timeout=8000)
+        except Exception:
+            continue
+        page.wait_for_timeout(1200)
+        rows = fr.evaluate("""() => {
+            const out = [];
+            const seen = new Set();
+            document.querySelectorAll('.ans-job-item, .ans-job-icon').forEach(n => {
+                const icon = n.classList.contains('ans-job-icon')
+                    ? n : n.querySelector('.ans-job-icon');
+                if (!icon) return;
+                const parent = icon.closest('.ans-job') || n.parentElement;
+                const finished = parent ? parent.className.includes('ans-job-finished')
+                                        : false;
+                const label = parent ? (parent.innerText||'')
+                                        .trim().replace(/\\s+/g,' ').slice(0,40) : '';
+                const marker = (icon.className||'').toString();
+                const key = label || marker;
+                if (seen.has(key)) return; seen.add(key);
+                out.push({ marker, isFinished: finished, titleText: label });
+            });
+            return out;
+        }""")
+        for r in rows:
+            typ = _classify_job(r.pop("marker") or "")
+            # video 点 → 章节 id（与 registry 的 video task_id 一致）；
+            # 其余 → <chapterId>:<type>（与 discovery 生成的 :other 命名对齐）。
+            r["task_id"] = knowledge_id if typ == "video" else f"{knowledge_id}:{typ}"
+            r["type"] = typ
+            points.append(r)
+        break
+    return points
+
+
+def build_live_pending(job_points: list[dict]) -> set[str]:
+    """从一章的实时 job 点列表推导「当前确实未完成」的 task_id 集合。"""
+    return {p["task_id"] for p in job_points if not p.get("isFinished")}
+
+
+def build_live_pending(
+    job_points: list[dict],
+    pending_count_hint: int = 0,
+) -> set[str]:
+    """由一章的实时 job 点列表推导出「当前确实未完成」的 task_id 集合。
+
+    Registry 里一个章节的 video task 会用章节 id 作 task_id（不加后缀）。
+    若该章存在未 finished 的 video 点 → 该 video task 应降级。
+    """
+    live = set()
+    for p in job_points:
+        if not p.get("isFinished"):
+            live.add(p["task_id"])
+    if not live and pending_count_hint > 0:
+        # 兜底：未能从 DOM 读出具体点，但目录层明确有待完成任务
+        live.add("__pending_hint__")
+    return live
 
 def aggregate_evidence(
     passive_results: dict[str, TaskInfo],
