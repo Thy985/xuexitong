@@ -386,8 +386,16 @@ def fetch_course_discovery(course_url: str, cx_user: Optional[str] = None,
             ensure_login(page, ctx, base, user, pw)
 
             # ── 导航到课程目录页 ──────────────────────────────────
-            page.goto(course_url, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(5000)
+            page.goto(course_url, wait_until="domcontentloaded", timeout=45000)
+            # 目录树可渲染得慢（偶发空表）；等 selector 出现再提取。
+            try:
+                page.wait_for_selector(
+                    "#coursetree, a[href*='chapterId']",
+                    timeout=30000, state="attached",
+                )
+            except Exception:
+                print("[tdvp] catalog tree selector not found before timeout "
+                      "(still extracting)", file=sys.stderr)
 
             # ── DOM 提取目录树（借鉴 xuexitongScript/v3：#coursetree 结构）──
             # 结构： #coursetree > ul > li(章)  →  .posCatalog_select:not(.firstLayer)(小节)
@@ -595,8 +603,18 @@ def fetch_course_detail_and_verify(
             from utils.cookie_store import ensure_login
             ensure_login(page, ctx, E.build_base_url(chapter_id, cp), user, pw)
 
-            page.goto(course_url, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(5000)
+            page.goto(course_url, wait_until="domcontentloaded", timeout=45000)
+            # 目录树渲染可慢于卡片帧（实测：本章点已返回、目录仍空表）。
+            # 不再用固定 5s，改等目录树 selector 出现（最多 ~30s），降低
+            # 'catalog 空 → 整轮空抓' 抖动；超时也照常 extract（fallback 兜底）。
+            try:
+                page.wait_for_selector(
+                    "#coursetree, a[href*='chapterId']",
+                    timeout=30000, state="attached",
+                )
+            except Exception:
+                print("[tdvp] catalog tree selector not found before timeout "
+                      "(still extracting)", file=sys.stderr)
             chapters = extract_catalog_from_page(page, course_url)
 
             points = []
