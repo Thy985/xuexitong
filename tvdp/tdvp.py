@@ -314,6 +314,13 @@ def fetch_course_discovery(course_url: str, cx_user: Optional[str] = None,
                         else if (m4) cid = m4[1];
                         // 从激活状态推断：当前 URL 的 chapterId 就是激活节点
                         const isActive = cell.classList.contains('posCatalog_active');
+                        // E6.2: 读取本章节「待完成任务点」数量（hidden input），
+                        // 用于把 chapter 拆分为 video + 残余 task，而不是单 TaskInfo。
+                        let jobRemaining = 0;
+                        const unf = cell.querySelector('input[type="hidden"][class*="UnfinishCount"], input[type="hidden"][class*="unfinish"], input[name*="job"]');
+                        if (unf && unf.value) {
+                            jobRemaining = parseInt(unf.value, 10) || 0;
+                        }
                         results.push({
                             chapter_id: cid,
                             title: title,
@@ -322,7 +329,8 @@ def fetch_course_discovery(course_url: str, cx_user: Optional[str] = None,
                             chapter_index: gi,
                             cell_index: gi,
                             text: text.slice(0, 150),
-                            mirrored: false
+                            mirrored: false,
+                            job_remaining: jobRemaining,   // 待完成任务点数量
                         });
                     });
                 }
@@ -568,10 +576,18 @@ def fetch_page_html(course_url: str, cx_user: Optional[str] = None,
 
 def build_tasks_from_discovery(chapters_raw: list[dict],
                                fallback_chapter: str = "") -> list[TaskInfo]:
-    """将 DOM 提取的章节列表转换为 TaskInfo 列表。
+    """将 DOM 提取的章节列表转换为「Chapter 内多个 Task」的 TaskInfo 列表（E6.2）。
 
-    每个 chapter_raw = {chapter_id, title, status, text, cell_index, chapter_index}
-    chapter_id 为空时 task_id 用 _{chapter_index}_{cell_index} 占位。
+    之前只生成 1 个 chapter TaskInfo 的原因（E6.2 §1）：
+      旧实现把「每个目录节点（.posCatalog_select）」当作一个 task 直接映射，
+      task_type 恒为 video，没有把 chapter 内部可能存在的多个 job/task 拆开。
+
+    现在：每个 chapter 默认产出 1 个 video Task（runtime 支持）。
+      若该章还有「待完成任务点」剩余（job_remaining > 0 / 非完成态），
+      再补 1 个 other(unsupported) Task：用于告知 reconcile——
+      「video 即使完成，也不能让 chapter 聚合为完成」（§9），且不会被 Queue 选中。
+
+    chapter_raw = {chapter_id, title, status, text, cell_index, chapter_index, job_remaining}
     """
     tasks = []
     for ch in chapters_raw:
@@ -586,11 +602,13 @@ def build_tasks_from_discovery(chapters_raw: list[dict],
             status, conf = "PENDING", "UI"
         else:
             status, conf = "UNKNOWN", "UI"
+        job_remaining = int(ch.get("job_remaining", 0) or 0)
         detail = ch.get("text", "")[:80]
         ch_idx = ch.get("chapter_index", 0)
         cell_idx = ch.get("cell_index", 0)
-        # 无 cid 时用全局索引作为唯一标识，避免与旧 registry 的占位符冲突
         task_id = cid if cid else f"_gi{ch_idx}"
+
+        # 1) video task —— 保持与旧 runtime 兼容（task_type="video"）
         tasks.append(TaskInfo(
             task_id=task_id,
             chapter_id=cid if cid else "",
@@ -603,6 +621,24 @@ def build_tasks_from_discovery(chapters_raw: list[dict],
             _ch_idx=ch_idx,
             _cell_idx=cell_idx,
         ))
+
+        # 2) 残余非视频 task —— 当该章尚有「待完成任务点」且本章并非整体完成
+        #    此时 video task 即便完成也不得覆盖整章（§9）。
+        not_all_done = (status_raw != "completed") or (job_remaining > 0)
+        if not_all_done and cid:
+            tasks.append(TaskInfo(
+                task_id=f"{cid}:other",
+                chapter_id=cid,
+                title=title,
+                task_type="other",          # 非 video → unsupported/pending
+                status="PENDING",           # §6: 非 video 先记 pending/unsupported
+                confidence="UI",
+                source_detail=f"余 {job_remaining} 个待完成任务点",
+                evidence=TaskEvidence("PENDING", "UI",
+                                      f"uncategorised; {job_remaining} 待完成"),
+                _ch_idx=ch_idx,
+                _cell_idx=cell_idx,
+            ))
     return tasks
 
 

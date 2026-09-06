@@ -195,6 +195,18 @@ jobs:
               print(f"verdict:         {r.get('verdict', 'N/A')}")
               print(f"timing_s:        {r.get('timing_s', 'N/A')}")
               print(f"error:           {r.get('error', 'N/A')}")
+              # E6.1 §11：把底层 runtime evidence（failure_stage/checks/passed/run_id）surface 出来
+              evd = r.get("evidence") or {}
+              if isinstance(evd, dict) and evd:
+                  print(f"── runtime evidence ──")
+                  print(f"  failure_stage:  {evd.get('failure_stage')}")
+                  print(f"  runtime_result: {evd.get('runtime_result')}")
+                  print(f"  passed_count:   {evd.get('passed_count')}/10")
+                  print(f"  run_id:         {evd.get('run_id')}")
+                  cks = evd.get("checks") or {}
+                  if isinstance(cks, dict):
+                      failed = [k for k, v in cks.items() if v is False]
+                      print(f"  failed_checks:  {failed or 'none'}")
               sys.exit(0)
           res = r.get("result", {})
           if not isinstance(res, dict):

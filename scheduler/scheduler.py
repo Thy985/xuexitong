@@ -66,6 +66,7 @@ class ExecutionResult:
     failure_stage: Optional[str] = None
     error: Optional[str] = None
     timestamp_utc: str = ""
+    evidence: Optional[dict] = None      # 底层 runtime evidence（不能丢，见 E6.1 §11）
 
     def __post_init__(self):
         if not self.timestamp_utc:
@@ -329,7 +330,9 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
     passed = exit_code == 0
     verdict = "PASS" if passed else "FAIL"
 
-    # 从 evidence 文件读取实际 verdict / failure_stage（与旧版一致）
+    # 从 evidence 文件读取实际 verdict / failure_stage（并保留底层 evidence，见 E6.1 §11）
+    runtime_evidence = None
+    failure_stage = None
     try:
         if Path(evidence_path).exists():
             with open(evidence_path) as f:
@@ -337,36 +340,13 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
             res = r.get("result", {})
             verdict = res.get("verdict", verdict)
             passed = res.get("exit_code", 1) == 0
-            # 无视频节点（过渡页/无 cards）→ 自动跳过，标记 COMPLETED，
-            # 避免 done_ids 修复后对这些不可学习节点无限重试。
-            if not passed:
-                ev = r.get("evidence", {}) or {}
-                failure_stage = str(ev.get("failure_stage", "") or "")
-                v_str = str(ev.get("verdict", "") or "").lower()
-                no_video = (
-                    failure_stage in ("NO_CARDS_IFRAME", "NO_VIDEO_IN_CARDS")
-                    or any(s in v_str for s in (
-                        "video metadata not ready", "no_cards_frame",
-                        "no_video_in_cards", "cards iframe",
-                    ))
-                )
-                if no_video:
-                    try:
-                        from e6.task_registry import load_registry, save_registry
-                        reg = load_registry(identity_key)
-                        changed = False
-                        for t in reg.values():
-                            if t.chapter_id == chapter_id:
-                                t.status = "COMPLETED"
-                                changed = True
-                        if changed:
-                            save_registry(identity_key, reg)
-                            print(f"[scheduler] {chapter_id}: no-video node -> "
-                                  f"marked COMPLETED (skip)", flush=True)
-                    except Exception:
-                        pass
-                    passed = True
-                    verdict = "SKIP(no video)"
+            runtime_evidence = r.get("evidence") or {}
+            failure_stage = runtime_evidence.get("failure_stage") \
+                if isinstance(runtime_evidence, dict) else None
+            # E6.1：不再从「无视频/无 cards」推断 COMPLETED（详见 §1）。
+            # 无视频节点同样作为有记录的 failure 交给 postflight 的 mark_failed：
+            #   consecutive_failures+1 → 达阈值自动 BLOCKED，Queue 跳过。
+            # 它不会被永久卡在队列头部，也不会造成「看似成功」的假完成。
     except Exception:
         pass
 
@@ -379,6 +359,8 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
         timing_s=round(timing, 1),
         passed=passed,
         verdict=verdict,
+        failure_stage=failure_stage,
+        evidence=runtime_evidence,
     )
 
     # 记录结果
@@ -407,19 +389,18 @@ def _write_summary(summary: dict) -> None:
 
 def _run_tdvp_probe(course_url: str, course_key: str,
                     run_id: str = "local") -> Optional[str]:
-    """E6 TDVP Probe: Discovery -> Sync E6 Registry -> Reconcile Queue -> pick next task.
+    """E6.1 TDVP Probe: Discovery → Reconcile Registry → Reconcile Queue → pick next task.
 
     Returns:
         chapter_id string, or None if all chapters done.
     """
     try:
-        from tvdp.tdvp import (
-            fetch_course_discovery, build_tasks_from_discovery,
-        )
-        from e6.task_registry import load_registry, save_registry, reconcile_queue
+        from tvdp.tdvp import fetch_course_discovery, build_tasks_from_discovery
+        from e6.task_registry import load_registry, save_registry
+        from e6.reconcile import reconcile_registry
+        from e6.task_registry import done_chapter_ids_from_registry, reconcile_queue
         from e6.click_probe import click_probe_chapter_id
         from resolvers.course_resolver import _parse_url_params
-        from state.course_state import load_course_state
 
         params = _parse_url_params(course_url)
 
@@ -430,187 +411,29 @@ def _run_tdvp_probe(course_url: str, course_key: str,
                   "falling back to URL chapter_id", file=sys.stderr)
             return params.get("chapter_id")
 
-        # 2. Preflight Reconciliation: 校准历史状态
-        # 【架构变更 v2】不能把所有 COMPLETED(NONE) 一律降级——DOM 的 completed 标记
-        # （posCatalog_finish class / "已完成"文字）是服务器端渲染的真实完成状态，
-        # 只有 nextunit URL 跳变导致的假完成才需要降级重跑。
-        # 校准依据 = 服务器端 DOM 渲染的章节状态（本次 discovery 实时提取）：
-        #   - DOM status == completed → 服务器端确认完成 → 保留 COMPLETED，
-        #     证据升级为 UI（服务器 DOM 渲染标记）
-        #   - DOM status != completed（pending/unknown）→ 服务器端未确认 →
-        #     降级为 DISCOVERED（需要重新播放验证）
+        # 1.5 服务器端 DOM 渲染状态 map
         dom_status = {}
         for ch in (chapters_raw or []):
             cid = str(ch.get("chapter_id") or "")
             if cid:
                 dom_status.setdefault(cid, ch.get("status", "unknown"))
-        reconciliation_count = 0
-        retain_count = 0
-        try:
-            from e6.task_registry import TaskRecord, Verification
-            reg_check = load_registry(course_key)
-            for tid, t in reg_check.items():
-                if t.status == "COMPLETED" and t.verification.level == "NONE":
-                    srv = dom_status.get(t.chapter_id, "unknown")
-                    if srv == "completed":
-                        # 服务器端 DOM 渲染标记该章节已完成 → 保留，证据升级为 UI
-                        t.verification = Verification(
-                            level="UI",
-                            verified_at_utc=datetime.now(timezone.utc).isoformat(),
-                            run_id=run_id,
-                            source_detail="server DOM completed marker",
-                        )
-                        t.updated_at_utc = datetime.now(timezone.utc).isoformat()
-                        retain_count += 1
-                        print(f"[scheduler] Reconcile: {tid} ({t.title}) "
-                              f"COMPLETED(NONE) → COMPLETED(UI) [server DOM completed]",
-                              flush=True)
-                    else:
-                        # 服务器端未确认完成 → 降级 DISCOVERED
-                        reg_check[tid] = TaskRecord(
-                            task_id=t.task_id,
-                            chapter_id=t.chapter_id,
-                            title=t.title,
-                            task_type=t.task_type,
-                            status="DISCOVERED",
-                            priority=t.priority,
-                            _ch_idx=t._ch_idx,
-                            _cell_idx=t._cell_idx,
-                        )
-                        reconciliation_count += 1
-                        print(f"[scheduler] Reconcile: {tid} ({t.title}) "
-                              f"COMPLETED(NONE) → DISCOVERED "
-                              f"[server DOM='{srv}']", flush=True)
-            if reconciliation_count > 0 or retain_count > 0:
-                save_registry(course_key, reg_check)
-                print(f"[scheduler] Reconciled {reconciliation_count} downgraded, "
-                      f"{retain_count} retained (server DOM completed)", flush=True)
-        except Exception as e:
-            print(f"[scheduler] Reconciliation failed (non-fatal): {e}",
-                  file=sys.stderr, flush=True)
 
-        # 3. 构建/合并 E6 Task Registry
+        # 2. 构建 discovery 任务 → Reconcile canonical registry
         tasks = build_tasks_from_discovery(chapters_raw)
-        existing = load_registry(course_key)
-        new_tids = {t.task_id for t in tasks}
-
-        def _dom_is_completed(cid: str) -> bool:
-            """服务器端 DOM 渲染标记该章节已完成？（仅接受显式 completed）"""
-            return bool(cid) and dom_status.get(cid) == "completed"
-
-        # 清理旧 registry 中 title 匹配但 task_id 格式已变的条目（格式迁移）
-        for old_tid, old_rec in list(existing.items()):
-            if old_tid not in new_tids:
-                matched = next((t for t in tasks if t.title == old_rec.title), None)
-                if matched:
-                    # 【架构变更 v2】迁移时：SERVER_VERIFIED 或服务器端 DOM completed →
-                    # 保留 COMPLETED，其余降级为 DISCOVERED。
-                    from e6.task_registry import TaskRecord
-                    srv_done = (old_rec.verification.level == "SERVER_VERIFIED"
-                                or _dom_is_completed(matched.chapter_id or ""))
-                    init_status = "COMPLETED" if srv_done else "DISCOVERED"
-                    tr = TaskRecord(
-                        task_id=matched.task_id,
-                        chapter_id=matched.chapter_id or "",
-                        title=matched.title,
-                        task_type="video",
-                        status=init_status,
-                        priority=len(existing),
-                        _ch_idx=matched._ch_idx,
-                        _cell_idx=matched._cell_idx,
-                    )
-                    existing[matched.task_id] = tr
-                    del existing[old_tid]
-        for t in tasks:
-            tid = t.task_id
-            if tid not in existing:
-                # 【架构变更 v2】新发现任务：若服务器端 DOM 标记 completed 则保留
-                # COMPLETED(UI)（这是服务器渲染的真实状态）；否则 DISCOVERED。
-                # 绝不由 nextunit URL 跳变推断完成。
-                from e6.task_registry import TaskRecord, Verification
-                dom_done = _dom_is_completed(t.chapter_id or "")
-                if dom_done:
-                    tr = TaskRecord(
-                        task_id=tid,
-                        chapter_id=t.chapter_id or "",
-                        title=t.title,
-                        task_type="video",
-                        status="COMPLETED",
-                        priority=len(existing),
-                        _ch_idx=getattr(t, '_ch_idx', 0),
-                        _cell_idx=getattr(t, '_cell_idx', 0),
-                        verification=Verification(
-                            level="UI",
-                            verified_at_utc=datetime.now(timezone.utc).isoformat(),
-                            run_id=run_id,
-                            source_detail="server DOM completed marker",
-                        ),
-                    )
-                    print(f"[scheduler] TDVP: new task {tid} ({t.title}) "
-                          f"COMPLETED(UI) [server DOM completed]", flush=True)
-                else:
-                    tr = TaskRecord(
-                        task_id=tid,
-                        chapter_id=t.chapter_id or "",
-                        title=t.title,
-                        task_type="video",
-                        status="DISCOVERED",
-                        priority=len(existing),
-                        _ch_idx=getattr(t, '_ch_idx', 0),
-                        _cell_idx=getattr(t, '_cell_idx', 0),
-                    )
-                existing[tid] = tr
-            else:
-                existing[tid].title = t.title
-                existing[tid]._ch_idx = getattr(t, '_ch_idx', existing[tid]._ch_idx)
-                existing[tid]._cell_idx = getattr(t, '_cell_idx', existing[tid]._cell_idx)
-                # 【架构变更 v2】不直接用 nextunit/DOM 推断覆盖强证据。
-                # 已有 SERVER_VERIFIED → 保持 COMPLETED；
-                # 服务器端 DOM completed → 保持 COMPLETED（升级为 UI 证据）；
-                # 服务器端未确认 → 标记为 DISCOVERED（需要重新验证）。
-                if existing[tid].verification.level == "SERVER_VERIFIED":
-                    continue
-                if _dom_is_completed(t.chapter_id or ""):
-                    if existing[tid].status != "COMPLETED":
-                        existing[tid].status = "COMPLETED"
-                        existing[tid].verification = Verification(
-                            level="UI",
-                            verified_at_utc=datetime.now(timezone.utc).isoformat(),
-                            run_id=run_id,
-                            source_detail="server DOM completed marker",
-                        )
-                        existing[tid].updated_at_utc = datetime.now(timezone.utc).isoformat()
-                else:
-                    existing[tid].status = "DISCOVERED"
+        reg_before = load_registry(course_key)
+        existing, report = reconcile_registry(course_key, reg_before, tasks, dom_status)
         save_registry(course_key, existing)
-        print(f"[scheduler] TDVP: registry has {len(existing)} tasks", flush=True)
-        for t in list(existing.values())[:8]:
-            print(f"    - [{t.status}] cid={t.chapter_id or '?'} {t.title}", flush=True)
+        print(f"[scheduler] TDVP: reconcile → {len(existing)} tasks "
+              f"(upcoming={report.upcoming} kept={report.kept_completed} "
+              f"downgraded={report.downgraded} upgraded_ui={report.upgraded_ui})",
+              flush=True)
 
-        # 3. 读取已完成的 chapter_id 集合
-        #    【架构变更 v2】done_ids 来源于 Task Registry 中 status=COMPLETED 且有
-        #    证据的任务（SERVER_VERIFIED 或服务器端 DOM completed 的 UI 证据）。
-        #    绝不由 nextunit URL 跳变推断完成；history.passed 仅用于诊断统计。
-        done_ids = set()
-        done_sv = set()
-        try:
-            from e6.task_registry import load_registry
-            reg = load_registry(course_key)
-            for t in reg.values():
-                if t.chapter_id and t.status == "COMPLETED":
-                    if t.verification.level == "SERVER_VERIFIED":
-                        done_ids.add(t.chapter_id)
-                        done_sv.add(t.chapter_id)
-                    elif t.verification.level == "UI":
-                        # 服务器端 DOM 渲染 completed 标记 → 视为完成
-                        done_ids.add(t.chapter_id)
-        except Exception:
-            pass
-        print(f"[scheduler] TDVP: done={len(done_ids)} chapters "
-              f"(SERVER_VERIFIED={len(done_sv)}, UI-serverDOM={len(done_ids)-len(done_sv)}): "
-              f"{sorted(done_ids)}", flush=True)
+        # 3. done_ids 仅为 derived cache（canonical 状态在 registry.completion）
+        done_ids = done_chapter_ids_from_registry(existing)
+        print(f"[scheduler] TDVP: done={len(done_ids)} chapters: {sorted(done_ids)}",
+              flush=True)
 
-        # 4. Reconcile Queue
+        # 4. Reconcile Queue（派生物）
         queue = reconcile_queue(course_key, existing, done_ids)
         print(f"[scheduler] TDVP: queue has {len(queue.items)} READY tasks", flush=True)
 
@@ -626,14 +449,13 @@ def _run_tdvp_probe(course_url: str, course_key: str,
             print(f"[scheduler] TDVP: next task {next_tid} not in registry", flush=True)
             return None
 
-        # 有 chapter_id -> 直接返回
+        # 有 chapter_id → 直接返回
         if next_rec.chapter_id:
             print(f"[scheduler] TDVP: next_chapter={next_rec.chapter_id} "
                   f"({next_rec.title})", flush=True)
             return next_rec.chapter_id
 
-        # 无 chapter_id -> click_probe 获取
-        # 循环尝试无 cid 节点，跳过已在 done_ids 里的
+        # 无 chapter_id → click_probe 获取
         max_probe_attempts = 10
         for probe_i in range(max_probe_attempts):
             ch_idx = next_rec._ch_idx
@@ -644,28 +466,26 @@ def _run_tdvp_probe(course_url: str, course_key: str,
             if resolved_cid:
                 next_rec.chapter_id = resolved_cid
                 save_registry(course_key, existing)
-                # 重新 reconcile，找下一个有 cid 的任务
                 queue2 = reconcile_queue(course_key, existing, done_ids)
-                if queue2.items:
-                    rec2 = existing.get(queue2.items[0]["task_id"])
-                    if rec2 and rec2.chapter_id and rec2.chapter_id not in done_ids:
-                        print(f"[scheduler] TDVP: click-probe resolved -> {rec2.chapter_id}",
-                              flush=True)
-                        return rec2.chapter_id
-                    elif rec2 and rec2.chapter_id and rec2.chapter_id in done_ids:
-                        # 这个 cid 也完成了，继续尝试下一个无 cid 节点
-                        next_tid = queue2.items[0]["task_id"]
-                        next_rec = existing.get(next_tid)
-                        if not next_rec or next_rec.chapter_id:
-                            break  # 没有更多无 cid 节点了
-                        continue
-                    else:
-                        # 下一个任务仍无 cid，继续循环
-                        next_tid = queue2.items[0]["task_id"]
-                        next_rec = existing.get(next_tid)
-                        if not next_rec or next_rec.chapter_id:
-                            break
-                        continue
+                if not queue2.items:
+                    return None
+                rec2 = existing.get(queue2.items[0]["task_id"])
+                if rec2 and rec2.chapter_id and rec2.chapter_id not in done_ids:
+                    print(f"[scheduler] TDVP: click-probe resolved -> {rec2.chapter_id}",
+                          flush=True)
+                    return rec2.chapter_id
+                elif rec2 and rec2.chapter_id and rec2.chapter_id in done_ids:
+                    next_tid = queue2.items[0]["task_id"]
+                    next_rec = existing.get(next_tid)
+                    if not next_rec or next_rec.chapter_id:
+                        break
+                    continue
+                else:
+                    next_tid = queue2.items[0]["task_id"]
+                    next_rec = existing.get(next_tid)
+                    if not next_rec or next_rec.chapter_id:
+                        break
+                    continue
             else:
                 print("[scheduler] TDVP: click-probe failed, trying fallback", flush=True)
                 break
@@ -676,7 +496,8 @@ def _run_tdvp_probe(course_url: str, course_key: str,
             second = queue3.items[1]
             rec2 = existing.get(second["task_id"])
             if rec2 and rec2.chapter_id:
-                print(f"[scheduler] TDVP: fallback to 2nd task: {rec2.chapter_id}", flush=True)
+                print(f"[scheduler] TDVP: fallback to 2nd task: {rec2.chapter_id}",
+                      flush=True)
                 return rec2.chapter_id
 
         print("[scheduler] TDVP: no executable task with chapter_id found", flush=True)
@@ -690,6 +511,8 @@ def _run_tdvp_probe(course_url: str, course_key: str,
             return params.get("chapter_id")
         except Exception:
             return None
+
+
 
 def sync_tdvp_on_switch(new_identity, course_url: str) -> None:
     """课程切换时同步任务登记表（TDVP/E6 清空，新课程从零开始）。

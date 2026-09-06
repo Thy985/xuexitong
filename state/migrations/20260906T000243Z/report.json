@@ -1,0 +1,14 @@
+{
+  "ts": "20260906T000243Z",
+  "dry_run": true,
+  "courses": [
+    {
+      "course": "265997861_151695658",
+      "downgraded": 0,
+      "kept_completed": 55,
+      "repair_map": {}
+    }
+  ],
+  "total_downgraded": 0,
+  "evidence_dir": "D:\\Projects\\Archive\\CTF\\xuexitong\\state\\migrations\\20260906T000243Z"
+}

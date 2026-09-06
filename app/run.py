@@ -257,42 +257,55 @@ def cmd_run(args) -> int:
         else ("DEGRADED" if ev and ev.get("passed_count", 0) >= 6 else "FAIL")
     )
 
-    # 【架构变更】Postflight: 如果 PASS 且有 passed_object_ids，更新 Task Registry
-    # 确保 done 状态来自 SERVER_VERIFIED 证据，而非 history
-    if passed and identity:
+    # 【E6.1】Postflight: 把 run 结果**写回 registry**（成功/失败都必须写，绝不静默丢失）。
+    #   - PASS → mark_completed（必须带证据）
+    #   - FAIL/DEGRADED/ERROR/TIMEOUT → mark_failed（consecutive_failures+1，达阈值 BLOCKED）
+    # 旧版只写 PASS，失败路径完全不更新 registry → 失败任务卡在 Queue 头部重复执行。
+    if identity and chapter:
         try:
             from e6.task_registry import load_registry, save_registry
             reg = load_registry(identity.key())
-            passed_obj_ids = ev.get("passed_object_ids", [])
-            if passed_obj_ids:
-                # 找到匹配的 task 并标记为 SERVER_VERIFIED
-                updated = False
-                for t in reg.values():
-                    if t.chapter_id == chapter:
-                        t.mark_completed(
-                            run_id=os.environ.get("GITHUB_RUN_ID", "local"),
+            target = next((t for t in reg.values() if t.chapter_id == chapter), None)
+            run_id = os.environ.get("GITHUB_RUN_ID", "local")
+            if passed:
+                if target is not None:
+                    passed_obj_ids = ev.get("passed_object_ids", [])
+                    if passed_obj_ids:
+                        target.mark_completed(
+                            run_id=run_id,
                             evidence_level="SERVER_VERIFIED",
+                            source="isPassed",
                             detail=f"passed_object_ids={len(passed_obj_ids)}",
+                            passed_object_ids=passed_obj_ids,
                         )
-                        updated = True
                         print(f"[run] Task {chapter} marked SERVER_VERIFIED "
                               f"(passed_object_ids={len(passed_obj_ids)})", flush=True)
-                        break
-                if updated:
-                    save_registry(identity.key(), reg)
-            else:
-                # 无 passed_object_ids 但仍 PASS（可能是旧版引擎）
-                # 降级为 UI 级别验证
-                for t in reg.values():
-                    if t.chapter_id == chapter:
-                        t.mark_completed(
-                            run_id=os.environ.get("GITHUB_RUN_ID", "local"),
+                    else:
+                        # 无 passed_object_ids 但仍 PASS → 降级为 UI 证据（仍携带 evidence，
+                        # 不适用 URL/nextUnit 推断）。
+                        target.mark_completed(
+                            run_id=run_id,
                             evidence_level="UI",
+                            source="engine-pass-no-object-ids",
                             detail="PASS but no passed_object_ids",
                         )
                         print(f"[run] Task {chapter} marked UI (no passed_object_ids)",
                               flush=True)
-                        break
+                    save_registry(identity.key(), reg)
+            else:
+                # ← FAIL / DEGRADED / ERROR：真正写入 registry（E6.1 核心修复）
+                if target is not None:
+                    failure_stage = str((ev or {}).get("failure_stage", "") or "") \
+                        if ev else ""
+                    detail = str((ev or {}).get("verdict", "") or "")[:200]
+                    blocked = target.mark_failed(
+                        run_id=run_id, detail=detail, failure_stage=failure_stage,
+                    )
+                    save_registry(identity.key(), reg)
+                    print(f"[run] Task {chapter} marked "
+                          f"{'BLOCKED' if blocked else 'FAILED'} "
+                          f"(cf={target.consecutive_failures}/{target.max_attempts}, "
+                          f"stage={failure_stage or '?'})", flush=True)
         except Exception as e:
             print(f"[run] Task registry update failed (non-fatal): {e}",
                   file=sys.stderr, flush=True)
@@ -317,6 +330,7 @@ def cmd_run(args) -> int:
         "verdict": verdict_str,
         "passed_count": ev.get("passed_count") if ev else None,
         "failure_stage": (ev or {}).get("failure_stage"),
+        "run_id": os.environ.get("GITHUB_RUN_ID", "local"),
         "crash": crash_msg,
         "evidence_file": out_path,
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -393,6 +407,18 @@ def cmd_scheduler(args) -> int:
         "timing_s": result.timing_s,
         "verdict": result.verdict,
         "error": result.error,
+        # E6.1 §11：不得用 scheduler 摘要覆盖底层 runtime evidence。
+        # 这里把 runtime 的 failure_stage / checks / result 一并带出，供 CI 诊断。
+        "evidence": {
+            "failure_stage": getattr(result, "failure_stage", None),
+            "checks": ((getattr(result, "evidence", None) or {}).get("checks")
+                       if isinstance(getattr(result, "evidence", None), dict) else None),
+            "runtime_result": ((getattr(result, "evidence", None) or {}).get("verdict")
+                               if isinstance(getattr(result, "evidence", None), dict) else None),
+            "passed_count": ((getattr(result, "evidence", None) or {}).get("passed_count")
+                             if isinstance(getattr(result, "evidence", None), dict) else None),
+            "run_id": result.run_id,
+        },
     }
     print(json.dumps(out, ensure_ascii=False, indent=2))
 

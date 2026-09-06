@@ -67,22 +67,89 @@ class Lease:
 
 
 @dataclass
+class CompletionEvidence:
+    """任务完成的唯一 canonical 证据——用于回答 Which/When/Why/Server evidence。
+
+    由 mark_completed 强制要求携带。绝不允许空证据的隐式完成。
+    """
+    type: EvidenceLevel = "NONE"               # SERVER_VERIFIED | UI | RECHECK | NONE
+    source: str = ""                            # isPassed | server DOM | ...
+    run_id: str = ""
+    observed_at_utc: str = ""
+    detail: str = ""
+    passed_object_ids: list = field(default_factory=list)  # isPassed=true 的对象 ID
+
+    def __post_init__(self):
+        if not self.observed_at_utc:
+            self.observed_at_utc = datetime.now(timezone.utc).isoformat()
+
+    def is_valid(self) -> bool:
+        """只有具备明确 server/runtime 证据才算有效；NONE 或空 detail 视为无效。"""
+        return self.type not in ("NONE", "") and bool(self.source)
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "CompletionEvidence":
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
+
+@dataclass
+class FailureRecord:
+    """一次失败的可审计记录（含 stage / run_id / detail）。"""
+    stage: str = ""                             # _derive_failure_stage() 值
+    run_id: str = ""
+    detail: str = ""
+    consecutive_failures: int = 0
+    occurred_at_utc: str = ""
+
+    def __post_init__(self):
+        if not self.occurred_at_utc:
+            self.occurred_at_utc = datetime.now(timezone.utc).isoformat()
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "FailureRecord":
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
+
+@dataclass
 class TaskRecord:
-    """一个任务点的完整记录——真相源。"""
+    """一个任务点的完整记录——真相源。
+
+    状态机：
+      DISCOVERED → PENDING → READY → RUNNING → VERIFYING → COMPLETED
+                                                      ↓
+                                                 FAILED → READY（可重试）
+                                                      ↓
+                                                BLOCKED（连续失败 ≥ max_attempts）
+
+    完成的唯一路径是 mark_completed() 且必须携带有效证据；
+    mark_failed() 由真实 runtime FAIL/ERROR/TIMEOUT 调用并立即持久化。
+    """
     task_id: str
     chapter_id: str
     title: str
     task_type: str = "video"
     status: TaskPhase = "DISCOVERED"
     priority: int = 0                              # 0 = 目录顺序；越高越优先
-    attempts: int = 0
+    attempt_count: int = 0
+    attempts: int = 0                              # 兼容旧字段（= attempt_count）
     consecutive_failures: int = 0
     max_attempts: int = 3
     lease: Lease = field(default_factory=Lease)
-    verification: Verification = field(default_factory=Verification)
+    verification: Verification = field(default_factory=Verification)   # 兼容旧字段
+    completion_evidence: CompletionEvidence = field(default_factory=CompletionEvidence)
+    failure: FailureRecord = field(default_factory=FailureRecord)
     created_at_utc: str = ""
     updated_at_utc: str = ""
+    last_run_id: Optional[str] = None              # 最近一次执行 run_id
     last_run_at_utc: Optional[str] = None
+    last_started_at: Optional[str] = None
+    last_finished_at: Optional[str] = None
     last_success_at_utc: Optional[str] = None
     last_failure_at_utc: Optional[str] = None
     _ch_idx: int = field(default=0, repr=False)    # DOM 目录索引（内部用）
@@ -101,16 +168,113 @@ class TaskRecord:
 
     @property
     def is_executable(self) -> bool:
-        """任务是否可执行（READY 或需重试的 FAILED）。"""
-        return self.status in ("READY", "FAILED")
+        """任务是否可执行（READY、PENDING、刚发现的 DISCOVERED，或可重试的 FAILED）。"""
+        if self.status in ("READY", "PENDING", "DISCOVERED"):
+            return True
+        if self.status == "FAILED" and self.consecutive_failures < self.max_attempts:
+            return True
+        return False
 
     @property
     def chapter_id_for_url(self) -> str:
         """返回用于构造 URL 的 chapterId；无则返回空。"""
         return self.chapter_id or ""
 
+    def _now(self) -> str:
+        return datetime.now(timezone.utc).isoformat()
+
+    def mark_discovered(self) -> None:
+        """由 Discovery/Reconciliation 置为待执行（无证据时不落入 COMPLETED）。"""
+        now = self._now()
+        self.status = "DISCOVERED"
+        self.updated_at_utc = now
+
+    def mark_started(self, run_id: str) -> None:
+        """进入 RUNNING（获得 lease），记录 last_started_at。"""
+        now = self._now()
+        self.status = "RUNNING"
+        self.lease = Lease(run_id=run_id, started_at_utc=now,
+                           expires_at_utc=(datetime.now(timezone.utc)
+                                           + timedelta(minutes=15)).isoformat())
+        self.last_run_id = run_id
+        self.last_run_at_utc = now
+        self.last_started_at = now
+        self.updated_at_utc = now
+
+    def mark_verifying(self) -> None:
+        self.status = "VERIFYING"
+        self.updated_at_utc = self._now()
+
+    def mark_completed(self, *, run_id: str,
+                       evidence_level: EvidenceLevel = "SERVER_VERIFIED",
+                       source: str = "isPassed",
+                       detail: str = "",
+                       passed_object_ids: list | None = None) -> None:
+        """—— 唯一的完成入口，强制要求有效 evidence. ——
+
+        没有传入有效证据（type=SOURCE 为空）时抛 ValueError，绝不允许隐式完成。
+        """
+        if not run_id:
+            raise ValueError("mark_completed requires a run_id")
+        if evidence_level in ("NONE", ""):
+            raise ValueError(
+                "mark_completed requires completion evidence; "
+                "URL/nextUnit/navigation inferences are NOT valid completion"
+            )
+        now = self._now()
+        self.status = "COMPLETED"
+        self.attempt_count += 1
+        self.consecutive_failures = 0            # 成功 → 重置失败计数
+        self.lease = Lease()
+        self.verification = Verification(level=evidence_level, verified_at_utc=now,
+                                         run_id=run_id, source_detail=detail or source)
+        self.completion_evidence = CompletionEvidence(
+            type=evidence_level,
+            source=source,
+            run_id=run_id,
+            observed_at_utc=now,
+            detail=detail or source,
+            passed_object_ids=list(passed_object_ids or []),
+        )
+        self.failure = FailureRecord()
+        self.last_run_id = run_id
+        self.last_run_at_utc = now
+        self.last_started_at = now
+        self.last_finished_at = now
+        self.last_success_at_utc = now
+        self.updated_at_utc = now
+
+    def mark_failed(self, *, run_id: str, detail: str = "",
+                    failure_stage: str = "") -> "bool":
+        """标记失败：consecutive_failures+1，达阈值 → BLOCKED，否则 FAILED。
+        调用方必须立即 save_registry() 持久化。
+        返回 True 表示已达阈值进入 BLOCKED。
+        """
+        now = self._now()
+        self.attempt_count += 1
+        self.attempts = self.attempt_count              # 兼容同步
+        self.consecutive_failures += 1
+        self.lease = Lease()
+        self.failure = FailureRecord(
+            stage=((failure_stage or "").upper()),      # 统一大写（NO_CARDS_IFRAME 等）
+            run_id=run_id or "",
+            detail=detail or "",
+            consecutive_failures=self.consecutive_failures,
+            occurred_at_utc=now,
+        )
+        blocked = self.consecutive_failures >= self.max_attempts
+        self.status = "BLOCKED" if blocked else "FAILED"
+        self.last_run_id = run_id or self.last_run_id
+        self.last_run_at_utc = now
+        self.last_started_at = self.last_started_at or now
+        self.last_finished_at = now
+        self.last_failure_at_utc = now
+        self.updated_at_utc = now
+        return self.status
+
     def to_dict(self) -> dict:
         d = asdict(self)
+        d["attempts"] = self.attempt_count
         return d
 
     @classmethod
@@ -119,6 +283,10 @@ class TaskRecord:
         cell_idx = d.pop("_cell_idx", 0)
         lease = d.pop("lease", {}) or {}
         verification = d.pop("verification", {}) or {}
+        cev = d.pop("completion_evidence", None) or {}
+        fail = d.pop("failure", None) or {}
+        attempts = d.get("attempts", 0)
+        attempt_count = d.get("attempt_count", attempts)
         return cls(
             task_id=d["task_id"],
             chapter_id=d.get("chapter_id", ""),
@@ -126,50 +294,27 @@ class TaskRecord:
             task_type=d.get("task_type", "video"),
             status=d.get("status", "DISCOVERED"),
             priority=d.get("priority", 0),
-            attempts=d.get("attempts", 0),
+            attempt_count=attempt_count,
+            attempts=attempt_count,
             consecutive_failures=d.get("consecutive_failures", 0),
             max_attempts=d.get("max_attempts", 3),
             lease=Lease(**lease) if isinstance(lease, dict) else Lease(),
             verification=Verification(**verification) if isinstance(verification, dict)
                         else Verification(),
+            completion_evidence=(CompletionEvidence.from_dict(cev)
+                                 if isinstance(cev, dict) else CompletionEvidence()),
+            failure=FailureRecord.from_dict(fail) if isinstance(fail, dict) else FailureRecord(),
             created_at_utc=d.get("created_at_utc", ""),
             updated_at_utc=d.get("updated_at_utc", ""),
+            last_run_id=d.get("last_run_id"),
             last_run_at_utc=d.get("last_run_at_utc"),
+            last_started_at=d.get("last_started_at"),
+            last_finished_at=d.get("last_finished_at"),
             last_success_at_utc=d.get("last_success_at_utc"),
             last_failure_at_utc=d.get("last_failure_at_utc"),
             _ch_idx=ch_idx,
             _cell_idx=cell_idx,
         )
-
-    def mark_running(self, run_id: str) -> None:
-        now = datetime.now(timezone.utc).isoformat()
-        self.status = "RUNNING"
-        self.lease = Lease(run_id=run_id, started_at_utc=now,
-                           expires_at_utc=(datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat())
-        self.last_run_at_utc = now
-        self.updated_at_utc = now
-
-    def mark_completed(self, run_id: str, evidence_level: EvidenceLevel = "SERVER_VERIFIED",
-                       detail: str = "") -> None:
-        now = datetime.now(timezone.utc).isoformat()
-        self.status = "COMPLETED"
-        self.lease = Lease()
-        self.verification = Verification(level=evidence_level, verified_at_utc=now,
-                                         run_id=run_id, source_detail=detail)
-        self.last_success_at_utc = now
-        self.updated_at_utc = now
-
-    def mark_failed(self, run_id: str, detail: str = "") -> None:
-        now = datetime.now(timezone.utc).isoformat()
-        self.attempts += 1
-        self.consecutive_failures += 1
-        self.lease = Lease()
-        self.last_failure_at_utc = now
-        self.updated_at_utc = now
-        if self.consecutive_failures >= self.max_attempts:
-            self.status = "BLOCKED"
-        else:
-            self.status = "FAILED"
 
 
 @dataclass
@@ -192,11 +337,11 @@ TASKS_DIR = _REPO_ROOT / "state" / "registry"
 
 def _queue_file(course_key: str) -> Path:
     """每个课程的队列文件独立，避免多课程互相覆盖。"""
-    return TASKS_DIR / course_key / "execution_queue.json"
+    return Path(TASKS_DIR) / course_key / "execution_queue.json"
 
 
 def _ensure_dir(course_key: str) -> Path:
-    d = TASKS_DIR / course_key
+    d = Path(TASKS_DIR) / course_key
     d.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -228,7 +373,7 @@ def save_registry(course_key: str, registry: dict[str, TaskRecord]) -> None:
 
 
 def load_queue(course_key: str) -> ExecutionQueue:
-    f = _queue_for(course_key)
+    f = _queue_file(course_key)
     if not f.exists():
         return ExecutionQueue()
     try:
@@ -239,44 +384,142 @@ def load_queue(course_key: str) -> ExecutionQueue:
 
 
 def save_queue(course_key: str, q: ExecutionQueue) -> None:
-    _atomic_write_text(_queue_for(course_key), json.dumps(
+    _atomic_write_text(_queue_file(course_key), json.dumps(
         q.to_dict(), ensure_ascii=False, indent=2))
 
 
 # ── Queue Reconciliation ───────────────────────────────────────────
 
-def reconcile_queue(course_key: str, registry: dict[str, TaskRecord],
-                    done_chapter_ids: set[str]) -> ExecutionQueue:
-    """从 Registry + 已完成的章节集合重算 Execution Queue。
+# ── Queue Reconciliation ───────────────────────────────────────────
 
-    规则：
-      - chapter_id 在 done_ids 中的任务 → 跳过（不进入队列）
-      - status = COMPLETED → 跳过
-      - status = BLOCKED / RUNNING / VERIFYING → 跳过
-      - PENDING / UNKNOWN / FAILED（可重试）且 chapter_id 不在 done_ids → READY
-      - chapter_id 为空的任务 → 也进入队列（需要 click_probe 获取 chapterId），
-        但若其 DOM 对应节点已通过 history 判定为已完成（通过其他方式确认），则跳过
-      - 按 _ch_idx（DOM 目录顺序）+ _cell_idx 排序
+def chapter_tasks(registry: dict[str, TaskRecord], chapter_id: str) -> list[TaskRecord]:
+    """本章节的所有任务（task_type 区分）。"""
+    return [t for t in registry.values() if t.chapter_id == chapter_id]
+
+
+def chapter_aggregate_status(registry: dict[str, TaskRecord], chapter_id: str) -> str:
+    """E6.2 §7: Chapter status = aggregate(Task statuses)。
+
+    - 没有任何任务 → UNKNOWN
+    - 所有任务均 COMPLETED → COMPLETED
+    - 存在 RUNNING/VERIFYING → RUNNING
+    - 存在 FAILED → FAILED（有未完成任务）
+    - 否则（存在 PENDING/DISCOVERED/READY/UNKNOWN/unsupported）→ PENDING
+
+    只有「所有 task 都已完成」才把章节判为 COMPLETED，从而防止
+    「video 已完成」单独覆盖整个 chapter（E6.2 §9）。
     """
+    recs = chapter_tasks(registry, chapter_id)
+    if not recs:
+        return "UNKNOWN"
+    statuses = {r.status for r in recs}
+    if statuses == {"COMPLETED"}:
+        return "COMPLETED"
+    if statuses & {"RUNNING", "VERIFYING"}:
+        return "RUNNING"
+    if "FAILED" in statuses:
+        return "FAILED"
+    if "BLOCKED" in statuses:
+        return "BLOCKED"
+    return "PENDING"
+
+
+def done_chapter_ids_from_registry(registry: dict[str, TaskRecord]) -> set[str]:
+    """从 Registry 派生已完成的章节集合（derived cache，非权威）。
+
+    E6.2：一个 chapter 只有当其「所有 task 都完成」才算 done。
+    单有一个 video task 是 COMPLETED 但该章仍有其它 pending/unsupported task，
+    不算完成 → 不会因 video 完成而掩盖整个 chapter。
+
+    - SERVER_VERIFIED / RECHECK / UI 证据的 COMPLETED task 才算完成。
+    - NONE/空证据 → 不计入。
+    绝不从 nextUnit / URL chapterId change / 页面导航推断完成。
+    """
+    done: set[str] = set()
+    chapters_with_task = {t.chapter_id for t in registry.values() if t.chapter_id}
+    for cid in chapters_with_task:
+        recs = chapter_tasks(registry, cid)
+        if not recs:
+            continue
+        all_done = True
+        for t in recs:
+            if t.status != "COMPLETED":
+                all_done = False
+                break
+            lvl = (t.completion_evidence.type
+                   if t.completion_evidence and t.completion_evidence.type != "NONE"
+                   else t.verification.level)
+            if lvl not in ("SERVER_VERIFIED", "RECHECK", "UI"):
+                all_done = False
+                break
+        if all_done:
+            done.add(cid)
+    return done
+
+
+def reconcile_queue(course_key: str, registry: dict[str, TaskRecord],
+                    done_chapter_ids: set[str] | None = None) -> ExecutionQueue:
+    """从 Registry（+可选 done 集合）重算 Execution Queue。
+
+    Registry 是权威状态；done_chapter_ids 是 derived cache：
+      - 未显式传入时，自动从 registry 内 COMPLETED+证据 推导。
+      - COMPLETED(有证据) → 不进入 READY
+      - PENDING / DISCOVERED / READY → 进入 READY
+      - UNKNOWN → 不自动执行（除非 policy 提升）
+      - RUNNING → 根据 lease 判断（过期则视为失败/可重试）
+      - FAILED → 未达阈值可重试进 READY；已达阈值跳过
+      - BLOCKED → 不执行
+    """
+    if done_chapter_ids is None:
+        done_chapter_ids = done_chapter_ids_from_registry(registry)
+
     ready: list[TaskRecord] = []
+
+    def _lease_expired(t: TaskRecord) -> bool:
+        exp = t.lease.expires_at_utc
+        if not exp:
+            return True
+        try:
+            return datetime.fromisoformat(exp) <= datetime.now(timezone.utc)
+        except (ValueError, TypeError):
+            return True
+
     for t in registry.values():
-        # 已有 chapter_id 且在 history 中 → 直接跳过
-        if t.chapter_id and t.chapter_id in done_chapter_ids:
+        # E6.2: Queue 只接受真正的可执行 task（video）。
+        # 非 video 任务（quiz/discussion/other/unsupported）当前不被 video runtime 支持，
+        # 不进入队列（避免 runtime 误认为可学视频）。
+        if (t.task_type or "video") != "video":
+            continue
+        # 已完成（有证据）→ 跳过
+        if t.status == "COMPLETED" and done_chapter_ids and t.chapter_id in done_chapter_ids:
             continue
         if t.status == "COMPLETED":
             continue
-        if t.status in ("RUNNING", "VERIFYING"):
-            continue
+        # BLOCKED → 不执行
         if t.status == "BLOCKED":
             continue
-        # FAILED 且超重试上限 → 跳过
-        if t.status == "FAILED" and t.consecutive_failures >= t.max_attempts:
+        if t.status == "UNKNOWN":
+            # 不自动执行；除非有显式重新发现的 pending 证据
             continue
-        ready.append(t)
+        # FAILED → 根据 retry policy
+        if t.status == "FAILED":
+            if t.consecutive_failures >= t.max_attempts:
+                continue
+            ready.append(t)
+            continue
+        # RUNNING / VERIFYING → lease 过期可重新入队，否则跳过
+        if t.status in ("RUNNING", "VERIFYING"):
+            if not _lease_expired(t):
+                continue
+            ready.append(t)
+            continue
+        # DISCOVERED / PENDING / READY 等其它可执行态
+        if t.is_executable:
+            ready.append(t)
 
-    # 排序：有 chapter_id 的优先（可直接执行），再按目录顺序
+    # 排序：有 chapter_id 优先，再按目录顺序
     ready.sort(key=lambda t: (
-        0 if t.chapter_id else 1,   # 有 cid 的排前面
+        0 if t.chapter_id else 1,
         t._ch_idx, t._cell_idx, t.task_id,
     ))
 
@@ -286,7 +529,7 @@ def reconcile_queue(course_key: str, registry: dict[str, TaskRecord],
             "task_id": t.task_id,
             "chapter_id": t.chapter_id or "",
             "priority": i,
-            "state": "READY",
+            "state": "READY" if t.status != "FAILED" else "RETRY",
             "course_key": course_key,
         })
 
