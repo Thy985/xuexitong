@@ -429,29 +429,39 @@ def _run_tdvp_probe(course_url: str, course_key: str,
               f"downgraded={report.downgraded} upgraded_ui={report.upgraded_ui})",
               flush=True)
 
-        # 2.5 E6.2/L1：目录层校准——raw 显示「仍有待完成任务点」的章，其 COMPLETED
-        #     一律降级 STALE 重新入队（否则 4706/4708 这类"章节点未播完但曾被 isPassed
-        #     标完成"的章会被当成 done 永久跳过）。
-        from e6.reconcile import stale_completed_by_catalog
-        stale_ids = stale_completed_by_catalog(existing, chapters_raw)
+        # 2.5 E6.2：COMPLETED 但真实仍有未完成任务点的章，降级 STALE 重新入队。
+        #     来源两路：
+        #      (a) 目录层 job_remaining>0（L1，廉价）
+        #      (b) 点级快照显示还有 video 点未 finish（洞2，已持久化的前一棵树）
+        from e6.reconcile import (stale_completed_by_catalog,
+                                  stale_completed_by_points)
+        from e6.task_registry import load_chapter_points
+        stale1 = stale_completed_by_catalog(existing, chapters_raw)
+        stale2 = stale_completed_by_points(existing, load_chapter_points(course_key))
+        stale_ids = list(dict.fromkeys(stale1 + stale2))
         if stale_ids:
             from e6.task_registry import TaskRecord
             for sid in stale_ids:
                 rec = existing.get(sid)
                 if rec is not None:
-                    rec.mark_stale(detail="catalog job_remaining>0 (L1)")
+                    rec.mark_stale(detail="chapter has unfinished points")
             save_registry(course_key, existing)
-            print(f"[scheduler] TDVP: catalog-stale={len(stale_ids)} "
+            print(f"[scheduler] TDVP: stale={len(stale_ids)} "
                   f"chapters re-queued: {sorted({existing[s].chapter_id for s in stale_ids if s in existing})}",
                   flush=True)
 
-        # 3. done_ids 仅为 derived cache（canonical 状态在 registry.completion）
-        done_ids = done_chapter_ids_from_registry(existing)
+        # 3. done_ids 仅为 derived cache（canonical 状态在 registry.completion）。
+        #    洞2：用持久化的点级快照校准——凡有快照显示"还有 video 点未 finish"的章，
+        #    即使 registry 把它记为 COMPLETED，也不放行（不会当 done 跳过）。
+        from e6.task_registry import load_chapter_points, merge_done_with_points
+        pts_map = load_chapter_points(course_key)
+        done_ids = merge_done_with_points(
+            done_chapter_ids_from_registry(existing), set(), pts_map)
         print(f"[scheduler] TDVP: done={len(done_ids)} chapters: {sorted(done_ids)}",
               flush=True)
 
         # 4. Reconcile Queue（派生物）
-        queue = reconcile_queue(course_key, existing, done_ids)
+        queue = reconcile_queue(course_key, existing, done_ids, points_map=pts_map)
         print(f"[scheduler] TDVP: queue has {len(queue.items)} READY tasks", flush=True)
 
         # 4.5 E6.2：对候选目标章做 L2 live 复核，把「多视频章」拆成逐个 video task，
@@ -473,6 +483,17 @@ def _run_tdvp_probe(course_url: str, course_key: str,
                 if verify is not None:
                     total_v = verify.get("video_total", 0)
                     live_pending = verify.get("live_pending") or set()
+                    # 洞2：点级真源快照存进 registry（缓存层）；done 由点级校准。
+                    from e6.task_registry import (
+                        set_chapter_point_snapshot, load_chapter_points,
+                        merge_done_with_points,
+                    )
+                    set_chapter_point_snapshot(
+                        course_key, head_cid,
+                        video_total=total_v,
+                        video_finished=verify.get("video_finished", 0),
+                        has_video=total_v > 0,
+                    )
                     # 重建 discovery：真正的视频点数量 + live pending
                     video_counts = {head_cid: total_v} if total_v > 0 else None
                     tasks2 = build_tasks_from_discovery(chapters_raw, video_counts=video_counts)
@@ -480,12 +501,30 @@ def _run_tdvp_probe(course_url: str, course_key: str,
                         course_key, existing, tasks2, dom_status, live_pending=live_pending)
                     save_registry(course_key, existing2)
                     existing = existing2
-                    done_ids = done_chapter_ids_from_registry(existing)
-                    queue = reconcile_queue(course_key, existing, done_ids)
+                    pts_map = load_chapter_points(course_key)
+                    done_ids = merge_done_with_points(
+                        done_chapter_ids_from_registry(existing), set(), pts_map)
+                    queue = reconcile_queue(course_key, existing, done_ids, points_map=pts_map)
                     print(f"[scheduler] TDVP: E6.2 after live refine {head_cid} "
                           f"video_total={total_v} finished_video = "
                           f"{verify.get('video_finished')} tasks={len(existing2)} "
                           f"queue={len(queue.items)}", flush=True)
+                    # 该"目标章"实际没有任何视频点（纯文本/知识扩展章，如 4705）：
+                    # 不应把它当作 video 运行——把它从 video READY 排除，避免白白
+                    # 播一个不存在的视频而 DEGRADED/BLOCKED。
+                    if total_v == 0:
+                        head_tid = head.get("task_id", "")
+                        rec = existing2.get(head_tid)
+                        if rec is not None and (getattr(rec, "task_type", "video") or "video") == "video":
+                            rec.task_type = "other"
+                            rec.status = "PENDING"      # 非视频 → 不执行
+                            save_registry(course_key, existing2)
+                            done_ids = merge_done_with_points(
+                                done_chapter_ids_from_registry(existing2), set(),
+                                load_chapter_points(course_key))
+                            queue = reconcile_queue(course_key, existing2, done_ids, points_map=load_chapter_points(course_key))
+                            print(f"[scheduler] TDVP: {head_cid} has no video, "
+                                  f"dropped as run target", flush=True)
 
         # 5. 选下一个任务
         if not queue.items:
@@ -516,7 +555,7 @@ def _run_tdvp_probe(course_url: str, course_key: str,
             if resolved_cid:
                 next_rec.chapter_id = resolved_cid
                 save_registry(course_key, existing)
-                queue2 = reconcile_queue(course_key, existing, done_ids)
+                queue2 = reconcile_queue(course_key, existing, done_ids, points_map=pts_map)
                 if not queue2.items:
                     return None
                 rec2 = existing.get(queue2.items[0]["task_id"])
@@ -541,7 +580,7 @@ def _run_tdvp_probe(course_url: str, course_key: str,
                 break
 
         # fallback: 取队列第二个任务
-        queue3 = reconcile_queue(course_key, existing, done_ids)
+        queue3 = reconcile_queue(course_key, existing, done_ids, points_map=pts_map)
         if len(queue3.items) > 1:
             second = queue3.items[1]
             rec2 = existing.get(second["task_id"])

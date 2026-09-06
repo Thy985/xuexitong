@@ -420,6 +420,82 @@ def save_queue(course_key: str, q: ExecutionQueue) -> None:
         q.to_dict(), ensure_ascii=False, indent=2))
 
 
+# ── Chapter point-level snapshot (E6.2 core story: registry = cached真源) ──
+# 一章的运行"穷尽"由「该章各任务点 finished 与否」决定，而不是一次 isPassed。
+# 这里把某次 live 复核得到的点级快照固化到 registry（缓存层），
+# 供后续 done 推导与多视频拆分复用，避免每轮重新开浏览器重扫。
+
+def _points_file(course_key: str) -> Path:
+    return Path(TASKS_DIR) / course_key / "chapter_points.json"
+
+
+def load_chapter_points(course_key: str) -> dict:
+    """{cid -> {video_total, video_finished, has_video, updated_at}}"""
+    f = _points_file(course_key)
+    if not f.exists():
+        return {}
+    try:
+        return json.loads(f.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def save_chapter_points(course_key: str, points: dict) -> None:
+    _atomic_write_text(_points_file(course_key), json.dumps(
+        points, ensure_ascii=False, indent=2))
+
+
+def set_chapter_point_snapshot(
+    course_key: str,
+    cid: str,
+    *,
+    video_total: int,
+    video_finished: int,
+    has_video: bool,
+) -> None:
+    """记录一章的实时点级快照（video 点数量 / 已 finished 数量）。"""
+    pts = load_chapter_points(course_key)
+    pts[cid] = {
+        "video_total": int(video_total),
+        "video_finished": int(video_finished),
+        "has_video": bool(has_video),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    save_chapter_points(course_key, pts)
+
+
+def chapter_done_from_snapshot(cid: str, points: dict) -> Optional[bool]:
+    """用点级快照判断一章是否"真做完"（所有已知 video 点全部 finished）。
+
+    Returns:
+        True  → 快照显示该章所有 video 点均 finished（应视为完成）
+        False → 快照显示还有未 finished 的 video 点（绝不能当 done/success）
+        None  → 无该章快照（无法据此判定，交给 registry COMPLETED 逻辑）
+    """
+    snap = (points or {}).get(cid)
+    if not snap:
+        return None
+    if not snap.get("has_video"):
+        return None                    # 非视频章 → 不参与 video-done 判定
+    total = int(snap.get("video_total", 0))
+    fin = int(snap.get("video_finished", 0))
+    if total <= 0:
+        return None
+    return fin >= total
+
+
+def merge_done_with_points(done_ids: set, cid_set: set, points: dict) -> set:
+    """把 done = registry衍生的集合，与点级快照做校准：
+      - 有完视频点未完的快照 ⇒ 即使 registry 标 done，也要踢掉（不 skip）。
+    """
+    out = set(done_ids)
+    for cid in list(out):
+        st = chapter_done_from_snapshot(cid, points)
+        if st is False:
+            out.discard(cid)
+    return out
+
+
 # ── Queue Reconciliation ───────────────────────────────────────────
 
 # ── Queue Reconciliation ───────────────────────────────────────────
@@ -493,7 +569,8 @@ def done_chapter_ids_from_registry(registry: dict[str, TaskRecord]) -> set[str]:
 
 
 def reconcile_queue(course_key: str, registry: dict[str, TaskRecord],
-                    done_chapter_ids: set[str] | None = None) -> ExecutionQueue:
+                    done_chapter_ids: set[str] | None = None,
+                    points_map: Optional[dict] = None) -> ExecutionQueue:
     """从 Registry（+可选 done 集合）重算 Execution Queue。
 
     Registry 是权威状态；done_chapter_ids 是 derived cache：
@@ -525,6 +602,12 @@ def reconcile_queue(course_key: str, registry: dict[str, TaskRecord],
         # 不进入队列（避免 runtime 误认为可学视频）。
         if (t.task_type or "video") != "video":
             continue
+        # 洞1: 若点级快照已知该章没有任何视频点（纯文档/知识扩展章），即使其
+        # 被标为 video task，也不进入 READY（没有可播的视频 → 不应被拉出来跑）。
+        if points_map:
+            snap = (points_map or {}).get(t.chapter_id)
+            if snap and not snap.get("has_video"):
+                continue
         # 已完成（有证据）→ 跳过
         if t.status == "COMPLETED" and done_chapter_ids and t.chapter_id in done_chapter_ids:
             continue

@@ -324,6 +324,30 @@ def stale_completed_by_catalog(
     return downgraded
 
 
+def stale_completed_by_points(
+    existing: dict[str, TaskRecord],
+    points_map: dict,
+) -> list[str]:
+    """洞2 点级校准：凡快照显示该章有 video 点、且并未全部 finished 的章，
+    无论 registry 是否把它记 COMPLETED，都降级（完成态已被实时推翻）。
+
+    与 stale_completed_by_catalog 互补：catalog 用 job_remaining 计数，
+    这里用点级快照（video_total / video_finished）——更精确。
+
+    返回需要降级的任务 task_id；调用方负责 mark_stale + save。
+    """
+    from e6.task_registry import chapter_done_from_snapshot
+    downgraded = []
+    for tid, t in existing.items():
+        if t.status != "COMPLETED":
+            continue
+        cid = t.chapter_id
+        done_state = chapter_done_from_snapshot(cid, points_map or {})
+        if done_state is False:                # 有未 finish 的视频点
+            downgraded.append(tid)
+    return downgraded
+
+
 def run_calibrated_reconcile(
     course_key: str,
     existing: dict[str, TaskRecord],

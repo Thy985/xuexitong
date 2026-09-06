@@ -137,3 +137,24 @@ def test_catalog_stale_downgrades_completed_when_jobs_remain(tmp_registry):
     reg_ok = {"1217304700": ok}
     chapters_ok = [{"chapter_id": "1217304700", "job_remaining": 0}]
     assert stale_completed_by_catalog(reg_ok, chapters_ok) == []
+
+
+def test_no_video_chapter_never_emits_video_task(tmp_registry):
+    """洞1: 已知无视频的章（video_counts=0，如 4705 文档/知识扩展章）
+    不产 video task → 不会进入"待播"队列（reconcile_queue 只要 video）。"""
+    from e6.task_registry import reconcile_queue, done_chapter_ids_from_registry
+    from e6.reconcile import reconcile_registry
+    from tvdp.tdvp import build_tasks_from_discovery
+
+    cid = "1217304705"
+    chapters = [{"chapter_id": cid, "title": "计算机网络的体系结构",
+                 "status": "pending", "job_remaining": 0,
+                 "chapter_index": 5, "cell_index": 5}]
+    # L2 已确认该章无视频点 → video_counts={cid:0}
+    tasks = build_tasks_from_discovery(chapters, video_counts={cid: 0})
+    types = {t.task_id: t.task_type for t in tasks}
+    assert cid not in types or types.get(cid) != "video"   # 不产 video
+    reg, _ = reconcile_registry("k1", {}, tasks, {cid: "pending"})
+    q = reconcile_queue("k1", reg, done_chapter_ids_from_registry(reg))
+    ids = {i["task_id"] for i in q.items}
+    assert cid not in ids           # 无视频章不入待播队列
