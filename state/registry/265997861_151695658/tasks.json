@@ -634,10 +634,10 @@
     "chapter_id": "1217304714",
     "title": "信道复用技术",
     "task_type": "video",
-    "status": "DISCOVERED",
+    "status": "COMPLETED",
     "priority": 55,
-    "attempt_count": 0,
-    "attempts": 0,
+    "attempt_count": 1,
+    "attempts": 1,
     "consecutive_failures": 0,
     "max_attempts": 3,
     "lease": {
@@ -646,33 +646,35 @@
       "expires_at_utc": null
     },
     "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
+      "level": "SERVER_VERIFIED",
+      "verified_at_utc": "2026-09-06T05:55:13.200929+00:00",
+      "run_id": "34014722753",
+      "source_detail": "passed_object_ids=1"
     },
     "completion_evidence": {
-      "type": "NONE",
-      "source": "",
-      "run_id": "",
-      "observed_at_utc": "2026-09-06T01:52:26.624481+00:00",
-      "detail": "",
-      "passed_object_ids": []
+      "type": "SERVER_VERIFIED",
+      "source": "isPassed",
+      "run_id": "34014722753",
+      "observed_at_utc": "2026-09-06T05:55:13.200929+00:00",
+      "detail": "passed_object_ids=1",
+      "passed_object_ids": [
+        "c1e65997077cd66b4e835b32ea219c0a"
+      ]
     },
     "failure": {
       "stage": "",
       "run_id": "",
       "detail": "",
       "consecutive_failures": 0,
-      "occurred_at_utc": "2026-09-06T01:52:26.624481+00:00"
+      "occurred_at_utc": "2026-09-06T05:55:13.200936+00:00"
     },
     "created_at_utc": "2026-09-04T11:32:26.160552+00:00",
-    "updated_at_utc": "2026-09-04T11:32:26.160552+00:00",
-    "last_run_id": null,
-    "last_run_at_utc": null,
-    "last_started_at": null,
-    "last_finished_at": null,
-    "last_success_at_utc": null,
+    "updated_at_utc": "2026-09-06T05:55:13.200929+00:00",
+    "last_run_id": "34014722753",
+    "last_run_at_utc": "2026-09-06T05:55:13.200929+00:00",
+    "last_started_at": "2026-09-06T05:55:13.200929+00:00",
+    "last_finished_at": "2026-09-06T05:55:13.200929+00:00",
+    "last_success_at_utc": "2026-09-06T05:55:13.200929+00:00",
     "last_failure_at_utc": null,
     "_ch_idx": 13,
     "_cell_idx": 13
