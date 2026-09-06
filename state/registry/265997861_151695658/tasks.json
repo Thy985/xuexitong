@@ -292,10 +292,10 @@
     "chapter_id": "1217304705",
     "title": "计算机网络的体系结构",
     "task_type": "video",
-    "status": "DISCOVERED",
+    "status": "COMPLETED",
     "priority": 55,
-    "attempt_count": 0,
-    "attempts": 0,
+    "attempt_count": 1,
+    "attempts": 1,
     "consecutive_failures": 0,
     "max_attempts": 3,
     "lease": {
@@ -304,33 +304,35 @@
       "expires_at_utc": null
     },
     "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
+      "level": "SERVER_VERIFIED",
+      "verified_at_utc": "2026-09-06T04:14:04.090343+00:00",
+      "run_id": "34010490567",
+      "source_detail": "passed_object_ids=1"
     },
     "completion_evidence": {
-      "type": "NONE",
-      "source": "",
-      "run_id": "",
-      "observed_at_utc": "2026-09-06T01:52:26.624481+00:00",
-      "detail": "",
-      "passed_object_ids": []
+      "type": "SERVER_VERIFIED",
+      "source": "isPassed",
+      "run_id": "34010490567",
+      "observed_at_utc": "2026-09-06T04:14:04.090343+00:00",
+      "detail": "passed_object_ids=1",
+      "passed_object_ids": [
+        "e5a9ba13a048d4fcce3f5a0a72483bb4"
+      ]
     },
     "failure": {
       "stage": "",
       "run_id": "",
       "detail": "",
       "consecutive_failures": 0,
-      "occurred_at_utc": "2026-09-06T01:52:26.624481+00:00"
+      "occurred_at_utc": "2026-09-06T04:14:04.090352+00:00"
     },
     "created_at_utc": "2026-09-05T12:35:58.027026+00:00",
-    "updated_at_utc": "2026-09-05T12:35:58.027026+00:00",
-    "last_run_id": null,
-    "last_run_at_utc": null,
-    "last_started_at": null,
-    "last_finished_at": null,
-    "last_success_at_utc": null,
+    "updated_at_utc": "2026-09-06T04:14:04.090343+00:00",
+    "last_run_id": "34010490567",
+    "last_run_at_utc": "2026-09-06T04:14:04.090343+00:00",
+    "last_started_at": "2026-09-06T04:14:04.090343+00:00",
+    "last_finished_at": "2026-09-06T04:14:04.090343+00:00",
+    "last_success_at_utc": "2026-09-06T04:14:04.090343+00:00",
     "last_failure_at_utc": null,
     "_ch_idx": 5,
     "_cell_idx": 5
