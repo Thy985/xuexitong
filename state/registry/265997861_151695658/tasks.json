@@ -52,7 +52,7 @@
     "chapter_id": "1217304706",
     "title": "物理层的主要任务",
     "task_type": "video",
-    "status": "COMPLETED",
+    "status": "STALE",
     "priority": 10,
     "attempt_count": 0,
     "attempts": 0,
@@ -85,7 +85,7 @@
       "occurred_at_utc": "2026-09-06T01:52:26.624481+00:00"
     },
     "created_at_utc": "2026-09-04T07:36:36.732281+00:00",
-    "updated_at_utc": "2026-09-05T14:23:09.104814+00:00",
+    "updated_at_utc": "2026-09-06T12:39:07.469605+00:00",
     "last_run_id": null,
     "last_run_at_utc": null,
     "last_started_at": null,
@@ -294,9 +294,9 @@
     "task_type": "video",
     "status": "FAILED",
     "priority": 55,
-    "attempt_count": 2,
-    "attempts": 2,
-    "consecutive_failures": 1,
+    "attempt_count": 3,
+    "attempts": 3,
+    "consecutive_failures": 2,
     "max_attempts": 3,
     "lease": {
       "run_id": null,
@@ -320,20 +320,20 @@
       ]
     },
     "failure": {
-      "stage": "",
-      "run_id": "34032505809",
-      "detail": "FAIL(video metadata not ready in GHA headed)",
-      "consecutive_failures": 1,
-      "occurred_at_utc": "2026-09-06T12:18:30.347153+00:00"
+      "stage": "NO_NEXTUNIT_NO_ENDED",
+      "run_id": "34033683340",
+      "detail": "PARTIAL(headed GHA) — isPassed=true but nextUnit not triggered (1 checks failed)",
+      "consecutive_failures": 2,
+      "occurred_at_utc": "2026-09-06T12:44:34.680273+00:00"
     },
     "created_at_utc": "2026-09-05T12:35:58.027026+00:00",
-    "updated_at_utc": "2026-09-06T12:18:30.347153+00:00",
-    "last_run_id": "34032505809",
-    "last_run_at_utc": "2026-09-06T12:18:30.347153+00:00",
+    "updated_at_utc": "2026-09-06T12:44:34.680273+00:00",
+    "last_run_id": "34033683340",
+    "last_run_at_utc": "2026-09-06T12:44:34.680273+00:00",
     "last_started_at": "2026-09-06T04:14:04.090343+00:00",
-    "last_finished_at": "2026-09-06T12:18:30.347153+00:00",
+    "last_finished_at": "2026-09-06T12:44:34.680273+00:00",
     "last_success_at_utc": "2026-09-06T04:14:04.090343+00:00",
-    "last_failure_at_utc": "2026-09-06T12:18:30.347153+00:00",
+    "last_failure_at_utc": "2026-09-06T12:44:34.680273+00:00",
     "_ch_idx": 5,
     "_cell_idx": 5
   },
@@ -534,7 +534,7 @@
     "chapter_id": "1217304708",
     "title": "数据通信的基础知识",
     "task_type": "video",
-    "status": "COMPLETED",
+    "status": "UNKNOWN",
     "priority": 55,
     "attempt_count": 1,
     "attempts": 1,
@@ -552,11 +552,11 @@
       "source_detail": "passed_object_ids=1"
     },
     "completion_evidence": {
-      "type": "SERVER_VERIFIED",
+      "type": "CONFLICT",
       "source": "isPassed",
       "run_id": "34011115318",
-      "observed_at_utc": "2026-09-06T04:25:59.489898+00:00",
-      "detail": "passed_object_ids=1",
+      "observed_at_utc": "2026-09-06T12:39:07.469616+00:00",
+      "detail": "catalog job_remaining>0 (L1)",
       "passed_object_ids": [
         "19da22cc8a80cda55eaf04e2d758bf80"
       ]
@@ -569,7 +569,7 @@
       "occurred_at_utc": "2026-09-06T04:25:59.489908+00:00"
     },
     "created_at_utc": "2026-09-04T11:32:26.160540+00:00",
-    "updated_at_utc": "2026-09-06T04:25:59.489898+00:00",
+    "updated_at_utc": "2026-09-06T12:39:18.835050+00:00",
     "last_run_id": "34011115318",
     "last_run_at_utc": "2026-09-06T04:25:59.489898+00:00",
     "last_started_at": "2026-09-06T04:25:59.489898+00:00",
@@ -584,7 +584,7 @@
     "chapter_id": "1217304712",
     "title": "物理层下面的传输媒体",
     "task_type": "video",
-    "status": "COMPLETED",
+    "status": "UNKNOWN",
     "priority": 55,
     "attempt_count": 1,
     "attempts": 1,
@@ -602,11 +602,11 @@
       "source_detail": "passed_object_ids=1"
     },
     "completion_evidence": {
-      "type": "SERVER_VERIFIED",
+      "type": "CONFLICT",
       "source": "isPassed",
       "run_id": "34011531693",
-      "observed_at_utc": "2026-09-06T04:36:45.636595+00:00",
-      "detail": "passed_object_ids=1",
+      "observed_at_utc": "2026-09-06T12:39:07.469629+00:00",
+      "detail": "catalog job_remaining>0 (L1)",
       "passed_object_ids": [
         "69a6c4c5d2477d84ab66250ba2c09db7"
       ]
@@ -619,7 +619,7 @@
       "occurred_at_utc": "2026-09-06T04:36:45.636606+00:00"
     },
     "created_at_utc": "2026-09-04T11:32:26.160546+00:00",
-    "updated_at_utc": "2026-09-06T04:36:45.636595+00:00",
+    "updated_at_utc": "2026-09-06T12:39:18.835057+00:00",
     "last_run_id": "34011531693",
     "last_run_at_utc": "2026-09-06T04:36:45.636595+00:00",
     "last_started_at": "2026-09-06T04:36:45.636595+00:00",
@@ -634,7 +634,7 @@
     "chapter_id": "1217304714",
     "title": "信道复用技术",
     "task_type": "video",
-    "status": "COMPLETED",
+    "status": "UNKNOWN",
     "priority": 55,
     "attempt_count": 1,
     "attempts": 1,
@@ -652,11 +652,11 @@
       "source_detail": "passed_object_ids=1"
     },
     "completion_evidence": {
-      "type": "SERVER_VERIFIED",
+      "type": "CONFLICT",
       "source": "isPassed",
       "run_id": "34014722753",
-      "observed_at_utc": "2026-09-06T05:55:13.200929+00:00",
-      "detail": "passed_object_ids=1",
+      "observed_at_utc": "2026-09-06T12:39:07.469639+00:00",
+      "detail": "catalog job_remaining>0 (L1)",
       "passed_object_ids": [
         "c1e65997077cd66b4e835b32ea219c0a"
       ]
@@ -669,7 +669,7 @@
       "occurred_at_utc": "2026-09-06T05:55:13.200936+00:00"
     },
     "created_at_utc": "2026-09-04T11:32:26.160552+00:00",
-    "updated_at_utc": "2026-09-06T05:55:13.200929+00:00",
+    "updated_at_utc": "2026-09-06T12:39:18.835062+00:00",
     "last_run_id": "34014722753",
     "last_run_at_utc": "2026-09-06T05:55:13.200929+00:00",
     "last_started_at": "2026-09-06T05:55:13.200929+00:00",
@@ -780,7 +780,7 @@
     "chapter_id": "1217304717",
     "title": "数据链路层概述",
     "task_type": "video",
-    "status": "COMPLETED",
+    "status": "UNKNOWN",
     "priority": 55,
     "attempt_count": 1,
     "attempts": 1,
@@ -798,11 +798,11 @@
       "source_detail": "passed_object_ids=1"
     },
     "completion_evidence": {
-      "type": "SERVER_VERIFIED",
+      "type": "CONFLICT",
       "source": "isPassed",
       "run_id": "34017168816",
-      "observed_at_utc": "2026-09-06T06:54:33.049883+00:00",
-      "detail": "passed_object_ids=1",
+      "observed_at_utc": "2026-09-06T12:39:07.469644+00:00",
+      "detail": "catalog job_remaining>0 (L1)",
       "passed_object_ids": [
         "a652d06b08df94d56811360f1dedac54"
       ]
@@ -815,7 +815,7 @@
       "occurred_at_utc": "2026-09-06T06:54:33.049894+00:00"
     },
     "created_at_utc": "2026-09-04T11:32:26.160569+00:00",
-    "updated_at_utc": "2026-09-06T06:54:33.049883+00:00",
+    "updated_at_utc": "2026-09-06T12:39:18.835069+00:00",
     "last_run_id": "34017168816",
     "last_run_at_utc": "2026-09-06T06:54:33.049883+00:00",
     "last_started_at": "2026-09-06T06:54:33.049883+00:00",
@@ -1022,8 +1022,8 @@
     "chapter_id": "1217304725",
     "title": "能力提升",
     "task_type": "video",
-    "status": "DISCOVERED",
-    "priority": 55,
+    "status": "COMPLETED",
+    "priority": 0,
     "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
@@ -1034,17 +1034,17 @@
       "expires_at_utc": null
     },
     "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
+      "level": "UI",
+      "verified_at_utc": "2026-09-06T12:39:07.464205+00:00",
+      "run_id": "",
+      "source_detail": "server DOM completed marker"
     },
     "completion_evidence": {
-      "type": "NONE",
-      "source": "",
+      "type": "UI",
+      "source": "server DOM completed marker",
       "run_id": "",
-      "observed_at_utc": "2026-09-06T01:52:26.624481+00:00",
-      "detail": "",
+      "observed_at_utc": "2026-09-06T12:39:07.464210+00:00",
+      "detail": "server DOM completed marker",
       "passed_object_ids": []
     },
     "failure": {
@@ -1052,10 +1052,10 @@
       "run_id": "",
       "detail": "",
       "consecutive_failures": 0,
-      "occurred_at_utc": "2026-09-06T01:52:26.624481+00:00"
+      "occurred_at_utc": "2026-09-06T12:39:07.464215+00:00"
     },
-    "created_at_utc": "2026-09-04T11:32:26.160597+00:00",
-    "updated_at_utc": "2026-09-04T11:32:26.160597+00:00",
+    "created_at_utc": "2026-09-06T12:39:07.464217+00:00",
+    "updated_at_utc": "2026-09-06T12:39:07.464217+00:00",
     "last_run_id": null,
     "last_run_at_utc": null,
     "last_started_at": null,
@@ -1070,8 +1070,8 @@
     "chapter_id": "1217304726",
     "title": "学习目标和重点难点",
     "task_type": "video",
-    "status": "DISCOVERED",
-    "priority": 55,
+    "status": "COMPLETED",
+    "priority": 0,
     "attempt_count": 0,
     "attempts": 0,
     "consecutive_failures": 0,
@@ -1082,17 +1082,17 @@
       "expires_at_utc": null
     },
     "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
+      "level": "UI",
+      "verified_at_utc": "2026-09-06T12:39:07.464224+00:00",
+      "run_id": "",
+      "source_detail": "server DOM completed marker"
     },
     "completion_evidence": {
-      "type": "NONE",
-      "source": "",
+      "type": "UI",
+      "source": "server DOM completed marker",
       "run_id": "",
-      "observed_at_utc": "2026-09-06T01:52:26.624481+00:00",
-      "detail": "",
+      "observed_at_utc": "2026-09-06T12:39:07.464227+00:00",
+      "detail": "server DOM completed marker",
       "passed_object_ids": []
     },
     "failure": {
@@ -1100,10 +1100,10 @@
       "run_id": "",
       "detail": "",
       "consecutive_failures": 0,
-      "occurred_at_utc": "2026-09-06T01:52:26.624481+00:00"
+      "occurred_at_utc": "2026-09-06T12:39:07.464231+00:00"
     },
-    "created_at_utc": "2026-09-04T11:32:26.160603+00:00",
-    "updated_at_utc": "2026-09-04T11:32:26.160603+00:00",
+    "created_at_utc": "2026-09-06T12:39:07.464234+00:00",
+    "updated_at_utc": "2026-09-06T12:39:07.464234+00:00",
     "last_run_id": null,
     "last_run_at_utc": null,
     "last_started_at": null,
