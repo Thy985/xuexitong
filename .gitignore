@@ -21,3 +21,10 @@ state/cookies.json
 
 # 本地环境变量/密钥（即使误存二进制也绝不入库）
 .env
+
+# —— 派生缓存（可由 registry/实时状态随时重算，不入库）——
+# execution_queue: 由 reconcile_queue 从 registry 派生的队列，是 derived cache
+# chapter_points:  点级快照（可再生的缓存；真源是 server end / live DOM）
+state/**/execution_queue.json
+state/registry/execution_queue.json
+state/**/chapter_points.json
