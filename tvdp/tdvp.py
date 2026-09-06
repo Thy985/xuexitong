@@ -689,24 +689,37 @@ def read_chapter_job_points(
         rows = fr.evaluate("""() => {
             const out = [];
             const seen = new Set();
-            document.querySelectorAll('.ans-job-item, .ans-job-icon').forEach(n => {
+            document.querySelectorAll('.ans-job-item, .ans-item, .ans-job-icon').forEach(n => {
                 const icon = n.classList.contains('ans-job-icon')
                     ? n : n.querySelector('.ans-job-icon');
                 if (!icon) return;
-                const parent = icon.closest('.ans-job') || n.parentElement;
-                const finished = parent ? parent.className.includes('ans-job-finished')
-                                        : false;
-                const label = parent ? (parent.innerText||'')
-                                        .trim().replace(/\\s+/g,' ').slice(0,40) : '';
+                // 完成标志在任务点最近的 .ans-job-item / .ans-item 上（confirmed）
+                const item = icon.closest('.ans-job-item, .ans-item') || icon.parentElement;
+                const finished = item ? item.classList.contains('ans-job-finished') : false;
                 const marker = (icon.className||'').toString();
-                const key = label || marker;
+                let type = 'other';
+                if (/\\bans-job-video\\b/i.test(marker)) type = 'video';
+                else if (/ans-job-work|ans-homework/i.test(marker)) type = 'homework';
+                else if (/ans-job-test|ans-job-19/i.test(marker)) type = 'quiz';
+                else if (/ans-job-exam/i.test(marker)) type = 'exam';
+                else if (/ans-job-discuss/i.test(marker)) type = 'discuss';
+                else if (/ans-job-pdf|ans-job-read|ans-job-doc/i.test(marker)) type = 'document';
+                else {
+                    // 内容级启发式（confirmed 视频：video/ananas iframe；文本 fallback）
+                    const hasVideo = item.querySelector('video, [class*=video_html5], iframe[src*=ananas], .videoContainer, .ans-insertvideo');
+                    const txt = (item.innerText || '');
+                    if (hasVideo || /观看.*视频|播放|总时长的?\\s*\\d+%|视频点/i.test(txt)) type = 'video';
+                    else if (/达标测试|测验|测试|作业|考试/i.test(txt)) type = 'quiz';
+                }
+                const key = marker + '|' + (item.innerText||'').slice(0,20);
                 if (seen.has(key)) return; seen.add(key);
-                out.push({ marker, isFinished: finished, titleText: label });
+                out.push({ marker, type, isFinished: finished,
+                           titleText: (item.innerText||'').trim().replace(/\\s+/g,' ').slice(0,60) });
             });
             return out;
         }""")
         for r in rows:
-            typ = _classify_job(r.pop("marker") or "")
+            typ = r["type"] or _classify_job(r["marker"] or "")
             # video 点 → 章节 id（与 registry 的 video task_id 一致）；
             # 其余 → <chapterId>:<type>（与 discovery 生成的 :other 命名对齐）。
             r["task_id"] = knowledge_id if typ == "video" else f"{knowledge_id}:{typ}"
