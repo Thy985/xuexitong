@@ -28,19 +28,43 @@ def tmp_registry(tmp_path):
 # ── 1) 为什么旧 discovery 只生成 1 个 TaskInfo（E6.2 §1）──────────────
 
 def test_discovery_emits_video_plus_residual_task(tmp_registry):
-    """E6.2 §3: 从章节 raw 生成 chapter 内多个 task：video + other(unsupported)。"""
+    """E6.2 §3: 从章节 raw 生成 chapter 内多个 task：video + 非视频残留(other)。"""
     from tvdp.tdvp import build_tasks_from_discovery
-    # 真实 4705：非完成态，job_remaining=1
-    chapter = {"chapter_id": "1217304705", "title": "计算机网络的体系结构",
-               "status": "pending", "job_remaining": 1,
-               "chapter_index": 5, "cell_index": 5, "text": "1.6 ..."}
+    # 章节有 2 个未完成点，默认按 1 个视频点 → 剩 1 个非视频残留
+    chapter = {"chapter_id": "1217304708", "title": "数据通信的基础知识",
+               "status": "pending", "job_remaining": 2,
+               "chapter_index": 11, "cell_index": 11, "text": "2.2 2待完成"}
     tasks = build_tasks_from_discovery([chapter])
     infos = {t.task_id: t for t in tasks}
-    assert "1217304705" in infos                       # video task
-    assert infos["1217304705"].task_type == "video"
-    assert "1217304705:other" in infos            # residual task
-    assert infos["1217304705:other"].task_type == "other"
-    assert infos["1217304705:other"].status == "PENDING"
+    assert "1217304708" in infos                       # video task
+    assert infos["1217304708"].task_type == "video"
+    assert "1217304708:other" in infos            # 非视频残留
+    assert infos["1217304708:other"].task_type == "other"
+    assert infos["1217304708:other"].status == "PENDING"
+    # 恰 1 个未完成点（纯 1 个视频）→ 不再发 :other
+    tasks1 = build_tasks_from_discovery(
+        [{"chapter_id": "1217304708", "title": "数据通信",
+          "status": "pending", "job_remaining": 1,
+          "chapter_index": 11, "cell_index": 11}])
+    ids1 = {t.task_id for t in tasks1}
+    assert "1217304708" in ids1
+    assert "1217304708:other" not in ids1
+
+
+def test_discovery_multi_video_chapter_emits_video_tasks(tmp_registry):
+    """E6.2: L2 已知某章 2 个视频点 → 逐 video 生成 task，供分别执行。"""
+    from tvdp.tdvp import build_tasks_from_discovery
+    ch = {"chapter_id": "1217304708", "title": "数据通信的基础知识",
+          "status": "pending", "job_remaining": 2,
+          "chapter_index": 11, "cell_index": 11, "text": "2.2 2待完成"}
+    tasks = build_tasks_from_discovery([ch], video_counts={"1217304708": 2})
+    infos = {t.task_id: t for t in tasks}
+    # 第 1 个视频沿用章节 id；第 2 个用 :video--<idx>
+    assert "1217304708" in infos
+    assert "1217304708:video2" in infos
+    assert infos["1217304708:video2"].task_type == "video"
+    assert infos["1217304708:video2"].chapter_id == "1217304708"
+    assert "1217304708:other" not in infos
 
 
 def test_discovery_done_chapter_no_residual(tmp_registry):
@@ -48,7 +72,7 @@ def test_discovery_done_chapter_no_residual(tmp_registry):
     from tvdp.tdvp import build_tasks_from_discovery
     tasks = build_tasks_from_discovery(
         [{"chapter_id": "1217304700", "title": "互联网概述",
-          "status": "completed", "task_remaining": 0}])
+          "status": "completed", "job_remaining": 0}])
     ids = [t.task_id for t in tasks]
     assert "1217304700" in ids
     assert "1217304700:other" not in ids

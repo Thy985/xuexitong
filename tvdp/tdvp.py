@@ -575,7 +575,8 @@ def fetch_page_html(course_url: str, cx_user: Optional[str] = None,
 
 
 def build_tasks_from_discovery(chapters_raw: list[dict],
-                               fallback_chapter: str = "") -> list[TaskInfo]:
+                               fallback_chapter: str = "",
+                               video_counts: Optional[dict] = None) -> list[TaskInfo]:
     """将 DOM 提取的章节列表转换为「Chapter 内多个 Task」的 TaskInfo 列表（E6.2）。
 
     之前只生成 1 个 chapter TaskInfo 的原因（E6.2 §1）：
@@ -589,6 +590,7 @@ def build_tasks_from_discovery(chapters_raw: list[dict],
 
     chapter_raw = {chapter_id, title, status, text, cell_index, chapter_index, job_remaining}
     """
+    video_counts = video_counts or {}
     tasks = []
     for ch in chapters_raw:
         title = ch.get("title", "").strip()
@@ -608,24 +610,32 @@ def build_tasks_from_discovery(chapters_raw: list[dict],
         cell_idx = ch.get("cell_index", 0)
         task_id = cid if cid else f"_gi{ch_idx}"
 
-        # 1) video task —— 保持与旧 runtime 兼容（task_type="video"）
-        tasks.append(TaskInfo(
-            task_id=task_id,
-            chapter_id=cid if cid else "",
-            title=title,
-            task_type="video",
-            status=status,
-            confidence=conf,
-            source_detail=detail,
-            evidence=TaskEvidence(status, conf, detail),
-            _ch_idx=ch_idx,
-            _cell_idx=cell_idx,
-        ))
+        # 1) video task —— 每个真实视频点一个 Task；默认当视频点数量未知时视为 1 个。
+        n_videos = int(video_counts.get(cid, 1) or 0)
+        known_count = cid in video_counts   # 已知真实视频点数量
+        if not known_count:
+            n_videos = 1
+        total_points = n_videos
+        for vi in range(n_videos):
+            vtid = task_id if vi == 0 else f"{task_id}:video{vi + 1}"
+            v_detail = detail if vi == 0 else f"{vtid} 视频点 {vi + 1}/{n_videos}"
+            tasks.append(TaskInfo(
+                task_id=vtid,
+                chapter_id=cid if cid else "",
+                title=title,
+                task_type="video",
+                status=status,
+                confidence=conf,
+                source_detail=v_detail,
+                evidence=TaskEvidence(status, conf, v_detail),
+                _ch_idx=ch_idx,
+                _cell_idx=cell_idx,
+            ))
 
-        # 2) 残余非视频 task —— 当该章尚有「待完成任务点」且本章并非整体完成
-        #    此时 video task 即便完成也不得覆盖整章（§9）。
+        # 2) 残余非 video task —— 当该章还有「非视频待完成任务点」
         not_all_done = (status_raw != "completed") or (job_remaining > 0)
-        if not_all_done and cid:
+        non_video_remain = job_remaining - total_points
+        if cid and not_all_done and non_video_remain > 0:
             tasks.append(TaskInfo(
                 task_id=f"{cid}:other",
                 chapter_id=cid,
@@ -633,9 +643,9 @@ def build_tasks_from_discovery(chapters_raw: list[dict],
                 task_type="other",          # 非 video → unsupported/pending
                 status="PENDING",           # §6: 非 video 先记 pending/unsupported
                 confidence="UI",
-                source_detail=f"余 {job_remaining} 个待完成任务点",
+                source_detail=f"余 {non_video_remain} 个非视频任务点",
                 evidence=TaskEvidence("PENDING", "UI",
-                                      f"uncategorised; {job_remaining} 待完成"),
+                                      f"uncategorised; {non_video_remain} 待完成"),
                 _ch_idx=ch_idx,
                 _cell_idx=cell_idx,
             ))
@@ -718,11 +728,16 @@ def read_chapter_job_points(
             });
             return out;
         }""")
+        video_seen = 0
         for r in rows:
             typ = r["type"] or _classify_job(r["marker"] or "")
-            # video 点 → 章节 id（与 registry 的 video task_id 一致）；
-            # 其余 → <chapterId>:<type>（与 discovery 生成的 :other 命名对齐）。
-            r["task_id"] = knowledge_id if typ == "video" else f"{knowledge_id}:{typ}"
+            if typ == "video":
+                # 第 1 个视频沿用章节 id（与 registry 的 video task_id 一致）；
+                # 第 2+ 个用 <chapterId>:video<idx>（与 build_tasks 的多视频拆分一致）。
+                video_seen += 1
+                r["task_id"] = knowledge_id if video_seen == 1 else f"{knowledge_id}:video{video_seen}"
+            else:
+                r["task_id"] = f"{knowledge_id}:{typ}"
             r["type"] = typ
             points.append(r)
         break
@@ -730,27 +745,70 @@ def read_chapter_job_points(
 
 
 def build_live_pending(job_points: list[dict]) -> set[str]:
-    """从一章的实时 job 点列表推导「当前确实未完成」的 task_id 集合。"""
-    return {p["task_id"] for p in job_points if not p.get("isFinished")}
-
-
-def build_live_pending(
-    job_points: list[dict],
-    pending_count_hint: int = 0,
-) -> set[str]:
-    """由一章的实时 job 点列表推导出「当前确实未完成」的 task_id 集合。
+    """从一章的实时 job 点列表推导「当前确实未完成」的 task_id 集合。
 
     Registry 里一个章节的 video task 会用章节 id 作 task_id（不加后缀）。
     若该章存在未 finished 的 video 点 → 该 video task 应降级。
     """
-    live = set()
-    for p in job_points:
-        if not p.get("isFinished"):
-            live.add(p["task_id"])
-    if not live and pending_count_hint > 0:
-        # 兜底：未能从 DOM 读出具体点，但目录层明确有待完成任务
-        live.add("__pending_hint__")
-    return live
+    return {p["task_id"] for p in job_points if not p.get("isFinished")}
+
+
+def chapter_video_summary(job_points: list[dict]) -> tuple[int, int]:
+    """返回一章的实时 job 点里 (视频点总数, 已完成视频点数)。
+
+    用于 Discovery 拆分多视频章：当一章有 N>1 个视频且未全部完成时，
+    build_tasks_from_discovery 用 N 生成 N 个视频 task，逐个进入队列。
+    返回 (total, finished)；无视频点时 total=0。
+    """
+    videos = [p for p in job_points if p.get("type") == "video"]
+    total = len(videos)
+    finished = sum(1 for p in videos if p.get("isFinished"))
+    return total, finished
+
+
+def live_verify_chapter(
+    knowledge_id: str,
+    course_id: str,
+    clazz_id: str,
+    cpi: str,
+    cx_user: str,
+    cx_pass: str,
+) -> Optional[dict]:
+    """独立章节 live 复核：打开浏览器 → read_chapter_job_points。
+
+    Returns dict 含 {points, video_total, video_finished, live_pending}；
+    失败返回 None。供 scheduler 在选任务前对目标章做 L2 实校（成本有界）。
+    """
+    from playwright.sync_api import sync_playwright
+    import os
+    user = cx_user or os.environ.get("CX_USER")
+    pw = cx_pass or os.environ.get("CX_PASS")
+    if not user or not pw:
+        return None
+    try:
+        sys.path.insert(0, str(Path(__file__).parent.parent / "e2"))
+        from utils.cookie_store import ensure_login
+        with sync_playwright() as p:
+            b = p.chromium.launch(
+                headless=False, channel="chromium",
+                args=["--no-sandbox", "--disable-gpu"],
+            )
+            pg = b.new_page()
+            ensure_login(pg, pg.context, "https://mooc1.chaoxing.com", user, pw)
+            cid_old = knowledge_id
+            pts = read_chapter_job_points(pg, cid_old, course_id, clazz_id, cpi)
+            b.close()
+    except Exception as e:
+        print(f"[tdvp] live_verify_chapter error: {e}", file=sys.stderr)
+        return None
+    total, finished = chapter_video_summary(pts)
+    return {
+        "points": pts,
+        "video_total": total,
+        "video_finished": finished,
+        "live_pending": build_live_pending(pts),
+    }
+
 
 def aggregate_evidence(
     passive_results: dict[str, TaskInfo],

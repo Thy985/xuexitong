@@ -265,7 +265,15 @@ def cmd_run(args) -> int:
         try:
             from e6.task_registry import load_registry, save_registry
             reg = load_registry(identity.key())
-            target = next((t for t in reg.values() if t.chapter_id == chapter), None)
+            # E6.2：同一章可有多个视频 task（<chapterId>, <chapterId>:video2, ...）。
+            # 标记「本章第一个尚未完成的 video task」——即本次播放的那个视频点的任务，
+            # 而不是 dict 迭代序里碰到的第一个（那可能是另一条仍待播放的视频任务）。
+            cands = [t for t in reg.values() if getattr(t, "chapter_id", "") == chapter]
+            target = next((t for t in cands
+                           if getattr(t, "task_type", "video") == "video"
+                           and t.status != "COMPLETED"), None)
+            if target is None:
+                target = next(iter(cands), None)
             run_id = os.environ.get("GITHUB_RUN_ID", "local")
             if passed:
                 if target is not None:

@@ -396,6 +396,7 @@ def _run_tdvp_probe(course_url: str, course_key: str,
     """
     try:
         from tvdp.tdvp import fetch_course_discovery, build_tasks_from_discovery
+        from tvdp.tdvp import live_verify_chapter
         from e6.task_registry import load_registry, save_registry
         from e6.reconcile import reconcile_registry
         from e6.task_registry import done_chapter_ids_from_registry, reconcile_queue
@@ -436,6 +437,39 @@ def _run_tdvp_probe(course_url: str, course_key: str,
         # 4. Reconcile Queue（派生物）
         queue = reconcile_queue(course_key, existing, done_ids)
         print(f"[scheduler] TDVP: queue has {len(queue.items)} READY tasks", flush=True)
+
+        # 4.5 E6.2：对候选目标章做 L2 live 复核，把「多视频章」拆成逐个 video task，
+        #     并让「当前未完成的视频」不被提前当作完成（4708 双视频只播 1 个的问题）。
+        if queue.items:
+            head = queue.items[0]
+            head_cid = str((existing.get(head.get("task_id", "")) or
+                            next((t.chapter_id for t in tasks
+                                  if t.task_id == head.get("task_id")), "")) or "")
+            if head_cid:
+                verify = live_verify_chapter(
+                    head_cid,
+                    params.get("course_id", ""),
+                    params.get("clazz_id", ""),
+                    params.get("cpi", ""),
+                    os.environ.get("CX_USER", ""),
+                    os.environ.get("CX_PASS", ""),
+                )
+                if verify is not None:
+                    total_v = verify.get("video_total", 0)
+                    live_pending = verify.get("live_pending") or set()
+                    # 重建 discovery：真正的视频点数量 + live pending
+                    video_counts = {head_cid: total_v} if total_v > 0 else None
+                    tasks2 = build_tasks_from_discovery(chapters_raw, video_counts=video_counts)
+                    existing2, report2 = reconcile_registry(
+                        course_key, existing, tasks2, dom_status, live_pending=live_pending)
+                    save_registry(course_key, existing2)
+                    existing = existing2
+                    done_ids = done_chapter_ids_from_registry(existing)
+                    queue = reconcile_queue(course_key, existing, done_ids)
+                    print(f"[scheduler] TDVP: E6.2 after live refine {head_cid} "
+                          f"video_total={total_v} finished_video = "
+                          f"{verify.get('video_finished')} tasks={len(existing2)} "
+                          f"queue={len(queue.items)}", flush=True)
 
         # 5. 选下一个任务
         if not queue.items:
