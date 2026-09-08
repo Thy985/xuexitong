@@ -6,7 +6,11 @@
 **重要边界**：本项目仅做"真实浏览器自然播放 → 服务端完成"，**不**构造/伪造/重放
 `multimedia/log`、不修改 `enc/attDurationEnc/videoFaceCaptureEnc/playingTime/_t`、
 不跳过播放、不宣称"整门课程自动化完成"。一次 Run 只自然完成 URL 中指定的一个视频任务点
-（`--max-chapters` 可设为 N 跨章节推进，但默认 1）。
+（scheduler 模式可通过 `--max-chapters N` 一次跨章节推进，
+手动 `workflow_dispatch` 的 `max_chapters` 输入即可填 2/3/…，默认 1）。
+> 当前活跃课程处于 `BLOCKED` 时采用**熔断 cooldown 自动复位**：自动 (`schedule`) 触发下每累计
+> `blocked_retry_interval`（默认 4，可用环境变量 `XUE_BLOCKED_RETRY_INTERVAL` 覆盖）次调度机会才自动放行一次
+> 探测/重试；手动 (`manual`) 触发不受 cooldown 限制，可立即干预。恢复成功后熔断计数自动清零。
 
 ---
 
@@ -50,8 +54,11 @@ gh secret set CX_PASS -b "你的密码"
 - `action`: **scheduler**
 - 无需传 `course_url`（自动从 `state/active_course.json` 读取）
 - 无需传 `chapter_id`（TDVP 探针自动发现下一个待执行任务）
+- 可选 `max_chapters: 2/3/...`：一次调度自动跨章节推进 N 个视频任务点（默认 1）。
+  手动触发不受 `BLOCKED` cooldown 限制，可立即干预。
 
 **自动定时（每天 UTC 02:00）**：无需手动操作，Workflow 内置 `schedule` trigger。
+课程处于 `BLOCKED` 时，自动触发遵循 cooldown 自动复位（见开头说明），而非永远卡死。
 
 Scheduler 内部自动执行：
 1. 从 `state/active_course.json` 读取活跃课程

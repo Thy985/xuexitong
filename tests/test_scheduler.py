@@ -75,6 +75,56 @@ class TestDetermineAction:
         assert dec == "RUN"
         assert "ready to run" in reason.lower()
 
+    # ── P0: BLOCKED cooldown / auto-retry ──────────────────────────
+    def test_manual_overrides_blocked_immediately(self, sample_identity, tmp_state_dir):
+        initialize_course(sample_identity)
+        state = CourseState(course_identity=sample_identity, status="BLOCKED")
+        save_course_state(state)
+        dec, reason = determine_action(sample_identity.key(), "manual")
+        assert dec == "RUN"
+        assert "manual override" in reason.lower()
+        # manual 不消费 blocked_hits
+        from scheduler.scheduler import load_scheduler_state as _ls
+        assert _ls(sample_identity.key()).blocked_hits == 0
+
+    def test_blocked_schedule_cooldown_counts(self, sample_identity, tmp_state_dir):
+        initialize_course(sample_identity)
+        state = CourseState(course_identity=sample_identity, status="BLOCKED")
+        save_course_state(state)
+        dec, reason = determine_action(sample_identity.key(), "schedule")
+        assert dec == "BLOCKED"
+        assert "1/4" in reason
+        from scheduler.scheduler import load_scheduler_state as _ls
+        assert _ls(sample_identity.key()).blocked_hits == 1
+
+    def test_blocked_schedule_retries_after_interval(self, sample_identity, tmp_state_dir):
+        initialize_course(sample_identity)
+        state = CourseState(course_identity=sample_identity, status="BLOCKED")
+        save_course_state(state)
+        # 前 3 次 schedule → BLOCKED；第 4 次 → 自动 retry RUN
+        for i in range(3):
+            dec, _ = determine_action(sample_identity.key(), "schedule")
+            assert dec == "BLOCKED"
+        dec, reason = determine_action(sample_identity.key(), "schedule")
+        assert dec == "RUN"
+        assert "cooldown expired" in reason
+        from scheduler.scheduler import load_scheduler_state as _ls
+        assert _ls(sample_identity.key()).blocked_hits == 0
+
+    def test_course_status_returns_actived_after_reset(self, sample_identity, tmp_state_dir):
+        initialize_course(sample_identity)
+        # 模拟之前进入过 BLOCKED（有残余计数），恢复后应清零
+        from scheduler.scheduler import save_scheduler_state, SchedulerState
+        save_scheduler_state(sample_identity.key(),
+                             SchedulerState(blocked_since="2026-01-01T00:00:00Z",
+                                            blocked_hits=2))
+        dec, _ = determine_action(sample_identity.key(), "schedule")
+        assert dec == "RUN"
+        from scheduler.scheduler import load_scheduler_state as _ls
+        ss = _ls(sample_identity.key())
+        assert ss.blocked_since is None
+        assert ss.blocked_hits == 0
+
 
 # ── Tests: record_result ──────────────────────────────────────────
 class TestRecordResult:
@@ -155,6 +205,46 @@ class TestActionsSummary:
         })
         assert "NOOP" in md
         assert "initialized" in md.lower()
+
+
+# ── P1: run_scheduler 多章循环 ───────────────────────────────────
+class TestRunSchedulerMultiChapter:
+    def test_runs_multiple_chapters(self, sample_identity, tmp_state_dir, monkeypatch):
+        initialize_course(sample_identity)
+        save_course_state(CourseState(course_identity=sample_identity,
+                                      status="ACTIVE"))
+        # tmp_state_dir 已把 state 目录指到 tmp；load_active_course 读到 sample_identity。
+        from scheduler import scheduler as sched
+        # probe 依次返回两个章，第三轮返回 None（队列空）
+        probe_calls = {"n": 0}
+        def fake_probe(course_url, course_key, run_id="local"):
+            seq = ["1217304701", "1217304702"]
+            if probe_calls["n"] >= len(seq):
+                return None
+            ch = seq[probe_calls["n"]]
+            probe_calls["n"] += 1
+            return ch
+        monkeypatch.setattr(sched, "_run_tdvp_probe", fake_probe)
+        def fake_run_one(course_url, chapter_id, trigger, run_id):
+            return True, "PASS", {"verdict": "PASS"}, None
+        monkeypatch.setattr(sched, "_run_one_chapter", fake_run_one)
+        out = sched.run_scheduler(course_url="", trigger="manual",
+                                  run_id="100", max_chapters=2)
+        assert out.decision == "RUN"
+        assert out.result == "SUCCESS"
+        assert out.chapters_attempted == ["1217304701", "1217304702"]
+        assert out.chapters_failed == []
+
+    def test_stops_when_probe_returns_none(self, sample_identity, tmp_state_dir, monkeypatch):
+        initialize_course(sample_identity)
+        save_course_state(CourseState(course_identity=sample_identity,
+                                      status="ACTIVE"))
+        from scheduler import scheduler as sched
+        monkeypatch.setattr(sched, "_run_tdvp_probe", lambda *a, **k: None)
+        out = sched.run_scheduler(course_url="", trigger="manual",
+                                  run_id="100", max_chapters=5)
+        assert out.decision == "NOOP"  # 无 pending 任务
+        assert out.chapters_attempted == []
 
 
 if __name__ == "__main__":

@@ -366,7 +366,7 @@ def main():
     ap.add_argument("--chapter-id", default=None,
                     help="要学习的章节 id（run 模式）")
     ap.add_argument("--max-chapters", type=int, default=1,
-                    help="最多自动学习的视频任务点数量（默认 1）")
+                    help="scheduler/run 模式最多自动推进的视频任务点数量（默认 1，可设 2/3/...）")
     ap.add_argument("--output", default="./evidence/run_<ts>.json")
     ap.add_argument("--max-attempts", type=int, default=2,
                     help="视频 iframe/metadata 瞬态失败的最大尝试次数（默认 2）")
@@ -401,10 +401,12 @@ def cmd_scheduler(args) -> int:
 
     trigger = getattr(args, 'trigger', 'schedule')
     run_id = getattr(args, 'run_id', os.environ.get('GITHUB_RUN_ID', 'local'))
+    max_chapters = getattr(args, 'max_chapters', 1)
 
-    print(f"[scheduler] Trigger: {trigger}, Run ID: {run_id}", flush=True)
+    print(f"[scheduler] Trigger: {trigger}, Run ID: {run_id}, "
+          f"max_chapters: {max_chapters}", flush=True)
     result = run_scheduler(args.course_url, args.chapter_id or "",
-                          trigger, run_id)
+                          trigger, run_id, max_chapters=max_chapters)
 
     out = {
         "action": "scheduler",
@@ -415,6 +417,8 @@ def cmd_scheduler(args) -> int:
         "timing_s": result.timing_s,
         "verdict": result.verdict,
         "error": result.error,
+        "chapters_attempted": getattr(result, "chapters_attempted", []),
+        "chapters_failed": getattr(result, "chapters_failed", []),
         # E6.1 §11：不得用 scheduler 摘要覆盖底层 runtime evidence。
         # 这里把 runtime 的 failure_stage / checks / result 一并带出，供 CI 诊断。
         "evidence": {

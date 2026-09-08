@@ -29,6 +29,20 @@ SchedulerResult = Literal["SUCCESS", "NOOP", "BLOCKED", "FAILED"]
 SchedulerDecision = Literal["RUN", "NOOP", "BLOCKED", "ERROR"]
 TriggerType = Literal["manual", "schedule"]
 
+# BLOCKED 熔断自动复位策略（cooldown / retry）。
+# 语义：
+#   - schedule 每轮调度机会计数 blocked_hits。
+#   - 每累计到 blocked_retry_interval（连续被 BLOCKED 拒的调度次数）后，自动放行一次 probe/retry。
+#   - manual 触发不受 cooldown 约束，永远允许立即 probe/retry。
+# 可通过环境变量 XUE_BLOCKED_RETRY_INTERVAL 覆盖（默认 4），无需改代码即可调成 2/4/6...。
+def _blocked_retry_interval() -> int:
+    import os
+    raw = os.environ.get("XUE_BLOCKED_RETRY_INTERVAL", "4")
+    try:
+        return max(1, int(raw))
+    except Exception:
+        return 4
+
 
 @dataclass
 class SchedulerState:
@@ -42,6 +56,10 @@ class SchedulerState:
     consecutive_failures: int = 0
     execution_id: Optional[str] = None           # 本次执行唯一 ID
     attempt: int = 0                             # 当前尝试次数
+    # ── BLOCKED 熔断 / cooldown 状态 ──────────────────────────────
+    blocked_since: Optional[str] = None          # 进入 BLOCKED 的时间（ISO UTC）
+    blocked_hits: int = 0                        # 进入 BLOCKED 后，被 schedule 拒的调度次数
+    blocked_retry_interval: int = 0              # 0 = 使用默认/环境变量；>0 = 显式覆盖
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -67,6 +85,8 @@ class ExecutionResult:
     error: Optional[str] = None
     timestamp_utc: str = ""
     evidence: Optional[dict] = None      # 底层 runtime evidence（不能丢，见 E6.1 §11）
+    chapters_attempted: list = field(default_factory=list)   # 本轮尝试的章节 id
+    chapters_failed: list = field(default_factory=list)      # 本轮失败的章节 id
 
     def __post_init__(self):
         if not self.timestamp_utc:
@@ -113,11 +133,60 @@ def save_scheduler_state(course_key: str, ss: SchedulerState) -> None:
         print(f"[scheduler] Error saving state: {e}", file=sys.stderr)
 
 
+def _blocked_decision(active_key: str, ss: SchedulerState, trigger: TriggerType,
+                      blocked_reason: str) -> tuple[SchedulerDecision, str]:
+    """统一处置「课程处于 BLOCKED」的情况——显式决定何时允许解除 BLOCKED。
+
+    规则（用户定案，不可用隐式门禁代替）：
+        manual       = 人工主动干预，允许立即 probe/retry（return RUN）
+        schedule     = 遵守 cooldown：每累计 blocked_retry_interval 次调度
+                       机会，自动放行一次 retry（return RUN 并清零计数）；
+                       否则只累计 blocked_hits 并 return BLOCKED。
+
+    Args:
+        active_key:      课程 identity key（用于持久化 cooldown 计数）
+        ss:              当前 SchedulerState（会被改写并持久化）
+        trigger:         manual / schedule
+        blocked_reason:  进入 BLOCKED 的原因描述
+
+    Returns:
+        (decision, reason)
+    """
+    interval = int(ss.blocked_retry_interval or _blocked_retry_interval())
+    interval = max(1, interval)
+
+    # 记录首次进入 BLOCKED 的时间（用于诊断）。
+    if not ss.blocked_since:
+        ss.blocked_since = datetime.now(timezone.utc).isoformat()
+
+    if trigger == "manual":
+        # 人工主动干预：立即放行，无需等待 cooldown。
+        # 不消费 blocked_hits（它只统计 schedule 的调度机会）。
+        return "RUN", f"manual override: {blocked_reason}; allow immediate probe/retry"
+
+    # schedule：遵守 cooldown
+    ss.blocked_hits += 1
+    if ss.blocked_hits >= interval:
+        # 达到复位点：放行一次 probe/retry，并清零调度计数。
+        ss.blocked_hits = 0
+        save_scheduler_state(active_key, ss)
+        return "RUN", (f"BLOCKED cooldown expired ({interval} schedules), "
+                       "auto retry granted")
+
+    save_scheduler_state(active_key, ss)
+    return "BLOCKED", (f"{blocked_reason}; cooldown "
+                       f"{ss.blocked_hits}/{interval} (schedule)")
+
+
 def determine_action(
     active_key: Optional[str],
     trigger: TriggerType,
 ) -> tuple[SchedulerDecision, str]:
-    """决定本次是否执行。
+    """决定本次是否允许。
+
+    显式区分「什么时候允许自动解除 BLOCKED」（见 _blocked_decision）：
+      - manual  → 立即放行（人工干预）
+      - schedule → 遵守 blocked_retry_interval 的 cooldown
 
     Returns:
         (decision, reason)
@@ -130,17 +199,28 @@ def determine_action(
     if not state:
         return "NOOP", f"No state for active course {active_key}"
 
-    if state.status == "BLOCKED" and trigger != "manual":
-        return "BLOCKED", f"Course {active_key} is BLOCKED"
-
     if state.status == "ARCHIVED":
         return "NOOP", f"Course {active_key} is ARCHIVED"
 
-    # 检查连续失败阈值（manual trigger 可 override）
+    # 读取 scheduler 熔断状态（在 BLOCKED 时会被改写并持久化）
     ss = load_scheduler_state(active_key)
-    if ss.consecutive_failures >= 3 and trigger != "manual":
-        return "BLOCKED", (f"Course {active_key} has {ss.consecutive_failures} "
-                          "consecutive failures")
+
+    # 课程状态级 BLOCKED
+    if state.status == "BLOCKED":
+        return _blocked_decision(active_key, ss, trigger,
+                                 f"Course {active_key} is BLOCKED")
+
+    # 连续失败阈值级 BLOCKED（recent 连续失败 ≥ 3）
+    if ss.consecutive_failures >= 3:
+        return _blocked_decision(
+            active_key, ss, trigger,
+            f"Course {active_key} has {ss.consecutive_failures} consecutive failures")
+
+    # 非阻塞状态：复位 BLOCKED 熔断计数（一旦恢复正常即清零）
+    if ss.blocked_since or ss.blocked_hits:
+        ss.blocked_since = None
+        ss.blocked_hits = 0
+        save_scheduler_state(active_key, ss)
 
     return "RUN", f"Active course {active_key} ready to run"
 
@@ -164,8 +244,16 @@ def record_result(
     # 更新连续失败计数
     if result.result == "FAILED":
         ss.consecutive_failures += 1
+        # 连续失败 ≥ 阈值 → 进入 BLOCKED 熔断（by _blocked_decision 下次 schedule 生效）
+        if ss.consecutive_failures >= 3 and not ss.blocked_since:
+            ss.blocked_since = result.timestamp_utc or \
+                datetime.now(timezone.utc).isoformat()
+            ss.blocked_hits = 0
     else:
         ss.consecutive_failures = 0
+        # 恢复正常 → 清除 BLOCKED 熔断计数
+        ss.blocked_since = None
+        ss.blocked_hits = 0
 
     save_scheduler_state(course_key, ss)
 
@@ -233,14 +321,90 @@ def generate_actions_summary(summary: dict) -> str:
 
 
 # 便捷函数供 run.py 调用
+def _run_one_chapter(course_url: str, chapter_id: str,
+                     trigger: TriggerType, run_id: str) -> tuple[bool, str, dict, str]:
+    """执行单章学习，返回 (passed, verdict, runtime_evidence, failure_stage)。
+
+    直接调用 app.cmd_run，共享同一进程上下文/日志，避免 subprocess 状态断线。
+    """
+    import time
+    import argparse
+    import json as json_mod
+    from app import run as app_run
+
+    evidence_path = "./evidence/result.json"
+    run_args = argparse.Namespace(
+        course_url=course_url,
+        chapter_id=chapter_id,
+        output=evidence_path,
+        xvfb_display=os.environ.get("DISPLAY", ":99"),
+        max_attempts=2,
+    )
+    t0 = time.time()
+    try:
+        exit_code = app_run.cmd_run(run_args)
+    except Exception as e:  # 函数级异常视为失败
+        print(f"[scheduler] run_scheduler: cmd_run raised: "
+              f"{type(e).__name__}: {e}", file=sys.stderr, flush=True)
+        exit_code = 1
+    timed = time.time() - t0
+
+    passed = exit_code == 0
+    verdict = "PASS" if passed else "FAIL"
+
+    # 从 evidence 文件读取实际 verdict / failure_stage（保留底层 evidence，见 E6.1 §11）
+    runtime_evidence = None
+    failure_stage = None
+    try:
+        if Path(evidence_path).exists():
+            with open(evidence_path) as f:
+                r = json_mod.load(f)
+            res = r.get("result", {})
+            verdict = res.get("verdict", verdict)
+            passed = res.get("exit_code", 1) == 0
+            runtime_evidence = r.get("evidence") or {}
+            failure_stage = runtime_evidence.get("failure_stage") \
+                if isinstance(runtime_evidence, dict) else None
+            # E6.1：不再从「无视频/无 cards」推断 COMPLETED（详见 §1）。
+            # 无视频节点同样作为有记录的 failure 交给 postflight 的 mark_failed：
+            #   consecutive_failures+1 → 达阈值自动 BLOCKED，Queue 跳过。
+            # 它不会被永久卡在队列头部，也不会造成「看似成功」的假完成。
+    except Exception:
+        pass
+
+    print(f"[scheduler] chapter {chapter_id}: verdict={verdict} "
+          f"timing_s={round(timed,1)} exit_code={exit_code}", flush=True)
+    return passed, verdict, runtime_evidence, failure_stage
+
+
 def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
-                  trigger: TriggerType = "manual", run_id: str = "local") -> ExecutionResult:
-    """Scheduler 入口：从 state/active_course.json 读取课程，内置 TDVP 探测。
+                  trigger: TriggerType = "manual", run_id: str = "local",
+                  max_chapters: int = 1) -> ExecutionResult:
+    """Scheduler 入口：从 state/active_course.json 读取课程，内置 TDVP 探测 + 多章执行。
 
     - 手动触发（workflow_dispatch）：可选传 course_url，用于切换课程
     - 定时触发（schedule）：course_url 为 None，完全从 state 读取
     - TDVP Passive Probe 在后台静默执行，不暴露给用户
+    - max_chapters：一次调度最多自动推进多个视频任务点（默认 1）
     """
+    import time
+    import os as _os
+
+    # ── 多章参数收敛 ──────────────────────────────────────────────
+    try:
+        max_chapters = max(1, int(max_chapters))
+    except (TypeError, ValueError):
+        max_chapters = 1
+    try:
+        budget_s = int(_os.environ.get("XUE_SCHEDULER_BUDGET_S", "1500"))
+    except Exception:
+        budget_s = 1500
+    try:
+        failure_budget = max(1, int(_os.environ.get(
+            "XUE_SCHEDULER_FAILURE_BUDGET", "1")))
+    except Exception:
+        failure_budget = 1
+
     from resolvers.course_resolver import resolve_course, detect_course_change
     from state.course_state import load_active_course, load_course_state, activate_course
 
@@ -286,12 +450,7 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
         identity_key = active.key()
         course_url = active.raw_url  # 使用 state 中保存的 URL
 
-    # ── Step 2: TDVP Passive Probe（后台静默执行）────────────────
-    next_chapter = _run_tdvp_probe(course_url, identity_key, run_id=run_id)
-    if next_chapter:
-        chapter_id = next_chapter  # 用发现的 next_task 覆盖传入的 chapter_id
-
-    # ── Step 3: 决定 action ─────────────────────────────────────
+    # ── Step 2: 决定 action（含 BLOCKED cooldown/retry）──────────
     decision, reason = determine_action(identity_key, trigger)
 
     if decision != "RUN":
@@ -303,67 +462,89 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
             timing_s=0, passed=False, verdict=reason,
         )
 
-    # 执行 run —— 函数级编排（替代旧版 subprocess 双层解析）
-    # 直接调用 app.cmd_run，共享同一进程上下文/日志，避免 subprocess 状态断线。
-    import time
-    import argparse
-    import json as json_mod
-    from app import run as app_run
+    # ── Step 2.5: BLOCKED cooldown 复位点只给最小推进（1 章）────────
+    if "cooldown expired" in reason:
+        max_chapters = 1
 
+    # ── Step 3: 多章循环执行 ─────────────────────────────────────
     t0 = time.time()
-    evidence_path = "./evidence/result.json"
-    run_args = argparse.Namespace(
-        course_url=course_url,
-        chapter_id=chapter_id,
-        output=evidence_path,
-        xvfb_display=os.environ.get("DISPLAY", ":99"),
-        max_attempts=2,
-    )
-    try:
-        exit_code = app_run.cmd_run(run_args)
-    except Exception as e:  # 函数级异常视为失败
-        print(f"[scheduler] run_scheduler: cmd_run raised: {type(e).__name__}: {e}",
-              file=sys.stderr, flush=True)
-        exit_code = 1
+    chapters_attempted: list[str] = []
+    chapters_failed: list[str] = []
+    last_verdict = "NOOP"
+    last_failure_stage = None
+    runtime_evidence = None
+
+    # 首次探测：无显式 chapter_id 时自动选下一个 pending 任务。
+    next_chapter = chapter_id or _run_tdvp_probe(course_url, identity_key,
+                                                 run_id=run_id)
+    if not next_chapter:
+        # 队列为空 → 没有可执行任务
+        summary = get_scheduler_summary(identity_key, "NOOP", "No pending task")
+        _write_summary(summary)
+        return ExecutionResult(
+            decision="NOOP", result="NOOP", trigger=trigger,
+            course_key=identity_key, run_id=run_id, timing_s=0,
+            passed=False, verdict="No pending task to execute",
+        )
+
+    consecutive_fail_in_run = 0
+    executed = 0
+    while executed < max_chapters:
+        if time.time() - t0 > budget_s:
+            print(f"[scheduler] budget exceeded ({budget_s}s), "
+                  f"stopping after {executed} chapters", flush=True)
+            break
+        if not next_chapter:
+            break
+
+        chapters_attempted.append(next_chapter)
+        passed, verdict, rt_ev, fail_stage = _run_one_chapter(
+            course_url, next_chapter, trigger, run_id)
+        executed += 1
+        last_verdict = verdict
+        runtime_evidence = runtime_evidence or rt_ev
+        if fail_stage:
+            last_failure_stage = fail_stage
+
+        if passed:
+            consecutive_fail_in_run = 0
+        else:
+            chapters_failed.append(next_chapter)
+            consecutive_fail_in_run += 1
+            # 连续失败达到 budget → 熔断本轮，不再跑剩余章。
+            if consecutive_fail_in_run >= failure_budget:
+                print(f"[scheduler] {consecutive_fail_in_run} consecutive "
+                      f"failure(s) this run (budget {failure_budget}); "
+                      "stopping multi-chapter loop", flush=True)
+                break
+
+        # 跑完一章后重新探测下一章（registry 已更新）。
+        if executed < max_chapters:
+            next_chapter = _run_tdvp_probe(course_url, identity_key, run_id=run_id)
+        else:
+            next_chapter = None
+
     timing = time.time() - t0
 
-    passed = exit_code == 0
-    verdict = "PASS" if passed else "FAIL"
-
-    # 从 evidence 文件读取实际 verdict / failure_stage（并保留底层 evidence，见 E6.1 §11）
-    runtime_evidence = None
-    failure_stage = None
-    try:
-        if Path(evidence_path).exists():
-            with open(evidence_path) as f:
-                r = json_mod.load(f)
-            res = r.get("result", {})
-            verdict = res.get("verdict", verdict)
-            passed = res.get("exit_code", 1) == 0
-            runtime_evidence = r.get("evidence") or {}
-            failure_stage = runtime_evidence.get("failure_stage") \
-                if isinstance(runtime_evidence, dict) else None
-            # E6.1：不再从「无视频/无 cards」推断 COMPLETED（详见 §1）。
-            # 无视频节点同样作为有记录的 failure 交给 postflight 的 mark_failed：
-            #   consecutive_failures+1 → 达阈值自动 BLOCKED，Queue 跳过。
-            # 它不会被永久卡在队列头部，也不会造成「看似成功」的假完成。
-    except Exception:
-        pass
-
+    # 汇总：任一章成功 → SUCCESS（部分推进）；否则 FAILED。
+    any_success = any(c not in chapters_failed for c in chapters_attempted)
     exec_result = ExecutionResult(
         decision="RUN",
-        result="SUCCESS" if passed else "FAILED",
+        result="SUCCESS" if any_success else "FAILED",
         trigger=trigger,
         course_key=identity_key,
         run_id=run_id,
         timing_s=round(timing, 1),
-        passed=passed,
-        verdict=verdict,
-        failure_stage=failure_stage,
+        passed=any_success,
+        verdict=last_verdict,
+        failure_stage=last_failure_stage,
         evidence=runtime_evidence,
     )
+    # 汇总补充字段（供 CI / 摘要）
+    exec_result.chapters_attempted = chapters_attempted
+    exec_result.chapters_failed = chapters_failed
 
-    # 记录结果
+    # 记录结果（aggregate 后 commit 一次）
     record_result(identity_key, exec_result)
 
     # 生成 summary
@@ -371,6 +552,8 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
     summary["result"] = exec_result.result
     summary["timing_s"] = exec_result.timing_s
     summary["verdict"] = exec_result.verdict
+    summary["chapters_attempted"] = chapters_attempted
+    summary["chapters_failed"] = chapters_failed
     _write_summary(summary)
 
     return exec_result
