@@ -54,8 +54,8 @@
     "task_type": "video",
     "status": "COMPLETED",
     "priority": 10,
-    "attempt_count": 7,
-    "attempts": 7,
+    "attempt_count": 8,
+    "attempts": 8,
     "consecutive_failures": 0,
     "max_attempts": 3,
     "lease": {
@@ -65,15 +65,15 @@
     },
     "verification": {
       "level": "SERVER_VERIFIED",
-      "verified_at_utc": "2026-09-09T09:03:33.039595+00:00",
-      "run_id": "34332366744",
+      "verified_at_utc": "2026-09-09T09:51:54.110949+00:00",
+      "run_id": "34336168695",
       "source_detail": "passed_object_ids=1"
     },
     "completion_evidence": {
       "type": "SERVER_VERIFIED",
       "source": "isPassed",
-      "run_id": "34332366744",
-      "observed_at_utc": "2026-09-09T09:03:33.039595+00:00",
+      "run_id": "34336168695",
+      "observed_at_utc": "2026-09-09T09:51:54.110949+00:00",
       "detail": "passed_object_ids=1",
       "passed_object_ids": [
         "f186805fa9e485a56f6ee730595fd606"
@@ -84,15 +84,15 @@
       "run_id": "",
       "detail": "",
       "consecutive_failures": 0,
-      "occurred_at_utc": "2026-09-09T09:03:33.039605+00:00"
+      "occurred_at_utc": "2026-09-09T09:51:54.110958+00:00"
     },
     "created_at_utc": "2026-09-04T07:36:36.732281+00:00",
-    "updated_at_utc": "2026-09-09T09:03:33.039595+00:00",
-    "last_run_id": "34332366744",
-    "last_run_at_utc": "2026-09-09T09:03:33.039595+00:00",
-    "last_started_at": "2026-09-09T09:03:33.039595+00:00",
-    "last_finished_at": "2026-09-09T09:03:33.039595+00:00",
-    "last_success_at_utc": "2026-09-09T09:03:33.039595+00:00",
+    "updated_at_utc": "2026-09-09T09:51:54.110949+00:00",
+    "last_run_id": "34336168695",
+    "last_run_at_utc": "2026-09-09T09:51:54.110949+00:00",
+    "last_started_at": "2026-09-09T09:51:54.110949+00:00",
+    "last_finished_at": "2026-09-09T09:51:54.110949+00:00",
+    "last_success_at_utc": "2026-09-09T09:51:54.110949+00:00",
     "last_failure_at_utc": "2026-09-06T14:20:12.524888+00:00",
     "_ch_idx": 10,
     "_cell_idx": 10
@@ -832,11 +832,11 @@
     "chapter_id": "1217304719",
     "title": "点对点协议PPP",
     "task_type": "video",
-    "status": "FAILED",
+    "status": "BLOCKED",
     "priority": 55,
-    "attempt_count": 2,
-    "attempts": 2,
-    "consecutive_failures": 2,
+    "attempt_count": 3,
+    "attempts": 3,
+    "consecutive_failures": 3,
     "max_attempts": 3,
     "lease": {
       "run_id": null,
@@ -859,19 +859,19 @@
     },
     "failure": {
       "stage": "",
-      "run_id": "34332366744",
+      "run_id": "34336168695",
       "detail": "FAIL(video metadata not ready in GHA headed)",
-      "consecutive_failures": 2,
-      "occurred_at_utc": "2026-09-09T09:07:17.783993+00:00"
+      "consecutive_failures": 3,
+      "occurred_at_utc": "2026-09-09T09:55:39.072480+00:00"
     },
     "created_at_utc": "2026-09-05T12:35:58.027231+00:00",
-    "updated_at_utc": "2026-09-09T09:07:17.783993+00:00",
-    "last_run_id": "34332366744",
-    "last_run_at_utc": "2026-09-09T09:07:17.783993+00:00",
+    "updated_at_utc": "2026-09-09T09:55:39.072480+00:00",
+    "last_run_id": "34336168695",
+    "last_run_at_utc": "2026-09-09T09:55:39.072480+00:00",
     "last_started_at": "2026-09-09T07:00:10.158506+00:00",
-    "last_finished_at": "2026-09-09T09:07:17.783993+00:00",
+    "last_finished_at": "2026-09-09T09:55:39.072480+00:00",
     "last_success_at_utc": null,
-    "last_failure_at_utc": "2026-09-09T09:07:17.783993+00:00",
+    "last_failure_at_utc": "2026-09-09T09:55:39.072480+00:00",
     "_ch_idx": 19,
     "_cell_idx": 19
   },
