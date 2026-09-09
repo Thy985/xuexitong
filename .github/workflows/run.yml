@@ -19,7 +19,7 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: "操作模式: initialize/run/scheduler/switch"
+        description: "操作模式: initialize/run/scheduler/switch/probe"
         required: false
         default: "run"
         type: choice
@@ -28,6 +28,7 @@ on:
           - run
           - scheduler
           - switch
+          - probe
       course_url:
         description: "学习通课程/章节 studentstudy URL"
         required: false
@@ -119,6 +120,20 @@ jobs:
             --course-url "$COURSE_URL" \
             --output ./evidence/result.json
           echo "switch-complete"
+
+      # ── Probe 模式: 登录后转储章节真实目录树 DOM（诊断 fetch 空）────
+      - name: Probe catalog
+        if: github.event.inputs.action == 'probe'
+        continue-on-error: true
+        run: |
+          Xvfb :99 -screen 0 1440x900x24 -ac &
+          export DISPLAY=:99
+          sleep 2
+          ARGS="--course-url \"$COURSE_URL\" --out ./evidence/probe.json --wait-s 12"
+          if [ -n "$GHA_CHAPTER" ]; then ARGS="$ARGS --chapter-id $GHA_CHAPTER"; fi
+          echo ">> python app/probe_catalog.py $ARGS"
+          eval "python app/probe_catalog.py $ARGS"
+          echo "probe-complete"
 
       # ── Scheduler 模式: 自动决定并执行（内置 TDVP 探针）────────────
       - name: Run Scheduler
@@ -297,7 +312,7 @@ jobs:
           try:
               r = json.load(open(files[0]))
               action = r.get("action", "run")
-              if action in ("initialize", "switch"):
+              if action in ("initialize", "switch", "probe"):
                   print("0", end="")
               elif action == "scheduler":
                   sched_result = r.get("result", "FAILED")
