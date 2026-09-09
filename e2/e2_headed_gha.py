@@ -191,6 +191,34 @@ def get_sidebar(page, cid: str) -> dict | None:
 
 
 # ── 主验证流程 ────────────────────────────────────────────────────
+NextUnitDecision = str  # "none" | "exit_completed" | "wait_playback" | "exit_switch"
+
+
+def next_unit_decision(nextunit_seen: bool, has_passed: bool, max_ct: float) -> str:
+    """完成语义状态机：nextUnit（URL chapterId 变化）后的退出决策（纯函数，可测）。
+
+    关键证据链：
+      * `passed_object_ids` 只在真实等到服务端 `"isPassed":true` 响应体时才 add，
+        因此 `has_passed` 本身就是「当前任务点已服务端确认完成」的强证据。
+      * URL chapterId 变化 + 该强证据 = 服务器因当前章完成而自动跳到下一章。
+
+    决策：
+      - not nextunit_seen                        → "none"（无动作）
+      - nextunit + passed + max_ct > 0           → "exit_complete"（本章完成，退出）
+      - nextunit + passed + max_ct == 0          → "wait_playback"（从未起播/瞬时误跳，
+                                                    不判完成，继续等起播，防刚起播就误切）
+      - nextunit + not passed                    → "exit_switch"（视为有效切换，退出）
+    """
+    if not nextunit_seen:
+        return "none"
+    if has_passed and max_ct > 0:
+        return "exit_complete"
+    if has_passed:
+        return "wait_playback"
+    return "exit_switch"
+
+
+# ── 主验证流程 ────────────────────────────────────────────────────
 def run_test(args, params: "CourseParams | None" = None):
     """执行浏览器学习验证。
 
@@ -389,6 +417,7 @@ def run_test(args, params: "CourseParams | None" = None):
         ended_seen = False
         ended_wall = None
         nextunit_seen = False
+        chapter_completed = False   # 本循环内部判定：当前章已完成并触发了自动跳转
         ml_parsed = []
         cur_video_src = ""
         video_count = 0
@@ -508,16 +537,23 @@ def run_test(args, params: "CourseParams | None" = None):
                     evidence["nextunit_title"] = title_now
                     log(f"[GHA] nextUnit (URL chapterId changed): {args.chapter_id} -> {cur_chap}")
 
-            if nextunit_seen and not passed_object_ids:
-                # chapterId 变化了，但引擎还没收到任何 isPassed=true → 视为有效切换，退出
+            # 退出判定 / 完成语义状态机：见 next_unit_decision（纯函数）。
+            nd = next_unit_decision(nextunit_seen, bool(passed_object_ids), max_ct)
+            if nd == "exit_complete":
+                # 真实播放过 + 服务端已 isPassed + URL 已跳下一章 → 本章完成
+                log(f"[GHA] nextUnit after completion: {len(passed_object_ids)} "
+                    f"passed_object_id(s), max_ct={max_ct:.0f}s — chapter done, exiting")
+                chapter_completed = True
+                break
+            if nd == "wait_playback":
+                # 跳转已发生但本章从未起播：可能是冷启动的瞬时误跳 → 等起播
+                log(f"[GHA] chapterId changed but never started (max_ct=0, "
+                    f"{len(passed_object_ids)} passed) — waiting for playback")
+                nextunit_seen = False
+            elif nd == "exit_switch":
+                # chapterId 变了、且未记录到 isPassed → 视为有效切换，退出
                 page.wait_for_timeout(5000)
                 break
-            if nextunit_seen and passed_object_ids:
-                # ⚠️ 页面 JS 自动跳转了下一章，但引擎仍在当前章节内收到了 isPassed=true
-                # 说明当前章节的视频任务点已经完成，不应把跳转当作下一章节的开始
-                log(f"[GHA] chapterId changed but {len(passed_object_ids)} passed_object_id(s) recorded — "
-                    f"current chapter still active, continuing playback")
-                nextunit_seen = False  # 重置，继续等待当前章节的自然结束
             # 修复：当视频已结束（ended_seen）且已播完大部分（>95%）且有 passed 记录时，
             # 不再无限等待 nextunit，直接退出——这说明当前章节的所有视频任务点已完成
             # 注意：使用 initial_duration 而非 summary["duration"]，因为后者可能已被新卡片重置
@@ -628,9 +664,11 @@ def run_test(args, params: "CourseParams | None" = None):
         "isPassed_seen": isPassed_seen,
         "isPassed_body": evidence.get("isPassed_body"),
         "ended_seen": ended_seen,
-        # 若播放期间收到了 passed_object_ids，则 URL chapterId 变化是页面自动跳转的副作用
-        # 不应视为"下一章节触发"，重置为 False 避免误判
-        "nextunit_triggered": nextunit_seen and not passed_object_ids,
+        # nextUnit 触发 = URL chapterId 变化。若本章已被判定完成（完成语义
+        # 状态机，chapter_completed=True），则自动跳转视为「下一章已触发」；
+        # 否则（未完成时 URL 变化）视为页面副作用、不当作完成跳转。
+        "nextunit_triggered": nextunit_seen and (not passed_object_ids or chapter_completed),
+        "chapter_completed": chapter_completed,
         "nextunit_chapterId": evidence.get("nextunit_chapterId"),
         "nextunit_title": evidence.get("nextunit_title"),
         "banner_before": evidence.get("banner_learned_before"),
@@ -675,6 +713,7 @@ def run_test(args, params: "CourseParams | None" = None):
         evidence["verdict"] = (
             f"PASS (headed GHA) — {passed_count}/10 checks passed. "
             f"isPassed=true, nextUnit={'triggered' if nextunit_seen else 'not observed'}, "
+            f"chapter_completed={chapter_completed}, "
             f"banner_up={banner_up}, sidebar_down={sidebar_down}"
         )
     elif isPassed_seen and nextunit_seen:
