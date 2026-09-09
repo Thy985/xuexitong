@@ -106,6 +106,10 @@ IS_PASSED_SETTLE_S   = 20
 HEARTBEAT_DEAD_S     = 60
 STATUS_EVERY_S       = 10
 LOGIN_TIMEOUT_S      = 30
+# 章内多视频推进窗口：一段视频ended后给页面留一点时间自动切到「同章节下一个视频」。
+# 若窗口内观察到视频 src 变化（video_count++）就继续播下一段；超时无新 src 则视为
+# 最后一段，此时才判「本章真正完成」。4706 是 8 视频章，缺这个窗口会播完第1段就误退。
+POST_VIDEO_NEXT_WAIT_S = 45
 
 
 # ── 工具函数 ───────────────────────────────────────────────────────
@@ -431,6 +435,10 @@ def run_test(args, params: "CourseParams | None" = None):
         ml_parsed = []
         cur_video_src = ""
         video_count = 0
+        # 章内多视频：一段 ended 后等待页面自动切下一段的宽限截止时间。
+        #   - 为 None → 不在宽限（根本还没 ended，或已切出新 src）
+        #   - 为绝对值 now+k → 正在宽限窗口内（ended 已见、尚未观察到下一段 src）
+        next_video_deadline = None
         passed_object_ids = set()
         initial_duration = evidence.get("video_duration", 0) or 0  # 记录初始视频总时长
         summary = {
@@ -462,9 +470,10 @@ def run_test(args, params: "CourseParams | None" = None):
                     else:
                         video_count = 1
                     cur_video_src = v_src
-                    # 重置视频级状态，继续播放新任务点
+                    # 重置视频级状态，继续播放新任务点（章内多视频切换）
                     ended_seen = False
                     ended_wall = None
+                    next_video_deadline = None
                     last_ct = 0.0
                     last_ct_change_at = now
                     max_ct = 0.0
@@ -483,7 +492,12 @@ def run_test(args, params: "CourseParams | None" = None):
                 if st.get("ended") and not ended_seen:
                     ended_seen = True
                     ended_wall = now
-                    log(f"★ Video ended: ct={ct:.0f}s")
+                    # 章内多视频：记录「等下一段视频自动切换」的宽限截止时间。
+                    # 若在窗口内观察到 src 变化→ 上面分支已清零并继续播下一段；
+                    # 若窗口耗尽仍无新 src → 判定这是最后一段，可完整退出。
+                    next_video_deadline = now + POST_VIDEO_NEXT_WAIT_S
+                    log(f"★ Video ended: ct={ct:.0f}s "
+                        f"(waiting up to {POST_VIDEO_NEXT_WAIT_S}s for next video)")
 
             # 消费 multimedia/log
             for ev in ml_events:
@@ -547,7 +561,28 @@ def run_test(args, params: "CourseParams | None" = None):
                     evidence["nextunit_title"] = title_now
                     log(f"[GHA] nextUnit (URL chapterId changed): {args.chapter_id} -> {cur_chap}")
 
+            # 章内多视频宽限期：一段视频 ended 后，给页面一点时间自动切到「同章节
+            # 下一个视频」。宽限期内绝不判完成/退出——否则像 4706 这种 8 视频章，
+            # 播完第 1 段就以 chapter_completed 退出，视频 2/8..8/8 根本不会被播。
+            # 窗口内若页面自动切换 src，上面 st>0 分支会 video_count++ 并清空
+            # next_video_deadline → 自然继续播下一段；只有窗口耗尽仍无新 src 时，
+            # 才说明「这是最后一段」，此时下面的完成判定才生效。
+            in_next_video_grace = (
+                next_video_deadline is not None and now < next_video_deadline
+            )
+
+            if in_next_video_grace:
+                if nextunit_seen:
+                    # 宽限内不处理「URL 已切下一章」判定，等下一段 src 或宽限结束。
+                    nextunit_seen = False
+                log(f"[GHA] awaiting next video (ended={ended_seen}, "
+                    f"deadline in {(next_video_deadline - now):.0f}s)")
+                page.wait_for_timeout(2000)
+                continue
+
             # 退出判定 / 完成语义状态机：见 next_unit_decision（纯函数）。
+            # 走到这里说明：要么根本没 ended，要么宽限期已过、没有切到下一段视频 →
+            # 当前就是最后一段，把它判完成（ended_seen=True）退出。
             nd = next_unit_decision(nextunit_seen, bool(passed_object_ids), max_ct,
                                     ended_seen=ended_seen,
                                     initial_duration=initial_duration)
@@ -568,16 +603,13 @@ def run_test(args, params: "CourseParams | None" = None):
                 # chapterId 变了、且未记录到 isPassed → 视为有效切换，退出
                 page.wait_for_timeout(5000)
                 break
-            # 修复：当视频已结束（ended_seen）且已播完大部分（>95%）且有 passed 记录时，
-            # 不再无限等待 nextunit，直接退出——这说明当前章节的所有视频任务点已完成
-            # 注意：使用 initial_duration 而非 summary["duration"]，因为后者可能已被新卡片重置
+            # 兼容边界：ended 且 95%+ 已知时长但有 passed → 退出（宽限已过，视为最后一段）
             if ended_seen and passed_object_ids and max_ct > 0 and initial_duration > 0:
                 if (max_ct / initial_duration) >= 0.95:
-                    log(f"Video ended at {max_ct:.0f}/{initial_duration:.0f} (95%+) with {len(passed_object_ids)} passed — exiting")
+                    log(f"Video ended at {max_ct:.0f}/{initial_duration:.0f} "
+                        f"(95%+) with {len(passed_object_ids)} passed — exiting")
                     break
-            if ended_seen and (now - ended_wall) > 30 and not nextunit_seen:
-                log("ended 30s no switch")
-                break
+
             page.wait_for_timeout(2000)
 
         summary["loop_seconds"] = time.time() - start
