@@ -587,6 +587,48 @@ def _apply_excluded(queue, exclude_chapters) -> list:
             if str(it.get("chapter_id") or "") not in exclude_chapters]
 
 
+def _fallback_chapter(course_url: str, course_key: str,
+                      exclude_chapters=None) -> Optional[str]:
+    """目录抓取为空/探测异常时的回退选章。
+
+    优先：URL 里的 chapterId —— 但仅当它**未被本轮处理**（否则会无限重放同一章）。
+    否则：回退到**已持久化的 registry 队列**，取第一个还没完成、也没被本轮
+    处理的视频章（保证 catalog 抓空时仍能推进到真正的新章，而不是死磕当前章）。
+
+    Args:
+        exclude_chapters: 本轮已处理章节名集合（去重）。
+    Returns:
+        选中的 chapter_id；无可推进章节则 None。
+    """
+    ex = {str(c) for c in (exclude_chapters or [])}
+    from resolvers.course_resolver import _parse_url_params
+    params = _parse_url_params(course_url)
+    url_cid = params.get("chapter_id")
+    if url_cid and url_cid not in ex:
+        return url_cid
+    # URL 章已在本轮处理过（或取不到）→ 从持久化 registry/队列找下一个真正 pending 的章
+    try:
+        from e6.task_registry import (
+            load_registry, done_chapter_ids_from_registry, reconcile_queue,
+        )
+        reg = load_registry(course_key)
+        if reg:
+            done = set(done_chapter_ids_from_registry(reg))
+            q = reconcile_queue(course_key, reg, done, points_map={})
+            for it in (q.items or []):
+                cid = str(it.get("chapter_id") or "")
+                if cid and cid not in ex and cid not in done:
+                    rec = reg.get(it.get("task_id", ""))
+                    if rec is not None and \
+                            (getattr(rec, "task_type", "video") or "video") == "video" \
+                            and rec.status in ("PENDING", "READY", "FAILED",
+                                              "DISCOVERED", "UNKNOWN"):
+                        return cid
+    except Exception as e:
+        print(f"[scheduler] TDVP: registry fallback failed: {e}", file=sys.stderr)
+    return None
+
+
 def _run_tdvp_probe(course_url: str, course_key: str,
                     run_id: str = "local",
                     exclude_chapters=None) -> Optional[str]:
@@ -640,11 +682,12 @@ def _run_tdvp_probe(course_url: str, course_key: str,
             from tvdp.tdvp import fetch_course_discovery
             chapters_raw = fetch_course_discovery(course_url)
             _combined_points = []
-        # 回退：目录拉不到 → 用 URL chapterId
+        # 回退：目录拉不到 → 用 URL/持久化 registry 选一个未处理章（遵守 exclude）
         if not chapters_raw:
-            print("[scheduler] TDVP: fetch returned empty, "
-                  "falling back to URL chapter_id", file=sys.stderr)
-            return params.get("chapter_id")
+            print("[scheduler] TDVP: fetch returned empty, falling back "
+                  f"(exclude={sorted(set(exclude_chapters or []))})", file=sys.stderr)
+            return _fallback_chapter(course_url, course_key,
+                                     exclude_chapters=exclude_chapters)
 
         # 1.5 服务器端 DOM 渲染状态 map
         dom_status = {}
@@ -844,12 +887,8 @@ def _run_tdvp_probe(course_url: str, course_key: str,
 
     except Exception as e:
         print(f"[scheduler] TDVP probe failed (non-fatal): {e}", file=sys.stderr)
-        try:
-            from resolvers.course_resolver import _parse_url_params
-            params = _parse_url_params(course_url)
-            return params.get("chapter_id")
-        except Exception:
-            return None
+        return _fallback_chapter(course_url, course_key,
+                                 exclude_chapters=exclude_chapters)
 
 
 

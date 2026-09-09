@@ -291,5 +291,50 @@ class TestRunSchedulerMultiChapter:
         assert len(sched._apply_excluded(q, None)) == 3
 
 
+class TestFallbackChapter:
+    """目录抓空 / 探测异常时，_fallback_chapter 必须遵守 exclude_chapters。"""
+
+    def test_url_chapter_returned_when_not_excluded(self, monkeypatch):
+        from scheduler import scheduler as sched
+        monkeypatch.setattr("resolvers.course_resolver._parse_url_params",
+                            lambda url: {"chapter_id": "1217304706"})
+        out = sched._fallback_chapter("http://x?chapterId=1217304706", "k", None)
+        assert out == "1217304706"
+
+    def test_url_chapter_excluded_falls_back_to_registry(self, monkeypatch):
+        from scheduler import scheduler as sched
+        monkeypatch.setattr("resolvers.course_resolver._parse_url_params",
+                            lambda url: {"chapter_id": "1217304706"})
+        # 一个可被 _fallback_chapter 当作真实 registry 记录的对象
+        class _Rec:
+            task_type = "video"
+            status = "DISCOVERED"
+            chapter_id = "1217304719"
+            consecutive_failures = 0
+            max_attempts = 3
+        monkeypatch.setattr("e6.task_registry.load_registry",
+                            lambda key: {"4719": _Rec()})
+        monkeypatch.setattr("e6.task_registry.done_chapter_ids_from_registry",
+                            lambda reg: set())
+        class _Q:
+            items = [{"task_id": "4719", "chapter_id": "1217304719",
+                      "priority": 0, "state": "READY", "course_key": "k"}]
+        monkeypatch.setattr("e6.task_registry.reconcile_queue",
+                            lambda *a, **k: _Q())
+        out = sched._fallback_chapter("http://x?chapterId=1217304706",
+                                      "k", {"1217304706"})
+        assert out == "1217304719"
+
+    def test_all_excluded_returns_none(self, monkeypatch):
+        from scheduler import scheduler as sched
+        monkeypatch.setattr("resolvers.course_resolver._parse_url_params",
+                            lambda url: {"chapter_id": "1217304706"})
+        monkeypatch.setattr("e6.task_registry.load_registry",
+                            lambda key: None)
+        out = sched._fallback_chapter("http://x?chapterId=1217304706",
+                                      "k", {"1217304706"})
+        assert out is None
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
