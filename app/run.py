@@ -165,6 +165,7 @@ def cmd_run(args) -> int:
         chapter_id=chapter,
         openc=course.get("openc"),
         hidetype=course.get("hidetype") or "0",
+        video_index=getattr(args, "video_index", 0) or 0,
     )
 
     # 加载或初始化课程状态
@@ -204,6 +205,7 @@ def cmd_run(args) -> int:
         clazz_id=course["clazz_id"],
         cpi=course["cpi"],
         enc=course["enc"],
+        video_index=getattr(args, "video_index", 0) or 0,
     )
 
     def retryable(verdict: str) -> bool:
@@ -269,9 +271,17 @@ def cmd_run(args) -> int:
             # 标记「本章第一个尚未完成的 video task」——即本次播放的那个视频点的任务，
             # 而不是 dict 迭代序里碰到的第一个（那可能是另一条仍待播放的视频任务）。
             cands = [t for t in reg.values() if getattr(t, "chapter_id", "") == chapter]
-            target = next((t for t in cands
-                           if getattr(t, "task_type", "video") == "video"
-                           and t.status != "COMPLETED"), None)
+            # Options B：若本次指定了章内视频段（video_index>0），就精确标记对应该段的
+            # video task（video1=<chapter>, videoN=<chapter>:videoN），而不是碰运气取第一个。
+            vi = int(getattr(args, "video_index", 0) or 0)
+            target = None
+            if vi >= 2:
+                want = f"{chapter}:video{vi}"
+                target = reg.get(want)
+            if target is None:
+                target = next((t for t in cands
+                               if getattr(t, "task_type", "video") == "video"
+                               and t.status != "COMPLETED"), None)
             if target is None:
                 target = next(iter(cands), None)
             run_id = os.environ.get("GITHUB_RUN_ID", "local")
@@ -370,6 +380,8 @@ def main():
     ap.add_argument("--output", default="./evidence/run_<ts>.json")
     ap.add_argument("--max-attempts", type=int, default=2,
                     help="视频 iframe/metadata 瞬态失败的最大尝试次数（默认 2）")
+    ap.add_argument("--video-index", type=int, default=0,
+                    help="章内视频段序号(1-based)。>1 时本次 run 推进到第 N 段视频并只把该段判完成(逐段视频 dispatch)；0=按自然连播。")
     ap.add_argument("--xvfb-display", default=os.environ.get("DISPLAY", ":99"))
     ap.add_argument("--trigger", default="manual",
                     choices=["manual", "schedule"],

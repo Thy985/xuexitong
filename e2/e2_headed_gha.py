@@ -440,6 +440,9 @@ def run_test(args, params: "CourseParams | None" = None):
         #   - 为绝对值 now+k → 正在宽限窗口内（ended 已见、尚未观察到下一段 src）
         next_video_deadline = None
         passed_object_ids = set()
+        # Options B：本次 run 目标章内视频段（1-based）。0 = 自然连播整章；
+        # N>0 = 推进到第 N 段视频并只把该段判完成（逐段 dispatch）。
+        target_vi = int(getattr(params, "video_index", 0) or 0)
         initial_duration = evidence.get("video_duration", 0) or 0  # 记录初始视频总时长
         summary = {
             "duration": evidence["video_duration"],
@@ -572,6 +575,13 @@ def run_test(args, params: "CourseParams | None" = None):
             )
 
             if in_next_video_grace:
+                # Options B：本次只做第 target_vi 段，且已推进到该段并结束 →
+                # 目标段完成，退出，不再等下一段。
+                if target_vi and video_count >= target_vi:
+                    log(f"[GHA] reached target video #{target_vi} "
+                        f"(video_count={video_count}, ended={ended_seen}) — done")
+                    chapter_completed = True
+                    break
                 if nextunit_seen:
                     # 宽限内不处理「URL 已切下一章」判定，等下一段 src 或宽限结束。
                     nextunit_seen = False

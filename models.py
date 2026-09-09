@@ -53,6 +53,9 @@ class CourseParams:
     chapter_id: str = ""
     openc: Optional[str] = None
     hidetype: Optional[str] = None
+    # 章内视频段序号（1-based）：若 >1，引擎需把播放推进到第 N 个视频点再正式播放
+    # 并只把该段判完成（Options B：每 run 只处理一个视频任务点）。0/None = 默认按自然连播。
+    video_index: int = 0
 
     def to_dict(self) -> dict:
         d = asdict(self)

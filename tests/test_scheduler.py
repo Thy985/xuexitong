@@ -225,7 +225,7 @@ class TestRunSchedulerMultiChapter:
             probe_calls["n"] += 1
             return ch
         monkeypatch.setattr(sched, "_run_tdvp_probe", fake_probe)
-        def fake_run_one(course_url, chapter_id, trigger, run_id, max_s=900):
+        def fake_run_one(course_url, chapter_id, task_id, trigger, run_id, video_index=0, max_s=900):
             return {"passed": True, "verdict": "PASS",
                     "runtime_evidence": {"verdict": "PASS"},
                     "failure_stage": None, "exit_code": 0,
@@ -265,7 +265,7 @@ class TestRunSchedulerMultiChapter:
             return ch
         from scheduler import scheduler as sched
         monkeypatch.setattr(sched, "_run_tdvp_probe", fake_probe)
-        def fake_run_one(course_url, chapter_id, trigger, run_id, max_s=900):
+        def fake_run_one(course_url, chapter_id, task_id, trigger, run_id, video_index=0, max_s=900):
             return {"passed": True, "verdict": "PASS",
                     "runtime_evidence": {}, "failure_stage": None,
                     "exit_code": 0, "timing_s": 1.0, "timed_out": False}
@@ -292,7 +292,7 @@ class TestRunSchedulerMultiChapter:
             return ch
         from scheduler import scheduler as sched
         monkeypatch.setattr(sched, "_run_tdvp_probe", fake_probe)
-        def fake_run_one(course_url, chapter_id, trigger, run_id, max_s=900):
+        def fake_run_one(course_url, chapter_id, task_id, trigger, run_id, video_index=0, max_s=900):
             if chapter_id == "1217304701":
                 # 4701 超时（watchdog 判死）
                 return {"passed": False, "verdict": "TIMEOUT",
@@ -328,6 +328,31 @@ class TestRunSchedulerMultiChapter:
         assert [i["task_id"] for i in filtered] == ["c"]      # 111 被剔除
         # 无排除时原样
         assert len(sched._apply_excluded(q, None)) == 3
+
+    def test_apply_excluded_per_task_keeps_next_video(self, tmp_state_dir):
+        """Options B：排除按「已完成 task_id」，不能把同章的下一个视频段一起排掉。
+
+        4706 是多视频章（task 有 <cid>、<cid>:video2、...）。跑完 <cid>(video1)后，
+        exclude set 里是 "4706"，但 _apply_excluded 必须保留 "4706:video2"。
+        """
+        from scheduler import scheduler as sched
+        items = [
+            {"task_id": "4706",       "chapter_id": "4706", "priority": 0, "state": "READY", "course_key": "k"},
+            {"task_id": "4706:video2", "chapter_id": "4706", "priority": 1, "state": "READY", "course_key": "k"},
+            {"task_id": "4706:video3", "chapter_id": "4706", "priority": 2, "state": "READY", "course_key": "k"},
+        ]
+        class _Q:
+            pass
+        q = _Q(); q.items = list(items)
+        # 排除整章"4706"→ 只有基视频被剔除，剩下的 video2/video3 保留
+        keep = sched._apply_excluded(q, {"4706"})
+        assert [i["task_id"] for i in keep] == ["4706:video2", "4706:video3"]
+
+    def test_split_video_target(self):
+        from scheduler import scheduler as sched
+        assert sched._split_video_target("4706") == ("4706", 1)
+        assert sched._split_video_target("4706:video3") == ("4706", 3)
+        assert sched._split_video_target("") == ("", 1)
 
 
 class TestFallbackChapter:

@@ -350,9 +350,9 @@ def _kill_proc_tree(pid: int) -> None:
             pass
 
 
-def _run_one_chapter(course_url: str, chapter_id: str,
-                     trigger: TriggerType, run_id: str,
-                     max_s: int = 900) -> dict:
+def _run_one_chapter(course_url: str, chapter_id: str, task_id: str = "",
+                     trigger: TriggerType = "manual", run_id: str = "",
+                     video_index: int = 0, max_s: int = 900) -> dict:
     """隔离执行单章学习（subprocess + wall-clock 超时），返回聚合结果 dict。
 
     设计动机（见事故 run 34311891898）：cmd_run → run_test 的 Playwright 播放
@@ -379,8 +379,8 @@ def _run_one_chapter(course_url: str, chapter_id: str,
     import json as json_mod
     import subprocess as sp
 
-    evidence_path = f"./evidence/chapter_{chapter_id}.json"
-    stdout_path = f"./evidence/chapter_{chapter_id}.scheduler.stdout.log"
+    evidence_path = f"./evidence/chapter_{task_id or chapter_id}.json"
+    stdout_path = f"./evidence/chapter_{task_id or chapter_id}.scheduler.stdout.log"
     try:
         Path(stdout_path).parent.mkdir(parents=True, exist_ok=True)
     except Exception:
@@ -394,6 +394,7 @@ def _run_one_chapter(course_url: str, chapter_id: str,
         "--output", evidence_path,
         "--xvfb-display", os.environ.get("DISPLAY", ":99"),
         "--max-attempts", "2",
+        "--video-index", str(int(video_index or 0)),
     ]
     t0 = time.time()
     exit_code = 1
@@ -559,9 +560,9 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
     runtime_evidence = None
 
     # 首次探测：无显式 chapter_id 时自动选下一个 pending 任务。
-    next_chapter = chapter_id or _run_tdvp_probe(course_url, identity_key,
-                                                 run_id=run_id)
-    if not next_chapter:
+    next_task = chapter_id or _run_tdvp_probe(course_url, identity_key,
+                                              run_id=run_id)
+    if not next_task:
         # 队列为空 → 没有可执行任务
         summary = get_scheduler_summary(identity_key, "NOOP", "No pending task")
         _write_summary(summary)
@@ -579,12 +580,15 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
             print(f"[scheduler] budget exceeded ({budget_s}s), "
                   f"stopping after {executed} chapters", flush=True)
             break
-        if not next_chapter:
+        if not next_task:
             break
 
-        chapters_attempted.append(next_chapter)
-        one = _run_one_chapter(course_url, next_chapter, trigger, run_id,
-                               max_s=chapter_max_s)
+        # Options B：把选中的 task（<cid> 或 <cid>:videoN）解析成 (chapter, video_index)
+        run_cid, run_vidx = _split_video_target(next_task)
+        chapters_attempted.append(next_task)
+        one = _run_one_chapter(course_url, run_cid, task_id=next_task,
+                               trigger=trigger, run_id=run_id,
+                               video_index=run_vidx, max_s=chapter_max_s)
         passed = one["passed"]
         verdict = one["verdict"]
         rt_ev = one["runtime_evidence"]
@@ -596,7 +600,7 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
         if fail_stage:
             last_failure_stage = fail_stage
         if timed_out:
-            chapters_timed_out.append(next_chapter)
+            chapters_timed_out.append(next_task)
 
         if passed:
             consecutive_fail_in_run = 0
@@ -604,9 +608,9 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
             # TIMEOUT：执行器未能可靠终止。记为失败（计入 chapters_failed，供
             # 聚合结果用），但不计入「连续失败熔断 budget」——避免单个 watchdog
             # 超时把整轮多章 run 熔断得"连下一章也不跑"，继续推进下一章。
-            chapters_failed.append(next_chapter)
+            chapters_failed.append(next_task)
         else:
-            chapters_failed.append(next_chapter)
+            chapters_failed.append(next_task)
             consecutive_fail_in_run += 1
             # 连续失败达到 budget → 熔断本轮，不再跑剩余章。
             if consecutive_fail_in_run >= failure_budget:
@@ -615,14 +619,14 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
                       "stopping multi-chapter loop", flush=True)
                 break
 
-        # 跑完一章后重新探测下一章（registry 已更新）。
-        # 排除本轮已处理过的章节，避免同一章重复重选。
+        # 跑完一段后重新探测下一任务（registry 已更新）。
+        # 按 task_id 排除本轮已处理过的——允许同一章的下一个视频段被接着选中。
         if executed < max_chapters:
-            next_chapter = _run_tdvp_probe(
+            next_task = _run_tdvp_probe(
                 course_url, identity_key, run_id=run_id,
                 exclude_chapters=set(chapters_attempted))
         else:
-            next_chapter = None
+            next_task = None
 
     timing = time.time() - t0
 
@@ -672,6 +676,23 @@ def _write_summary(summary: dict) -> None:
         pass
 
 
+def _split_video_target(task_or_cid) -> tuple[str, int]:
+    """把 task_id / 章节 id 拆成 (chapter_id, video_index)。
+
+    Options B 逐段视频 dispatch：task_id 形如 `<chapterId>`(=video1) 或
+    `<chapterId>:video<N>`。返回视频段序号用于 app.run --video-index。
+    非 video 后缀或非 string → index=1（按第一段处理）。
+    """
+    s = str(task_or_cid or "")
+    if s.endswith(":video") or ":video" not in s:
+        return s, 1
+    cid, _, part = s.partition(":video")
+    try:
+        return cid, max(1, int(part))
+    except (TypeError, ValueError):
+        return s.split(":")[0], 1
+
+
 def _apply_excluded(queue, exclude_chapters) -> list:
     """从 ExecutionQueue items 中剔除「本轮 run 已处理过」的章节，返回过滤后的 items 列表。
 
@@ -682,8 +703,20 @@ def _apply_excluded(queue, exclude_chapters) -> list:
     """
     if not exclude_chapters:
         return list(queue.items or [])
-    return [it for it in (queue.items or [])
-            if str(it.get("chapter_id") or "") not in exclude_chapters]
+    ex = {str(c) for c in (exclude_chapters or [])}
+    out = []
+    for it in (queue.items or []):
+        tid = str(it.get("task_id") or "")
+        cid = str(it.get("chapter_id") or "")
+        drop = tid in ex
+        if cid in ex:
+            # 排除整章：仅对 base 视频（task_id 形如 <cid>，无 :videoN 后缀）生效，
+            # 让同章的下一个视频段（<cid>:video2...）保留 → 逐段视频 dispatch。
+            if ":" not in tid:
+                drop = True
+        if not drop:
+            out.append(it)
+    return out
 
 
 def _fallback_chapter(course_url: str, course_key: str,
@@ -928,11 +961,11 @@ def _run_tdvp_probe(course_url: str, course_key: str,
             print(f"[scheduler] TDVP: next task {next_tid} not in registry", flush=True)
             return None
 
-        # 有 chapter_id → 直接返回
+        # 有 chapter_id → 直接返回（返回 task_id，调用方用 _split_video_target 取 index）
         if next_rec.chapter_id:
-            print(f"[scheduler] TDVP: next_chapter={next_rec.chapter_id} "
+            print(f"[scheduler] TDVP: next_task={next_tid} "
                   f"({next_rec.title})", flush=True)
-            return next_rec.chapter_id
+            return next_tid
 
         # 无 chapter_id → click_probe 获取
         max_probe_attempts = 10
@@ -951,9 +984,9 @@ def _run_tdvp_probe(course_url: str, course_key: str,
                     return None
                 rec2 = existing.get(candidates2[0]["task_id"])
                 if rec2 and rec2.chapter_id and rec2.chapter_id not in done_ids:
-                    print(f"[scheduler] TDVP: click-probe resolved -> {rec2.chapter_id}",
+                    print(f"[scheduler] TDVP: click-probe resolved -> {rec2.task_id}",
                           flush=True)
-                    return rec2.chapter_id
+                    return rec2.task_id
                 elif rec2 and rec2.chapter_id and rec2.chapter_id in done_ids:
                     next_tid = candidates2[0]["task_id"]
                     next_rec = existing.get(next_tid)
@@ -977,9 +1010,9 @@ def _run_tdvp_probe(course_url: str, course_key: str,
             second = candidates3[1]
             rec2 = existing.get(second["task_id"])
             if rec2 and rec2.chapter_id:
-                print(f"[scheduler] TDVP: fallback to 2nd task: {rec2.chapter_id}",
+                print(f"[scheduler] TDVP: fallback to 2nd task: {rec2.task_id}",
                       flush=True)
-                return rec2.chapter_id
+                return rec2.task_id
 
         print("[scheduler] TDVP: no executable task with chapter_id found", flush=True)
         return None
