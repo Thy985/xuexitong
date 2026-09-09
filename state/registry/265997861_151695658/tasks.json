@@ -54,8 +54,8 @@
     "task_type": "video",
     "status": "COMPLETED",
     "priority": 10,
-    "attempt_count": 4,
-    "attempts": 4,
+    "attempt_count": 6,
+    "attempts": 6,
     "consecutive_failures": 0,
     "max_attempts": 3,
     "lease": {
@@ -65,15 +65,15 @@
     },
     "verification": {
       "level": "SERVER_VERIFIED",
-      "verified_at_utc": "2026-09-09T00:22:53.982248+00:00",
-      "run_id": "34293378209",
+      "verified_at_utc": "2026-09-09T01:11:08.769534+00:00",
+      "run_id": "34296534140",
       "source_detail": "passed_object_ids=1"
     },
     "completion_evidence": {
       "type": "SERVER_VERIFIED",
       "source": "isPassed",
-      "run_id": "34293378209",
-      "observed_at_utc": "2026-09-09T00:22:53.982248+00:00",
+      "run_id": "34296534140",
+      "observed_at_utc": "2026-09-09T01:11:08.769534+00:00",
       "detail": "passed_object_ids=1",
       "passed_object_ids": [
         "f186805fa9e485a56f6ee730595fd606"
@@ -84,15 +84,15 @@
       "run_id": "",
       "detail": "",
       "consecutive_failures": 0,
-      "occurred_at_utc": "2026-09-09T00:22:53.982260+00:00"
+      "occurred_at_utc": "2026-09-09T01:11:08.769547+00:00"
     },
     "created_at_utc": "2026-09-04T07:36:36.732281+00:00",
-    "updated_at_utc": "2026-09-09T00:22:53.982248+00:00",
-    "last_run_id": "34293378209",
-    "last_run_at_utc": "2026-09-09T00:22:53.982248+00:00",
-    "last_started_at": "2026-09-09T00:22:53.982248+00:00",
-    "last_finished_at": "2026-09-09T00:22:53.982248+00:00",
-    "last_success_at_utc": "2026-09-09T00:22:53.982248+00:00",
+    "updated_at_utc": "2026-09-09T01:11:08.769534+00:00",
+    "last_run_id": "34296534140",
+    "last_run_at_utc": "2026-09-09T01:11:08.769534+00:00",
+    "last_started_at": "2026-09-09T01:11:08.769534+00:00",
+    "last_finished_at": "2026-09-09T01:11:08.769534+00:00",
+    "last_success_at_utc": "2026-09-09T01:11:08.769534+00:00",
     "last_failure_at_utc": "2026-09-06T14:20:12.524888+00:00",
     "_ch_idx": 10,
     "_cell_idx": 10
