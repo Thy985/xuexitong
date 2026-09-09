@@ -194,26 +194,36 @@ def get_sidebar(page, cid: str) -> dict | None:
 NextUnitDecision = str  # "none" | "exit_completed" | "wait_playback" | "exit_switch"
 
 
-def next_unit_decision(nextunit_seen: bool, has_passed: bool, max_ct: float) -> str:
-    """完成语义状态机：nextUnit（URL chapterId 变化）后的退出决策（纯函数，可测）。
+def next_unit_decision(nextunit_seen: bool, has_passed: bool, max_ct: float,
+                       ended_seen: bool = False,
+                       initial_duration: float = 0.0) -> str:
+    """完成语义状态机：视频点何时算「本轮真播完」并退出（纯函数，可测）。
 
-    关键证据链：
-      * `passed_object_ids` 只在真实等到服务端 `"isPassed":true` 响应体时才 add，
-        因此 `has_passed` 本身就是「当前任务点已服务端确认完成」的强证据。
-      * URL chapterId 变化 + 该强证据 = 服务器因当前章完成而自动跳到下一章。
+    真实推进的唯一完成凭据是 ended_seen（本轮视频真的播到了末尾）。基线
+    run 34293378209 就是这样：视频 0→751 真播了 ~503s 后 ended_seen=True，
+    走「Video ended at 751/751 (95%+) ... exiting」，服务端才登记任务点完成。
+    方案2 早期把完成门设成「nextUnit+passed+max_ct>0」，被历史进度污染导致
+    33s 就冒充完成（ended_seen=False → 服务端不认，红点永不消失）。
 
     决策：
-      - not nextunit_seen                        → "none"（无动作）
-      - nextunit + passed + max_ct > 0           → "exit_complete"（本章完成，退出）
-      - nextunit + passed + max_ct == 0          → "wait_playback"（从未起播/瞬时误跳，
-                                                    不判完成，继续等起播，防刚起播就误切）
-      - nextunit + not passed                    → "exit_switch"（视为有效切换，退出）
+      - ended_seen                                    → "exit_complete"（真·播完，退出）
+      - 未播完且无 nextUnit                            → "none"（继续播，等 ended）
+      - nextUnit 已变 + passed + 未播完                → "wait_playback"（等真正的
+            ended_seen；若永不出现由外层 watchDog 900s 兜底，绝不冒充完成）
+      - nextUnit 已变 + 未 passed                     → "exit_switch"（有效切换，退出）
     """
+    # 完成态 = 视频在本轮真播到了末尾(ended_seen)。这与真实推进基线
+    # run 34293378209（"Video ended at 751/751 (95%+) ... exiting"，且当时
+    # ended_seen=True）一致。不能用「max_ct>=95%已知时长」当完成凭据——因为
+    # 服务端已恢复的历史进度会让 max_ct 一早就是 ~duration，却没有本轮新播放，
+    # 33s 就冒充完成（run 34332366744），服务端收不到「这段重新播完」的证据。
+    if ended_seen:
+        return "exit_complete"
     if not nextunit_seen:
         return "none"
-    if has_passed and max_ct > 0:
-        return "exit_complete"
     if has_passed:
+        # URL 已切 + isPassed，但本段视频没真播完 → 不能判完成，等 ended_seen；
+        # 若 ended 永不出现，由外层 watchDog(900s) 兜底 TIMEOUT，而非冒充完成。
         return "wait_playback"
     return "exit_switch"
 
@@ -538,17 +548,21 @@ def run_test(args, params: "CourseParams | None" = None):
                     log(f"[GHA] nextUnit (URL chapterId changed): {args.chapter_id} -> {cur_chap}")
 
             # 退出判定 / 完成语义状态机：见 next_unit_decision（纯函数）。
-            nd = next_unit_decision(nextunit_seen, bool(passed_object_ids), max_ct)
+            nd = next_unit_decision(nextunit_seen, bool(passed_object_ids), max_ct,
+                                    ended_seen=ended_seen,
+                                    initial_duration=initial_duration)
             if nd == "exit_complete":
-                # 真实播放过 + 服务端已 isPassed + URL 已跳下一章 → 本章完成
-                log(f"[GHA] nextUnit after completion: {len(passed_object_ids)} "
-                    f"passed_object_id(s), max_ct={max_ct:.0f}s — chapter done, exiting")
+                # 视频真播到末尾(ended/95%) + isPassed → 本章完成（与真实推进基
+                # 线一致），服务端才会登记任务点完成。
+                log(f"[GHA] video really finished: ended={ended_seen} "
+                    f"max_ct={max_ct:.0f}/{('%.0f'%initial_duration) if initial_duration else '?'} "
+                    f"with {len(passed_object_ids)} passed — chapter done, exiting")
                 chapter_completed = True
                 break
             if nd == "wait_playback":
-                # 跳转已发生但本章从未起播：可能是冷启动的瞬时误跳 → 等起播
-                log(f"[GHA] chapterId changed but never started (max_ct=0, "
-                    f"{len(passed_object_ids)} passed) — waiting for playback")
+                # URL 已切 + passed 但本段视频未真播完 → 等 ended_seen
+                log(f"[GHA] nextUnit without ended (ended={ended_seen}, "
+                    f"{len(passed_object_ids)} passed) — waiting for actual finish")
                 nextunit_seen = False
             elif nd == "exit_switch":
                 # chapterId 变了、且未记录到 isPassed → 视为有效切换，退出
