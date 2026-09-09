@@ -217,7 +217,7 @@ class TestRunSchedulerMultiChapter:
         from scheduler import scheduler as sched
         # probe 依次返回两个章，第三轮返回 None（队列空）
         probe_calls = {"n": 0}
-        def fake_probe(course_url, course_key, run_id="local"):
+        def fake_probe(course_url, course_key, run_id="local", exclude_chapters=None):
             seq = ["1217304701", "1217304702"]
             if probe_calls["n"] >= len(seq):
                 return None
@@ -245,6 +245,50 @@ class TestRunSchedulerMultiChapter:
                                   run_id="100", max_chapters=5)
         assert out.decision == "NOOP"  # 无 pending 任务
         assert out.chapters_attempted == []
+
+    # 多章 re-probe 去重：确认循环把「已处理章节」传给 _run_tdvp_probe 的 exclude_chapters
+    def test_reprobe_receives_excluded_set(self, sample_identity, tmp_state_dir, monkeypatch):
+        initialize_course(sample_identity)
+        save_course_state(CourseState(course_identity=sample_identity,
+                                      status="ACTIVE"))
+        probe_log = []
+        calls = {"n": 0}
+        def fake_probe(course_url, course_key, run_id="local", exclude_chapters=None):
+            probe_log.append((course_key, run_id, set(exclude_chapters or [])))
+            seq = ["1217304701", "1217304702"]
+            if calls["n"] >= len(seq):
+                return None
+            ch = seq[calls["n"]]; calls["n"] += 1
+            return ch
+        from scheduler import scheduler as sched
+        monkeypatch.setattr(sched, "_run_tdvp_probe", fake_probe)
+        def fake_run_one(course_url, chapter_id, trigger, run_id):
+            return True, "PASS", {}, None
+        monkeypatch.setattr(sched, "_run_one_chapter", fake_run_one)
+        sched.run_scheduler(course_url="", trigger="manual",
+                            run_id="100", max_chapters=3)
+        # 第一次 probe: exclude 为空；第二次 probe: 排除已处理过的 {1217304701}
+        assert probe_log[0][2] == set()          # 首轮无排除
+        assert probe_log[1][2] == {"1217304701"}  # re-probe 排除首章
+        assert probe_log[-1][2] == {"1217304701", "1217304702"}
+
+    def test_apply_excluded_filters_same_chapter(self, tmp_state_dir):
+        from scheduler import scheduler as sched
+        # 展示队列 items 里有重复同章（本轮已处理）时应被剔除
+        items = [
+            {"task_id": "a", "chapter_id": "111", "priority": 0, "state": "READY", "course_key": "k"},
+            {"task_id": "b", "chapter_id": "111", "priority": 1, "state": "READY", "course_key": "k"},
+            {"task_id": "c", "chapter_id": "222", "priority": 2, "state": "READY", "course_key": "k"},
+        ]
+        # 构造 ExecutionQueue（借用 reconcile_queue 在不存在的课程上的空返回不可靠，
+        # 这里直接用一个最小的有 items 属性的容器）
+        class _Q:
+            pass
+        q = _Q(); q.items = list(items)
+        filtered = sched._apply_excluded(q, {"111"})
+        assert [i["task_id"] for i in filtered] == ["c"]      # 111 被剔除
+        # 无排除时原样
+        assert len(sched._apply_excluded(q, None)) == 3
 
 
 if __name__ == "__main__":

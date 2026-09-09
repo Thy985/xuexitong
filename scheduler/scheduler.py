@@ -519,8 +519,11 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
                 break
 
         # 跑完一章后重新探测下一章（registry 已更新）。
+        # 排除本轮已处理过的章节，避免同一章重复重选。
         if executed < max_chapters:
-            next_chapter = _run_tdvp_probe(course_url, identity_key, run_id=run_id)
+            next_chapter = _run_tdvp_probe(
+                course_url, identity_key, run_id=run_id,
+                exclude_chapters=set(chapters_attempted))
         else:
             next_chapter = None
 
@@ -570,13 +573,34 @@ def _write_summary(summary: dict) -> None:
         pass
 
 
+def _apply_excluded(queue, exclude_chapters) -> list:
+    """从 ExecutionQueue items 中剔除「本轮 run 已处理过」的章节，返回过滤后的 items 列表。
+
+    exclude_chapters: set[str] 的本轮已处理章节 id。用于多章循环中避免
+    「同一章在本轮内被重复 re-probe 重选」（如一门既含视频任务点、又含
+    非视频任务点导致服务端 job_remaining>0 的章）。
+    返回过滤后的 items；队列已空则返回空列表。
+    """
+    if not exclude_chapters:
+        return list(queue.items or [])
+    return [it for it in (queue.items or [])
+            if str(it.get("chapter_id") or "") not in exclude_chapters]
+
+
 def _run_tdvp_probe(course_url: str, course_key: str,
-                    run_id: str = "local") -> Optional[str]:
+                    run_id: str = "local",
+                    exclude_chapters=None) -> Optional[str]:
     """E6.1 TDVP Probe: Discovery → Reconcile Registry → Reconcile Queue → pick next task.
 
+    Args:
+        exclude_chapters: 可选 set[str]，本轮 run 已处理过的章节 id，
+            选择下一个任务时排除它们（多章 re-probe 去重）。
+
     Returns:
-        chapter_id string, or None if all chapters done.
+        chapter_id string, or None if all chapters done / all excluded.
     """
+    if exclude_chapters:
+        exclude_chapters = {str(c) for c in exclude_chapters}
     try:
         from tvdp.tdvp import fetch_course_discovery, build_tasks_from_discovery
         from tvdp.tdvp import live_verify_chapter
@@ -748,12 +772,14 @@ def _run_tdvp_probe(course_url: str, course_key: str,
                             print(f"[scheduler] TDVP: {head_cid} has no video, "
                                   f"dropped as run target", flush=True)
 
-        # 5. 选下一个任务
-        if not queue.items:
-            print("[scheduler] TDVP: queue empty - all chapters done", flush=True)
+        # 5. 选下一个任务（剔除本轮已处理过的章节，避免 re-probe 重复重选同一章）
+        candidates = _apply_excluded(queue, exclude_chapters)
+        if not candidates:
+            print("[scheduler] TDVP: queue empty (or all remaining chapters "
+                  "already handled this run)", flush=True)
             return None
 
-        next_item = queue.items[0]
+        next_item = candidates[0]
         next_tid = next_item.get("task_id", "")
         next_rec = existing.get(next_tid)
         if not next_rec:
@@ -778,21 +804,22 @@ def _run_tdvp_probe(course_url: str, course_key: str,
                 next_rec.chapter_id = resolved_cid
                 save_registry(course_key, existing)
                 queue2 = reconcile_queue(course_key, existing, done_ids, points_map=pts_map)
-                if not queue2.items:
+                candidates2 = _apply_excluded(queue2, exclude_chapters)
+                if not candidates2:
                     return None
-                rec2 = existing.get(queue2.items[0]["task_id"])
+                rec2 = existing.get(candidates2[0]["task_id"])
                 if rec2 and rec2.chapter_id and rec2.chapter_id not in done_ids:
                     print(f"[scheduler] TDVP: click-probe resolved -> {rec2.chapter_id}",
                           flush=True)
                     return rec2.chapter_id
                 elif rec2 and rec2.chapter_id and rec2.chapter_id in done_ids:
-                    next_tid = queue2.items[0]["task_id"]
+                    next_tid = candidates2[0]["task_id"]
                     next_rec = existing.get(next_tid)
                     if not next_rec or next_rec.chapter_id:
                         break
                     continue
                 else:
-                    next_tid = queue2.items[0]["task_id"]
+                    next_tid = candidates2[0]["task_id"]
                     next_rec = existing.get(next_tid)
                     if not next_rec or next_rec.chapter_id:
                         break
@@ -801,10 +828,11 @@ def _run_tdvp_probe(course_url: str, course_key: str,
                 print("[scheduler] TDVP: click-probe failed, trying fallback", flush=True)
                 break
 
-        # fallback: 取队列第二个任务
+        # fallback: 取候选队列第二个任务
         queue3 = reconcile_queue(course_key, existing, done_ids, points_map=pts_map)
-        if len(queue3.items) > 1:
-            second = queue3.items[1]
+        candidates3 = _apply_excluded(queue3, exclude_chapters)
+        if len(candidates3) > 1:
+            second = candidates3[1]
             rec2 = existing.get(second["task_id"])
             if rec2 and rec2.chapter_id:
                 print(f"[scheduler] TDVP: fallback to 2nd task: {rec2.chapter_id}",
