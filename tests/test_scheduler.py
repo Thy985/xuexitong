@@ -225,8 +225,11 @@ class TestRunSchedulerMultiChapter:
             probe_calls["n"] += 1
             return ch
         monkeypatch.setattr(sched, "_run_tdvp_probe", fake_probe)
-        def fake_run_one(course_url, chapter_id, trigger, run_id):
-            return True, "PASS", {"verdict": "PASS"}, None
+        def fake_run_one(course_url, chapter_id, trigger, run_id, max_s=900):
+            return {"passed": True, "verdict": "PASS",
+                    "runtime_evidence": {"verdict": "PASS"},
+                    "failure_stage": None, "exit_code": 0,
+                    "timing_s": 1.0, "timed_out": False}
         monkeypatch.setattr(sched, "_run_one_chapter", fake_run_one)
         out = sched.run_scheduler(course_url="", trigger="manual",
                                   run_id="100", max_chapters=2)
@@ -262,8 +265,10 @@ class TestRunSchedulerMultiChapter:
             return ch
         from scheduler import scheduler as sched
         monkeypatch.setattr(sched, "_run_tdvp_probe", fake_probe)
-        def fake_run_one(course_url, chapter_id, trigger, run_id):
-            return True, "PASS", {}, None
+        def fake_run_one(course_url, chapter_id, trigger, run_id, max_s=900):
+            return {"passed": True, "verdict": "PASS",
+                    "runtime_evidence": {}, "failure_stage": None,
+                    "exit_code": 0, "timing_s": 1.0, "timed_out": False}
         monkeypatch.setattr(sched, "_run_one_chapter", fake_run_one)
         sched.run_scheduler(course_url="", trigger="manual",
                             run_id="100", max_chapters=3)
@@ -271,6 +276,40 @@ class TestRunSchedulerMultiChapter:
         assert probe_log[0][2] == set()          # 首轮无排除
         assert probe_log[1][2] == {"1217304701"}  # re-probe 排除首章
         assert probe_log[-1][2] == {"1217304701", "1217304702"}
+
+    # TIMEOUT 语义：watchdog 超时的章应进 chapters_timed_out、计为失败，
+    # 但单章超时后循环仍可推进下一章（而不是整场卡死）。
+    def test_timeout_chapter_advances_queue(self, sample_identity, tmp_state_dir, monkeypatch):
+        initialize_course(sample_identity)
+        save_course_state(CourseState(course_identity=sample_identity,
+                                      status="ACTIVE"))
+        calls = {"n": 0}
+        def fake_probe(course_url, course_key, run_id="local", exclude_chapters=None):
+            seq = ["1217304701", "1217304702"]
+            if calls["n"] >= len(seq):
+                return None
+            ch = seq[calls["n"]]; calls["n"] += 1
+            return ch
+        from scheduler import scheduler as sched
+        monkeypatch.setattr(sched, "_run_tdvp_probe", fake_probe)
+        def fake_run_one(course_url, chapter_id, trigger, run_id, max_s=900):
+            if chapter_id == "1217304701":
+                # 4701 超时（watchdog 判死）
+                return {"passed": False, "verdict": "TIMEOUT",
+                        "runtime_evidence": {}, "failure_stage": "watchdog_timeout",
+                        "exit_code": 124, "timing_s": max_s, "timed_out": True}
+            return {"passed": True, "verdict": "PASS", "runtime_evidence": {},
+                    "failure_stage": None, "exit_code": 0, "timing_s": 1.0,
+                    "timed_out": False}
+        monkeypatch.setattr(sched, "_run_one_chapter", fake_run_one)
+        out = sched.run_scheduler(course_url="", trigger="manual",
+                                  run_id="100", max_chapters=2)
+        assert out.decision == "RUN"
+        assert out.chapters_timed_out == ["1217304701"]
+        assert out.chapters_failed == ["1217304701"]   # TIMEOUT 会计为失败
+        # 4702 成功 → 任一成功即 SUCCESS（部分推进）
+        assert out.result == "SUCCESS"
+        assert out.chapters_attempted == ["1217304701", "1217304702"]
 
     def test_apply_excluded_filters_same_chapter(self, tmp_state_dir):
         from scheduler import scheduler as sched

@@ -86,7 +86,8 @@ class ExecutionResult:
     timestamp_utc: str = ""
     evidence: Optional[dict] = None      # 底层 runtime evidence（不能丢，见 E6.1 §11）
     chapters_attempted: list = field(default_factory=list)   # 本轮尝试的章节 id
-    chapters_failed: list = field(default_factory=list)      # 本轮失败的章节 id
+    chapters_failed: list = field(default_factory=list)      # 本轮失败的章节 id（含 TIMEOUT）
+    chapters_timed_out: list = field(default_factory=list)   # 本轮超时(watchdog)的章节 id
 
     def __post_init__(self):
         if not self.timestamp_utc:
@@ -321,38 +322,113 @@ def generate_actions_summary(summary: dict) -> str:
 
 
 # 便捷函数供 run.py 调用
-def _run_one_chapter(course_url: str, chapter_id: str,
-                     trigger: TriggerType, run_id: str) -> tuple[bool, str, dict, str]:
-    """执行单章学习，返回 (passed, verdict, runtime_evidence, failure_stage)。
+def _kill_proc_tree(pid: int) -> None:
+    """尽力杀进程树（含 Playwright 派生的 Chromium/child）。
 
-    直接调用 app.cmd_run，共享同一进程上下文/日志，避免 subprocess 状态断线。
+    调用方须用 `start_new_session=True` 启动子进程，使其成为独立进程组组长，
+    这样 killpg(pid, ...) 能连同其所有子进程（browser/page）一并清理。
+    GHA runner 是 Linux：先 SIGTERM（graceful），随后 SIGKILL 兜底。
+    """
+    if not pid:
+        return
+    import signal as _signal
+    import time as _t
+    try:
+        os.killpg(pid, _signal.SIGTERM)
+        _t.sleep(1)
+        try:
+            os.killpg(pid, _signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+    except ProcessLookupError:
+        pass
+    except (AttributeError, OSError):
+        # 无 killpg 或组已消亡 → 直接 SIGKILL 该 pid
+        try:
+            os.kill(pid, 9)
+        except Exception:
+            pass
+
+
+def _run_one_chapter(course_url: str, chapter_id: str,
+                     trigger: TriggerType, run_id: str,
+                     max_s: int = 900) -> dict:
+    """隔离执行单章学习（subprocess + wall-clock 超时），返回聚合结果 dict。
+
+    设计动机（见事故 run 34311891898）：cmd_run → run_test 的 Playwright 播放
+    循环在「nextUnit 切换但已记录 passed_object_id」等状态下可能**永不退出**。
+    若在同一主线程内同步调用，外层 Python 循环即使有 budget 也拦不住一次
+    cmd_run 内部的永久阻塞（browser 还活着）。因此：
+
+      * 把每次 cmd_run 放进独立**子进程**（app.run --action run）。
+      * 用 subprocess.wait(timeout=max_s) 提供**墙钟硬上限**。
+      * 超时 → 杀进程树（不再可能泄漏 Chromium）→ 标记 TIMEOUT（区别于 FAIL）。
+
+    返回:
+      {
+        "passed": bool,
+        "verdict": str,            # PASS / FAIL / TIMEOUT
+        "runtime_evidence": dict,
+        "failure_stage": str | None,
+        "exit_code": int,          # 0 成功；非 0 失败/崩溃；124=本 watchdog 超时
+        "timing_s": float,
+        "timed_out": bool,
+      }
     """
     import time
-    import argparse
     import json as json_mod
-    from app import run as app_run
+    import subprocess as sp
 
-    evidence_path = "./evidence/result.json"
-    run_args = argparse.Namespace(
-        course_url=course_url,
-        chapter_id=chapter_id,
-        output=evidence_path,
-        xvfb_display=os.environ.get("DISPLAY", ":99"),
-        max_attempts=2,
-    )
-    t0 = time.time()
+    evidence_path = f"./evidence/chapter_{chapter_id}.json"
+    stdout_path = f"./evidence/chapter_{chapter_id}.scheduler.stdout.log"
     try:
-        exit_code = app_run.cmd_run(run_args)
-    except Exception as e:  # 函数级异常视为失败
-        print(f"[scheduler] run_scheduler: cmd_run raised: "
+        Path(stdout_path).parent.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
+
+    cmd = [
+        sys.executable, "-m", "app.run",
+        "--action", "run",
+        "--course-url", course_url,
+        "--chapter-id", chapter_id,
+        "--output", evidence_path,
+        "--xvfb-display", os.environ.get("DISPLAY", ":99"),
+        "--max-attempts", "2",
+    ]
+    t0 = time.time()
+    exit_code = 1
+    timed_out = False
+    stdout_fh = open(stdout_path, "w", encoding="utf-8", errors="replace")
+    try:
+        try:
+            proc = sp.Popen(cmd, stdout=stdout_fh, stderr=sp.STDOUT,
+                        start_new_session=True)  # 独立进程组 → killpg 可连 browser 一并清理
+            exit_code = proc.wait(timeout=max_s)
+        except sp.TimeoutExpired:
+            timed_out = True
+            print(f"[scheduler] chapter {chapter_id} exceeded {max_s}s "
+                  f"(watchdog), killing pid {proc.pid}", flush=True)
+            _kill_proc_tree(proc.pid)
+            try:
+                proc.wait(timeout=10)
+            except Exception:
+                pass
+            exit_code = 124  # watchdog 超时 exit（与 GNU timeout 一致）
+    except Exception as e:
+        print(f"[scheduler] chapter {chapter_id} subprocess error: "
               f"{type(e).__name__}: {e}", file=sys.stderr, flush=True)
         exit_code = 1
+    finally:
+        try:
+            stdout_fh.close()
+        except Exception:
+            pass
     timed = time.time() - t0
 
-    passed = exit_code == 0
-    verdict = "PASS" if passed else "FAIL"
+    passed = (not timed_out) and (exit_code == 0)
+    verdict = "TIMEOUT" if timed_out else ("PASS" if passed else "FAIL")
 
-    # 从 evidence 文件读取实际 verdict / failure_stage（保留底层 evidence，见 E6.1 §11）
+    # 读取运行生成的 evidence / failure_stage
     runtime_evidence = None
     failure_stage = None
     try:
@@ -360,21 +436,24 @@ def _run_one_chapter(course_url: str, chapter_id: str,
             with open(evidence_path) as f:
                 r = json_mod.load(f)
             res = r.get("result", {})
-            verdict = res.get("verdict", verdict)
-            passed = res.get("exit_code", 1) == 0
+            if res.get("verdict", ""):
+                verdict = res.get("verdict", verdict)
+            passed = res.get("exit_code", 1) == 0 if not timed_out else False
             runtime_evidence = r.get("evidence") or {}
             failure_stage = runtime_evidence.get("failure_stage") \
                 if isinstance(runtime_evidence, dict) else None
-            # E6.1：不再从「无视频/无 cards」推断 COMPLETED（详见 §1）。
-            # 无视频节点同样作为有记录的 failure 交给 postflight 的 mark_failed：
-            #   consecutive_failures+1 → 达阈值自动 BLOCKED，Queue 跳过。
-            # 它不会被永久卡在队列头部，也不会造成「看似成功」的假完成。
     except Exception:
         pass
 
     print(f"[scheduler] chapter {chapter_id}: verdict={verdict} "
-          f"timing_s={round(timed,1)} exit_code={exit_code}", flush=True)
-    return passed, verdict, runtime_evidence, failure_stage
+          f"timing_s={round(timed,1)} exit_code={exit_code} "
+          f"timed_out={timed_out}", flush=True)
+    return {
+        "passed": passed, "verdict": verdict,
+        "runtime_evidence": runtime_evidence,
+        "failure_stage": failure_stage, "exit_code": exit_code,
+        "timing_s": timed, "timed_out": timed_out,
+    }
 
 
 def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
@@ -404,6 +483,11 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
             "XUE_SCHEDULER_FAILURE_BUDGET", "1")))
     except Exception:
         failure_budget = 1
+    # 单章执行器（cmd_run 子进程）的 wall-clock 硬上限；超时按 TIMEOUT 处理并杀进程树。
+    try:
+        chapter_max_s = max(60, int(_os.environ.get("XUE_CHAPTER_MAX_S", "900")))
+    except Exception:
+        chapter_max_s = 900
 
     from resolvers.course_resolver import resolve_course, detect_course_change
     from state.course_state import load_active_course, load_course_state, activate_course
@@ -489,6 +573,7 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
 
     consecutive_fail_in_run = 0
     executed = 0
+    chapters_timed_out: list = []
     while executed < max_chapters:
         if time.time() - t0 > budget_s:
             print(f"[scheduler] budget exceeded ({budget_s}s), "
@@ -498,16 +583,28 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
             break
 
         chapters_attempted.append(next_chapter)
-        passed, verdict, rt_ev, fail_stage = _run_one_chapter(
-            course_url, next_chapter, trigger, run_id)
+        one = _run_one_chapter(course_url, next_chapter, trigger, run_id,
+                               max_s=chapter_max_s)
+        passed = one["passed"]
+        verdict = one["verdict"]
+        rt_ev = one["runtime_evidence"]
+        fail_stage = one["failure_stage"]
+        timed_out = one["timed_out"]
         executed += 1
         last_verdict = verdict
         runtime_evidence = runtime_evidence or rt_ev
         if fail_stage:
             last_failure_stage = fail_stage
+        if timed_out:
+            chapters_timed_out.append(next_chapter)
 
         if passed:
             consecutive_fail_in_run = 0
+        elif timed_out:
+            # TIMEOUT：执行器未能可靠终止。记为失败（计入 chapters_failed，供
+            # 聚合结果用），但不计入「连续失败熔断 budget」——避免单个 watchdog
+            # 超时把整轮多章 run 熔断得"连下一章也不跑"，继续推进下一章。
+            chapters_failed.append(next_chapter)
         else:
             chapters_failed.append(next_chapter)
             consecutive_fail_in_run += 1
@@ -546,6 +643,7 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
     # 汇总补充字段（供 CI / 摘要）
     exec_result.chapters_attempted = chapters_attempted
     exec_result.chapters_failed = chapters_failed
+    exec_result.chapters_timed_out = chapters_timed_out
 
     # 记录结果（aggregate 后 commit 一次）
     record_result(identity_key, exec_result)
@@ -557,6 +655,7 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
     summary["verdict"] = exec_result.verdict
     summary["chapters_attempted"] = chapters_attempted
     summary["chapters_failed"] = chapters_failed
+    summary["chapters_timed_out"] = chapters_timed_out
     _write_summary(summary)
 
     return exec_result

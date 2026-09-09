@@ -419,6 +419,7 @@ def cmd_scheduler(args) -> int:
         "error": result.error,
         "chapters_attempted": getattr(result, "chapters_attempted", []),
         "chapters_failed": getattr(result, "chapters_failed", []),
+        "chapters_timed_out": getattr(result, "chapters_timed_out", []),
         # E6.1 §11：不得用 scheduler 摘要覆盖底层 runtime evidence。
         # 这里把 runtime 的 failure_stage / checks / result 一并带出，供 CI 诊断。
         "evidence": {
