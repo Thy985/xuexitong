@@ -1,0 +1,72 @@
+# action_runs.jsonl - GitHub Actions 生产 run 逐条记录（只读考古）
+# schema: run_id, run_at_utc, action, trigger, episode(chapter/task), verdict, passed, timing_s, classification, evidence, advance, note
+# classification 对照: SUCCESS_PROGRESS/SUCCESS_NO_PROGRESS/SUCCESS_REGRESSION/SUCCESS_FALSE_POSITIVE/
+#   FAILURE_RECOVERABLE/FAILURE_STATE_MUTATION/CANCELLED_HANG/SCHEDULER_STALL/QUEUE_REPEAT/
+#   STATE_INCONSISTENCY/PROBE_FAILURE/E2_TERMINATION
+# 时间依据 state/courses/265997861_151695658.json history[] 尾部 50 条 + 下载 artifact result.json/tdvp_discovery.json
+# history 仅保留最近 50 条；全局真实计数 run_count=62 / success=47 / fail=15。
+
+{"run_id":"artifact-33873929856","note":"唯一确凿 FAILED artifact; state BLOCKED(26 runs), active=1217304707(从未完成), error null","run_at_utc":"2026-09-06","action":"scheduler","trigger_type":"manual","episode":"1217304707","result":"FAILED","verdict":"FAIL","timing_s":212.4,"classification":"FAILURE_RECOVERABLE","advance":false,"evidence":["E1","E4"],"prog_observed":0}
+{"run_id":"artifact-33837881087","note":"bundle e6_c7","run_at_utc":"2026-09-06","action":"scheduler","trigger_type":"manual","result":"SUCCESS","verdict":"PASS","timing_s":535.0,"classification":"SUCCESS_NO_PROGRESS","advance":false,"evidence":["E1","E4"],"prog_observed":0,"note":"探针55 个全部 UNKNOWN，episode 空，progress.completed=0"}
+{"run_id":"artifact-33836081390","note":"bundle e6_c7b/e6_check5","run_at_utc":"2026-09-06","action":"scheduler","trigger_type":"manual","result":"SUCCESS","verdict":"PASS","timing_s":536.8,"classification":"SUCCESS_NO_PROGRESS","advance":false,"evidence":["E1","E4"],"prog_observed":0}
+{"run_id":"artifact-33832905215","note":"bundle e6_check3","run_at_utc":"2026-09-06","action":"scheduler","trigger_type":"manual","result":"SUCCESS","verdict":"PASS","timing_s":101.6,"classification":"SUCCESS_NO_PROGRESS","advance":false,"evidence":["E1","E4"],"prog_observed":0}
+{"run_id":"artifact-33835144518","note":"bundle e6_check4/e6_check6","run_at_utc":"2026-09-06","action":"scheduler","trigger_type":"manual","result":"SUCCESS","verdict":"PASS","timing_s":539.8,"classification":"SUCCESS_NO_PROGRESS","advance":false,"evidence":["E1","E4"],"prog_observed":0}
+{"run_id":"artifact-33828620610","note":"bundle e6_out/latest_check","run_at_utc":"2026-09-06","action":"scheduler","trigger_type":"manual","result":"SUCCESS","verdict":"PASS","timing_s":539.4,"classification":"SUCCESS_NO_PROGRESS","advance":false,"evidence":["E1","E4"],"prog_observed":0}
+{"run_id":"artifact-33828620610_noop","note":"local scheduler_local_test","run_at_utc":"2026-09-06","action":"scheduler","trigger_type":"schedule","decision":"NOOP","result":"NOOP","verdict":"NOOP","timing_s":0,"classification":"SCHEDULER_STALL","advance":false,"note":"无 active course，schedule 触发 NOOP"}
+{"run_id":"artifact-run33955404261","run_at_utc":"2026-09-05T16:43:20Z","action":"run","trigger_type":"manual","episode":"1217304706","verdict":"PASS","passed":1,"timing_s":792.1,"classification":"SUCCESS_NO_PROGRESS","advance":false,"evidence":["E1","E2","E4"],"prog_observed":0,"note":"10/10 检查通过，但 completed=0、active null、registry 全 UNKNOWN"}
+{"run_id":"artifact-run33956959691","run_at_utc":"2026-09-05","action":"run","trigger_type":"manual","verdict":"PASS","timing_s":553.5,"classification":"SUCCESS_NO_PROGRESS","advance":false,"evidence":["E1","E4"],"prog_observed":0}
+{"run_id":"artifact-run33966450863","run_at_utc":"2026-09-05","action":"scheduler","trigger_type":"manual","verdict":"PASS","timing_s":1274.0,"classification":"SUCCESS_NO_PROGRESS","advance":false,"evidence":["E1","E4"],"prog_observed":0,"note":"多章长 run(1274s) 仍 completed=0"}
+{"run_id":"artifact-run33970738470","run_at_utc":"2026-09-05","action":"scheduler","trigger_type":"manual","verdict":"PASS","timing_s":1033.6,"classification":"SUCCESS_NO_PROGRESS","advance":false,"evidence":["E1","E4"],"prog_observed":0}
+{"run_id":"artifact-run33971988313","run_at_utc":"2026-09-05","action":"scheduler","trigger_type":"manual","verdict":"PASS","timing_s":355.9,"classification":"SUCCESS_NO_PROGRESS","advance":false,"evidence":["E1","E4"],"prog_observed":0}
+
+## ---- 以下 50 行为 state history 尾部（每行为一 run，cur epoch 仅占一行，无 artifact）----
+{"run_at_utc":"2026-09-04T15:45:54Z","episode":"1217304706","verdict":"PASS","passed":true,"timing_s":536.5,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-04T16:21:36Z","episode":"1217304704","verdict":"PASS","passed":true,"timing_s":531.5,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-04T16:40:23Z","episode":"1217304706","verdict":"PASS","passed":true,"timing_s":535.4,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-04T16:46:49Z","episode":"1217304706","verdict":"PASS","passed":true,"timing_s":123.6,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-04T17:14:02Z","episode":"1217304706","verdict":"PASS","passed":true,"timing_s":535.0,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-04T17:36:46Z","episode":"1217304706","verdict":"PASS","passed":true,"timing_s":532.6,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-04T17:53:06Z","episode":"1217304706","verdict":"PASS","passed":true,"timing_s":535.8,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-04T18:05:47Z","episode":"1217304706","verdict":"PASS","passed":true,"timing_s":536.5,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-04T18:20:35Z","episode":"1217304706","verdict":"PASS","passed":true,"timing_s":536.0,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-04T19:11:14Z","episode":"1217304703","verdict":"FAIL","passed":false,"timing_s":104.7,"classification":"FAILURE_RECOVERABLE","prog_observed":0,"meaning":"failed_historized"}
+{"run_at_utc":"2026-09-04T19:13:57Z","episode":"1217304703","verdict":"FAIL","passed":false,"timing_s":105.4,"classification":"FAILURE_RECOVERABLE","prog_observed":0,"meaning":"failed_historized"}
+{"run_at_utc":"2026-09-04T20:00:28Z","episode":"1217304701","verdict":"PASS","passed":true,"timing_s":501.1,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-04T20:34:27Z","episode":"1217304705","verdict":"PASS","passed":true,"timing_s":640.9,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-04T20:44:37Z","episode":"1217304707","verdict":"FAIL","passed":false,"timing_s":212.3,"classification":"FAILURE_RECOVERABLE","prog_observed":0,"meaning":"FAIL_historized"}
+{"run_at_utc":"2026-09-04T21:05:56Z","episode":"1217304708","verdict":"PASS","passed":true,"timing_s":469.4,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-04T21:18:48Z","episode":"1217304712","verdict":"PASS","passed":true,"timing_s":531.4,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-05T14:42:06Z","episode":"1217304714","verdict":"DEGRADED","passed":false,"timing_s":527.8,"classification":"FAILURE_STATE_MUTATION","prog_observed":0,"meaning":"degraded"}
+{"run_at_utc":"2026-09-05T14:53:16Z","episode":"1217304717","verdict":"PASS","passed":true,"timing_s":483.6,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-05T15:24:35Z","episode":"1217304714","verdict":"PASS","passed":true,"timing_s":173.8,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-05T15:55:48Z","episode":"1217304719","verdict":"FAIL","passed":false,"timing_s":210.1,"classification":"FAILURE_RECOVERABLE","prog_observed":0,"meaning":"FAIL_historized"}
+{"run_at_utc":"2026-09-05T16:43:20Z","episode":"1217304706","verdict":"PASS","passed":true,"timing_s":792.1,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-05T17:14:11Z","episode":"1217304721","verdict":"PASS","passed":true,"timing_s":553.3,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-05T18:33:53Z","episode":"1217304706","verdict":"PASS","passed":true,"timing_s":1349.5,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-05T20:09:51Z","episode":"1217304706","verdict":"PASS","passed":true,"timing_s":540.8,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-05T20:30:27Z","episode":"1217304706","verdict":"PASS","passed":true,"timing_s":532.6,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-05T20:57:12Z","episode":"1217304700","verdict":"PASS","passed":true,"timing_s":1273.9,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-05T21:25:02Z","episode":"1217304701","verdict":"PASS","passed":true,"timing_s":485.5,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-05T22:01:16Z","episode":"1217304706","verdict":"PASS","passed":true,"timing_s":531.7,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-05T22:23:09Z","episode":"1217304706","verdict":"PASS","passed":true,"timing_s":1033.4,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-05T22:36:57Z","episode":"1217304704","verdict":"PASS","passed":true,"timing_s":355.7,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-06T12:14:04Z","episode":"1217304705","verdict":"PASS","passed":true,"timing_s":627.8,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-06T12:25:59Z","episode":"1217304708","verdict":"PASS","passed":true,"timing_s":461.2,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-06T12:36:45Z","episode":"1217304712","verdict":"PASS","passed":true,"timing_s":523.7,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-06T13:55:13Z","episode":"1217304714","verdict":"PASS","passed":true,"timing_s":588.9,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-06T14:54:33Z","episode":"1217304717","verdict":"PASS","passed":true,"timing_s":709.7,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-06T20:18:30Z","episode":"1217304705","verdict":"FAIL","passed":false,"timing_s":201.0,"classification":"FAILURE_RECOVERABLE","prog_observed":0,"meaning":"FAIL_historized"}
+{"run_at_utc":"2026-09-06T20:44:34Z","episode":"1217304705","verdict":"DEGRADED","passed":false,"timing_s":315.8,"classification":"FAILURE_STATE_MUTATION","prog_observed":0,"meaning":"degraded"}
+{"run_at_utc":"2026-09-06T22:13:24Z","episode":"1217304706","verdict":"FAIL","passed":false,"timing_s":200.3,"classification":"FAILURE_RECOVERABLE","prog_observed":0,"meaning":"FAIL_historized"}
+{"run_at_utc":"2026-09-06T22:20:12Z","episode":"1217304706","verdict":"FAIL","passed":false,"timing_s":200.3,"classification":"FAILURE_RECOVERABLE","prog_observed":0,"meaning":"FAIL_historized"}
+{"run_at_utc":"2026-09-09T08:13:48Z","episode":"1217304706","verdict":"PASS","passed":true,"timing_s":527.3,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-09T08:22:53Z","episode":"1217304706","verdict":"PASS","passed":true,"timing_s":527.5,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-09T08:57:52Z","episode":"1217304706","verdict":"PASS","passed":true,"timing_s":527.4,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-09T09:11:08Z","episode":"1217304706","verdict":"PASS","passed":true,"timing_s":777.7,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-09T15:00:10Z","episode":"1217304719","verdict":"FAIL","passed":false,"timing_s":209.5,"classification":"FAILURE_RECOVERABLE","prog_observed":0,"meaning":"FAIL_historized"}
+{"run_at_utc":"2026-09-09T17:03:33Z","episode":"1217304706","verdict":"PASS","passed":true,"timing_s":55.7,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-09T17:07:17Z","episode":"1217304719","verdict":"FAIL","passed":false,"timing_s":208.3,"classification":"FAILURE_RECOVERABLE","prog_observed":0,"meaning":"FAIL_historized"}
+{"run_at_utc":"2026-09-09T17:51:54Z","episode":"1217304706","verdict":"PASS","passed":true,"timing_s":525.4,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-09T17:55:39Z","episode":"1217304719","verdict":"FAIL","passed":false,"timing_s":208.4,"classification":"FAILURE_RECOVERABLE","prog_observed":0,"meaning":"FAIL_historized"}
+{"run_at_utc":"2026-09-09T22:27:48Z","episode":"1217304706","verdict":"PASS","passed":true,"timing_s":530.6,"classification":"SUCCESS_NO_PROGRESS","prog_observed":0,"meaning":"no_progress"}
+{"run_at_utc":"2026-09-09T22:31:47Z","episode":"1217304721","verdict":"FAIL","passed":false,"timing_s":215.7,"classification":"FAILURE_RECOVERABLE","prog_observed":0,"meaning":"FAIL_historized"}

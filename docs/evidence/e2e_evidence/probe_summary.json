@@ -1,0 +1,17 @@
+{
+  "scope": "read-only login + catalog (no learning/state write)",
+  "created_at_utc": "20260910T030323Z",
+  "env_runner": "local-playwright",
+  "course_url": "https://mooc1.chaoxing.com/mooc-ans/mycourse/studentstudy?courseId=265997861&clazzId=151695658",
+  "creds_present": true,
+  "login": {
+    "ok": true,
+    "actually_authed": false,
+    "final_url": "https://mooc1.chaoxing.com/mooc-ans/mycourse/studentstudy?courseId=265997861&clazzId=151695658",
+    "used_password_login": true,
+    "dead_session_evidence": "user not logged in"
+  },
+  "catalog": {
+    "html_len": 766
+  }
+}

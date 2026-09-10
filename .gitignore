@@ -22,6 +22,12 @@ state/cookies.json
 # 本地环境变量/密钥（即使误存二进制也绝不入库）
 .env
 
+# —— docs/evidence：原始真站抓取含会话 token(enc) / 体积过大，不入库。
+# 其脱敏/裁剪后的最小快照放在 tests/fixtures/（见 fixtures/README）。
+docs/evidence/mooc2_evidence/page.html
+docs/evidence/mooc2_evidence/page.png
+docs/evidence/mooc2_evidence/probe.json
+
 # —— 派生缓存（可由 registry/实时状态随时重算，不入库）——
 # execution_queue: 由 reconcile_queue 从 registry 派生的队列，是 derived cache
 # chapter_points:  点级快照（可再生的缓存；真源是 server end / live DOM）
