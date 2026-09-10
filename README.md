@@ -14,6 +14,47 @@
 
 ---
 
+## 目录导航（先看这里）
+
+这份 README 讲"怎么用"（快速开始 / 调度 / 本地调试）。按用途去找，代码与文档分层如下。
+
+### 各目录是什么
+
+| 目录 / 文件 | 放什么 |
+|---|---|
+| `app/` | **产品/运行时**：`run.py`（入口）、`e2_headed_gha.py`（headed-browser 引擎）、`registry/`（task_registry / reconcile / click_probe）、`probe_catalog.py` |
+| `scheduler/` | **调度决策引擎**：`determine_action() / run_scheduler() / record_result()`；TDVP 探针内置于此 |
+| `tvdp/` | **探针与验证协议**：`PassiveProbe / ActiveProbe / EvidenceAggregator` |
+| `state/` | 持久化课程状态（active / courses / tdvp_tasks / registry），git 跨 Run 保留 |
+| `tests/` | `unit/` 纯函数、`integration/` 调度+registry 持久化、`regression/` 历史事故回归（含真实 DOM fixture） |
+| `scripts/` | 本地诊断/验证脚本：`mooc2_probe.py`、`capture_fixtures.py`、`diag_login.py`、`local-pw_probe.py`、`e3_ci_run.py` 等 |
+| `docs/` | 工程文档（见下"文档地图"） |
+| `config/`、`utils/` | 配置与工具 |
+
+### 文档地图（docs/）
+
+| docs/ 子目录 | 找什么 |
+|---|---|
+| `docs/architecture/` | 架构说明、状态机、scheduler/registry 设计 + **E3/E5/E6/E7 实验报告**（`E6_scheduler_report.md`、`E7_tdvp_report.md` 等） |
+| `docs/engineering-review/` | **工程审计**：`ACTION_HISTORY_AUDIT.md`（运行考古）、`HISTORICAL_BUG_CASES.md`（历史事故）、`REGRESSION_MATRIX.md`（回归矩阵）、`AGENT_RULE_CANDIDATES.md`、`CI_GATES_CANDIDATES.md` |
+| `docs/runbooks/` | **操作手册**：`LOCAL_PLAYWRIGHT_RUNBOOK.md`、`LOCAL_CAPABILITY_MATRIX.md`、`CAPTCHA_HANDLER_NOTES.md` |
+| `docs/evidence/` | **运行证据**：E2E 基线、真实登录/抓取快照（`mooc2_evidence/`）、`snapshot-archive/`（收敛的 CI 诊断抽样）、`E{5,6,7}_evidence.json`、历史 CI 日志 |
+
+### 常见任务 → 去哪个链接
+
+| 你想 | 看这里 |
+|---|---|
+| 为什么某 run 全绿但 `progress.completed=0`？ | `docs/engineering-review/ACTION_HISTORY_AUDIT.md`；`docs/architecture/PROGRESS_OUTCOME_DATAFLOW.md`（五层 outcome） |
+| 这套测试/回归体系怎么建、P0 项怎样分布 | `docs/engineering-review/REGRESSION_MATRIX.md`、`docs/engineering-review/TEST_SYSTEM_DESIGN.md` |
+| 本地起浏览器做真实 E2E 验证 | `docs/runbooks/LOCAL_PLAYWRIGHT_RUNBOOK.md`、`scripts/mooc2_probe.py` |
+| 超星滑块验证码怎么处理 | `docs/runbooks/CAPTCHA_HANDLER_NOTES.md`；代码 `utils/captcha_slider.py` |
+| 新子功能/状态机想放哪 | `docs/architecture/README.md`（按四大分类就近归档） |
+| 目录结构总览 | 下方 [`## 目录结构`](#目录结构) |
+
+> 目录树（完整文件清单）见下文 `## 目录结构`；更细的 docs 地图见 `docs/README.md`。
+
+---
+
 ## 快速开始（3 步）
 
 ### 1. Fork 本仓库
