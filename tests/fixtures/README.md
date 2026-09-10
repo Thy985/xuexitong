@@ -21,6 +21,15 @@ _raw_capture/  真实抓取原始物料（**不入库**, gitignore）；只保�
 | `dom/chaoxing_login_required.html` | **真实**「用户未登录」公开错误页 | 登录态判定回归（`_is_login_warning`）|
 | `state/registry_tasks_sample.json` | canonical `tasks.json` **内部 schema**（人工材料化 shape，非 DOM；非“真站快照”类）| reconcile/状态机/进度会计回归输入 |
 | `net/probe_mooc2_ok.json` | **真实** mooc2 只读 E2E probe 结果（`enc/t` 已红act）| 「正确入口真实登录可达」基线证据 |
+| `net/xhr_student_course_catalog.json` | **真实** mooc2 `studentcourse` 目录页 **XHR 快照**（GET 200 text/html，来自 `_raw_capture/xhr_00.json`，body 截到目录片段）| 网络层喂给目录解析的服务端语法锚 |
+
+## 关于 `multimedia_log` / `next_unit` 的 XHR 快照（诚实说明）
+项目想保留真实 XHR 快照，但 `multimedia/log` POST 与 `next_unit` 的**响应体**目前**没有**被快照：
+- 它们只在**真实播放视频（写行为）**时产生，会向超星登记一个观看/完成点，与「只读探测、不污染
+  服务器」的纪律冲突 —— 所以脚本只读抓目录与学习页，**不主动触发播放**。
+- 仓库里只有 E3 判定的**字符串**（`"multimedia_log": "PASS"`），没有可回放的 JSON body。
+- 因此本表只落地真实、无害、可回放的目录页 XHR；`multimedia_log`/`next_unit` 的 body **明确未捕获
+  （需写行为，按策略不办）**，不伪造。
 
 ## 重要：两种页面 DOM 不同（都真存在）
 - **学习页**（点击章节后进入，`mooc1...studentstudy?chapterId=..`）→ 目录树是

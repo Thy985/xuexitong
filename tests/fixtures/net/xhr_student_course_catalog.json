@@ -1,0 +1,19 @@
+{
+  "_note": "sanitized REAL XHR snapshot — extracted from _raw_capture/xhr_00.json (mooc2 studentcourse catalog HTML captured live by scripts/capture_fixtures.py); enc/t redacted; body trimmed to catalog excerpt; full body len in body_len_total.",
+  "method": "GET",
+  "url": "studentcourse?courseid=265997861&clazzid=151695658&cpi=506830460",
+  "status": 200,
+  "content_type": "text/html;charset=UTF-8",
+  "body_len_total": 158348,
+  "catalog_markers": {
+    "chapter_item": true,
+    "catalog_title": true,
+    "catalog_level": true,
+    "catalog_name": true,
+    "catalog_state": true,
+    "knowledgeJobCount": true,
+    "catalog_points_yi": true
+  },
+  "real_grammar": true,
+  "body_excerpt": "pe=\"text/css\" href=\"/mooc2-ans/css/courselist/q_chapter.css?v=2026-0828-1200\"/>\n\t<style>\n        *{outline: none}\n\t    .chapter_item{cursor: pointer}\n\t    .dataSearch{ width:200px; height:36px; border-radius:40px;position:relative;}\n        .dataSearch_input{ width:122px; height:34px;font-size:14px; color:#131B26;  border:1px solid #D5D7D9;background:none;position:absolute;left:0;top:0;z-index:2;padding:0 62px 0 14px; border-radius:40px;font-family:microsoft Yahei;}\n        .dataSearch_input:hover,.dataSearch:hover .dataSearch_input{border:1px solid #3a8bff;}\n        .dataSearch_input:focus{outline:none;border:1px solid #3a8bff;}\n        .dataSearch_bnt{ width:16px; height:16px;background:url(/mooc2-ans/images/knowledgepoints/ico-search.png) no-repeat 0 0; background-size:16px auto; border:0 none; cursor:pointer;position:absolute;right:14px;top:50%;margin-top:-8px;z-index:3;outline:none; overflow:hidden;}\n        .dataSearch_input:hover+.dataSearch_bnt,.dataSearch_input:focus+.dataSearch_bnt,.dataSearch:hover .dataSearch_bnt{background-position:0 -20px; background-size:16px auto;}\n        .dataSearch_dele{ width:14px; height:14px; background:url(/mooc2-ans/images/search_dele.png) no-repeat center/14px; display:block; position:absolute; right:40px; top:50%; margin-top:-7px; display:none; z-index:3;}\n        @supports (caret-color:#3a8bff) {\n            .dataSearch_input{\n                color:#131B26;\n                caret-color:#3a8bff;\n            }\n        }\n        .breadcrumb_a {\n           "
+}

@@ -88,3 +88,30 @@ class TestStateFixturesLoadable:
         assert data["login"]["ok"] is True
         assert data["render"]["title"] == "计算机网络-2025级"
         assert "***" in data["url"]  # 脱敏：enc 必须是红act
+
+
+class TestNetXhrFixtures:
+    """真实 net/ XHR 快照 —— 锚定「网络层喂给解析器的服务端目录页语法」。
+
+    真源：`_raw_capture/xhr_00.json`（scripts/capture_fixtures.py 实捕获的
+    mooc2 studentcourse 目录页 GET 200 响应，从 .gitignore 的 _raw_capture 抽取并脱敏）。
+    当真实服务端目录语法漂移（.catalog_* / 完成标记），本回归红。
+    """
+
+    def test_xhr_catalog_serves_real_grammar(self, fixture_path):
+        import json
+        data = json.loads(_read(fixture_path, "net/xhr_student_course_catalog.json"))
+        assert data["method"] == "GET"
+        assert data["status"] == 200
+        assert "html" in data["content_type"]
+        assert data["real_grammar"] is True
+        # catalog_markers 是对完整响应体（158KB）判定的真语法签名（excerpt 只是 CSS 预览片段）
+        for m in ("chapter_item", "catalog_title", "catalog_level",
+                  "catalog_name", "catalog_state", "knowledgeJobCount",
+                  "catalog_points_yi"):
+            assert data["catalog_markers"].get(m) is True, f"net 快照缺少目录语法 {m}"
+
+    def test_xhr_fixture_is_sanitized(self, fixture_path):
+        s = _read(fixture_path, "net/xhr_student_course_catalog.json").lower()
+        for secret in ("enc=", "147258369", "18605440", "utEnc", "setlog"):
+            assert secret not in s
