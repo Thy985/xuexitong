@@ -1,19 +1,19 @@
 {
   "_note": "real mooc2 E2E capability-audit observations (脱敏：enc/t/cookie 打码). Compiled by scripts/local_e2e_audit.py.",
-  "started_at_utc": "2026-09-10T15:01:54.984890+00:00",
-  "ended_at_utc": "2026-09-10T15:02:05.033008+00:00",
-  "status": "COMPLETED_OBSERVATION",
+  "started_at_utc": "2026-09-10T23:04:36.606404+00:00",
+  "ended_at_utc": "2026-09-10T23:04:54.625533+00:00",
+  "status": "LONG_PLAY_OBSERVATION",
   "steps": [
     {
       "step": "browser-start",
-      "t": "2026-09-10T15:01:56.130560+00:00",
+      "t": "2026-09-10T23:04:38.028629+00:00",
       "headless": true,
-      "version": "151.0.7922.34",
-      "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.7922.34 Safari/537.36"
+      "version": "145.0.7632.6",
+      "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.7632.6 Safari/537.36"
     },
     {
       "step": "entry",
-      "t": "2026-09-10T15:01:56.137674+00:00",
+      "t": "2026-09-10T23:04:38.032863+00:00",
       "url": "https://mooc1.chaoxing.com/mycourse/studentstudy?chapterId=1217304705=***&courseId=265997861=***&clazzid=151695658=***&cpi=506830460=***&enc=***&mooc2=1",
       "chapter": "1217304705",
       "course": "265997861",
@@ -21,7 +21,7 @@
     },
     {
       "step": "login",
-      "t": "2026-09-10T15:02:00.365690+00:00",
+      "t": "2026-09-10T23:04:42.149887+00:00",
       "ok": true,
       "title": "学生学习页面",
       "on_login_page": false,
@@ -29,7 +29,7 @@
     },
     {
       "step": "course-parse",
-      "t": "2026-09-10T15:02:00.418339+00:00",
+      "t": "2026-09-10T23:04:42.188286+00:00",
       "title": "学生学习页面",
       "catalog_anchor_count": 80,
       "is_mooc2": false,
@@ -37,46 +37,74 @@
     },
     {
       "step": "catalog-discovery",
-      "t": "2026-09-10T15:02:00.424293+00:00",
+      "t": "2026-09-10T23:04:42.197395+00:00",
       "chapter_nodes": 79
     },
     {
       "step": "video-discovery",
-      "t": "2026-09-10T15:02:00.662391+00:00",
+      "t": "2026-09-10T23:04:42.362043+00:00",
       "video": {
         "src_start": "s://cdn/***.mp4",
         "duration": null
       }
     },
     {
-      "step": "playback",
-      "t": "2026-09-10T15:02:04.906787+00:00",
-      "ml_log_200_seen": true,
-      "ml_log_count": 1,
-      "ml_log_urls": [
-        "https://mooc1.chaoxing.com/mooc-ans/multimedia/log/a/506830460/7e8e0419fd1598a3436328b4941e17c8?claz"
+      "step": "long-play",
+      "t": "2026-09-10T23:04:54.497449+00:00",
+      "max_seconds": 220.0,
+      "elapsed": 12.1,
+      "play_trigger": {
+        "ok": true,
+        "currentTime": 0,
+        "duration": null,
+        "paused": false,
+        "ended": false,
+        "src": "s://cdn/***.mp4"
+      },
+      "ml_log_total": 1,
+      "isPassed_seen_true": true,
+      "is_passed_at_sec": 12.1,
+      "is_passed_body_excerpt": "{\"isPassed\":true,\"videoTimeLimit\":false,\"hasJobLimit\":false}",
+      "currentTime_increased": true,
+      "max_currentTime": 11.692343,
+      "first_last_currentTime": [
+        0,
+        11.692343
       ],
-      "currentTime_samples": [
+      "ml_logs": [
         {
-          "t_ms": 191,
-          "currentTime": 0
-        },
-        {
-          "t_ms": 1210,
-          "currentTime": 0
-        },
-        {
-          "t_ms": 2224,
-          "currentTime": 0
-        },
-        {
-          "t_ms": 3239,
-          "currentTime": 0
+          "t_ms": 6050,
+          "status": 200,
+          "url": "https://mooc1.chaoxing.com/mooc-ans/multimedia/log/a/506830460/7e8e0419fd1598a3436328b4941e17c8?clazzId=151695658=***&playingTime=",
+          "body_contains_isPassed_true": true
         }
       ],
-      "currentTime_increased": false,
-      "isPassed": null,
-      "bounded_seconds": 25
+      "samples": [
+        {
+          "t_ms": 45,
+          "currentTime": 0,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": null
+        },
+        {
+          "t_ms": 6129,
+          "currentTime": 5.612083,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 906
+        },
+        {
+          "t_ms": 12135,
+          "currentTime": 11.692343,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 906
+        }
+      ]
     }
   ]
 }

@@ -134,6 +134,107 @@ def _read_is_passed(page):
     return None
 
 
+def _trigger_real_play(page) -> dict:
+    """用真实 engine 的 get_video_state 定位 cards→video，并真实调用 video.play()（非 muted）。
+
+    返回 {ok, found, reason, currentTime, duration, paused, src(redacted), err}。
+    """
+    try:
+        res = page.evaluate("""() => {
+          const cards = Array.from(document.querySelectorAll('iframe'))
+            .find(f => /knowledge\\/cards/.test(f.src||''));
+          if(!cards) return {ok:false, reason:'no_cards_frame'};
+          let doc = cards.contentDocument;
+          if(!doc) return {ok:false, reason:'no_cards_doc'};
+          let v = doc.querySelector('video#video_html5_api, video[id*="video_html5"], video');
+          if(!v){
+            const nf=Array.from(doc.querySelectorAll('iframe')).find(f=>/video|ans-insertvideo/.test(f.src||''));
+            if(nf && nf.contentDocument && nf.contentDocument.querySelector('video'))
+                v = nf.contentDocument.querySelector('video');
+          }
+          if(!v) return {ok:false, reason:'no_video_in_cards'};
+          v.muted = false; v.volume = 1.0;
+          let pr = null;
+          try { pr = v.play(); if (pr && pr.then) pr.catch(()=>{}); } catch(e){}
+          return {ok:true, currentTime: v.currentTime, duration: (isFinite(v.duration)&&v.duration>0)?v.duration:null,
+                  paused: v.paused, ended: v.ended,
+                  src:(v.currentSrc||v.src||'').slice(0,140)};
+        }""")
+    except Exception as e:
+        return {"ok": False, "err": str(e)[:160]}
+    if not isinstance(res, dict):
+        return {"ok": False, "reason": "no result"}
+    if res.get("src"):
+        res["src"] = redact(res["src"])
+    return res
+
+
+def observe_long_play(page, max_s: int = 150, poll_s: int = 6) -> dict:
+    """真实长播放观察：get_video_state 定位并真实 play（非 muted）→ 轮询 currentTime 增长
+    → 记录 multimedia/log 响应（含响应体是否 '"isPassed":true'，即 P0-04 单一真源）。
+
+    只观察不伪造：currentTime 前进 / isPassed=true 出现，都如实记录；超时未到 isPassed 则诚实 PARTIAL。
+    """
+    from app.e2_headed_gha import get_video_state
+
+    ml_logs = []
+    is_passed_seen = False
+    is_passed_body = None
+    is_passed_at = None
+    started = time.time()
+
+    def _on_resp(r):
+        nonlocal is_passed_seen, is_passed_body, is_passed_at
+        if "/multimedia/log" not in r.url:
+            return
+        rec = {"t_ms": int((time.time() - started) * 1000), "status": r.status,
+               "url": redact(r.url)[:130]}
+        body = ""
+        try:
+            body = r.text() or ""
+        except Exception:
+            body = ""
+        rec["body_contains_isPassed_true"] = '"isPassed":true' in body
+        if '"isPassed":true' in body and not is_passed_seen:
+            is_passed_seen = True
+            is_passed_body = body[:240]
+            is_passed_at = time.time()
+        ml_logs.append(rec)
+
+    page.on("response", _on_resp)
+    play = _trigger_real_play(page)
+    samples = []
+    ts = []
+    max_ct = 0.0
+    end_deadline = started + max_s
+    while time.time() < end_deadline:
+        st = get_video_state(page)
+        ct = st.get("currentTime") if st.get("found") else None
+        if isinstance(ct, (int, float)):
+            ts.append(ct)
+            max_ct = max(max_ct, ct)
+        samples.append({"t_ms": int((time.time() - started) * 1000),
+                        "currentTime": ct, "found": st.get("found"),
+                        "paused": st.get("paused"), "ended": st.get("ended"),
+                        "duration": st.get("duration")})
+        if is_passed_seen and len(ml_logs) >= 1:
+            break
+        time.sleep(poll_s)
+    elapsed = time.time() - started
+    real = [c for c in ts if isinstance(c, (int, float))]
+    grew = bool(real and len(real) >= 2 and real[-1] > real[0] + 1.0)
+    return {
+        "max_seconds": max_s, "elapsed": round(elapsed, 1),
+        "play_trigger": play, "ml_log_total": len(ml_logs),
+        "isPassed_seen_true": is_passed_seen,
+        "is_passed_at_sec": round(is_passed_at - started, 1) if is_passed_at else None,
+        "is_passed_body_excerpt": is_passed_body,
+        "currentTime_increased": bool(grew), "max_currentTime": max_ct,
+        "first_last_currentTime": (real[0], real[-1]) if real else None,
+        "ml_logs": ml_logs, "samples": samples,
+    }
+
+
 def main() -> int:
     load_env(ROOT / ".env")
     for var in ("CX_USER", "CX_PASS"):
@@ -224,11 +325,26 @@ def main() -> int:
                 log("video-discovery-err", err=str(e)[:150])
             log("video-discovery", video=discovered_video)
 
-            # --- 真实播放观察（有界：最多 ~25s），记录 multimedia/log 是否上屏 + isPassed ---
-            playback = _observe_playback(page, max_s=25)
-            log("playback", **playback)
+            # --- 播放观察：默认短（≤25s）；--long 触发真实长播放到 isPassed ---
+            argv = [a for a in sys.argv[1:] if a != "--long"]
+            long_mode = "--long" in sys.argv
+            max_s = 150.0
+            for i, a in enumerate(argv):
+                if a == "--max-s" and i + 1 < len(argv):
+                    try:
+                        max_s = float(argv[i + 1])
+                    except ValueError:
+                        pass
+            if long_mode:
+                play_obs = observe_long_play(page, max_s=max_s)
+                log("long-play", **play_obs)
+                status = "LONG_PLAY_OBSERVATION"
+            else:
+                play_obs = _observe_playback(page, max_s=int(min(max_s, 25)))
+                log("playback", **play_obs)
+                status = "COMPLETED_OBSERVATION"
             browser.close()
-            write_audit(started=started, status="COMPLETED_OBSERVATION", steps=step)
+            write_audit(started=started, status=status, steps=step)
             return 0
     except Exception as e:
         # 罕见 harness 异常：不崩溃，诚实记 HARNESS_ERROR
