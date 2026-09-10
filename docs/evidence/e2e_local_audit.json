@@ -1,0 +1,82 @@
+{
+  "_note": "real mooc2 E2E capability-audit observations (脱敏：enc/t/cookie 打码). Compiled by scripts/local_e2e_audit.py.",
+  "started_at_utc": "2026-09-10T15:01:54.984890+00:00",
+  "ended_at_utc": "2026-09-10T15:02:05.033008+00:00",
+  "status": "COMPLETED_OBSERVATION",
+  "steps": [
+    {
+      "step": "browser-start",
+      "t": "2026-09-10T15:01:56.130560+00:00",
+      "headless": true,
+      "version": "151.0.7922.34",
+      "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.7922.34 Safari/537.36"
+    },
+    {
+      "step": "entry",
+      "t": "2026-09-10T15:01:56.137674+00:00",
+      "url": "https://mooc1.chaoxing.com/mycourse/studentstudy?chapterId=1217304705=***&courseId=265997861=***&clazzid=151695658=***&cpi=506830460=***&enc=***&mooc2=1",
+      "chapter": "1217304705",
+      "course": "265997861",
+      "clazz": "151695658"
+    },
+    {
+      "step": "login",
+      "t": "2026-09-10T15:02:00.365690+00:00",
+      "ok": true,
+      "title": "学生学习页面",
+      "on_login_page": false,
+      "url": "https://mooc1.chaoxing.com/mycourse/studentstudy?chapterId=1217304705=***&courseId=2659978"
+    },
+    {
+      "step": "course-parse",
+      "t": "2026-09-10T15:02:00.418339+00:00",
+      "title": "学生学习页面",
+      "catalog_anchor_count": 80,
+      "is_mooc2": false,
+      "url_page": "https://mooc1.chaoxing.com/mycourse/studentstudy?chapterId=1"
+    },
+    {
+      "step": "catalog-discovery",
+      "t": "2026-09-10T15:02:00.424293+00:00",
+      "chapter_nodes": 79
+    },
+    {
+      "step": "video-discovery",
+      "t": "2026-09-10T15:02:00.662391+00:00",
+      "video": {
+        "src_start": "s://cdn/***.mp4",
+        "duration": null
+      }
+    },
+    {
+      "step": "playback",
+      "t": "2026-09-10T15:02:04.906787+00:00",
+      "ml_log_200_seen": true,
+      "ml_log_count": 1,
+      "ml_log_urls": [
+        "https://mooc1.chaoxing.com/mooc-ans/multimedia/log/a/506830460/7e8e0419fd1598a3436328b4941e17c8?claz"
+      ],
+      "currentTime_samples": [
+        {
+          "t_ms": 191,
+          "currentTime": 0
+        },
+        {
+          "t_ms": 1210,
+          "currentTime": 0
+        },
+        {
+          "t_ms": 2224,
+          "currentTime": 0
+        },
+        {
+          "t_ms": 3239,
+          "currentTime": 0
+        }
+      ],
+      "currentTime_increased": false,
+      "isPassed": null,
+      "bounded_seconds": 25
+    }
+  ]
+}
