@@ -36,9 +36,9 @@ Windows 桌面直接 `headless=False`（需要可视桌面）；Linux/Runner 用
 ```bash
 Xvfb :99 -screen 0 1440x900x24 -ac &
 export DISPLAY=:99
-python e2/e2_headed_gha.py --chapter-id 1217304705 --output ./evidence_e2.json --xvfb-display :99
+python app/e2_headed_gha.py --chapter-id 1217304705 --output ./evidence_e2.json --xvfb-display :99
 ```
-> > `e2/e2_headed_gha.py` 会做**真实播放**并注册点（E2 实验目的），**不是只读**。仅当你明确要做完整 E2E 时才跑。
+> > `app/e2_headed_gha.py` 会做**真实播放**并注册点（E2 实验目的），**不是只读**。仅当你明确要做完整 E2E 时才跑。（该引擎从 `e2/e2_headed_gha.py` 迁至 `app/e2_headed_gha.py`）
 
 ### 离线回归 vs 浏览器/真站 分工
 - **离线 CI**（`.github/workflows/test.yml`，push/PR 自动跑 + 本地 `python -m pytest tests/`）：

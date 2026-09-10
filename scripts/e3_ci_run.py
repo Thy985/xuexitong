@@ -26,8 +26,8 @@ _E2_DIR = _REPO / "e2"
 if str(_E2_DIR) not in sys.path:
     sys.path.insert(0, str(_E2_DIR))
 
-from e2_headed_gha import run_test as e2_run_test  # noqa: E402
-from e2_headed_gha import _write as e2_write        # noqa: E402
+from app.e2_headed_gha import run_test as e2_run_test  # noqa: E402
+from app.e2_headed_gha import _write as e2_write        # noqa: E402
 
 # Failure Taxonomy: E2 verification_10 key -> best-fit E3 failure stage
 # (keys must match exactly what e2_headed_gha.py writes)

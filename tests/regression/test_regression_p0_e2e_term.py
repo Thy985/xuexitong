@@ -18,7 +18,7 @@ Expected {body} → has_is_passed_marker(body)：
 
 import pytest
 
-from e2.e2_headed_gha import next_unit_decision, has_is_passed_marker
+from app.e2_headed_gha import next_unit_decision, has_is_passed_marker
 
 
 class TestP02MainLoopTerminationModel:

@@ -33,7 +33,7 @@ def click_probe_chapter_id(course_url: str, chapter_index: int, cell_index: int)
         from models import CourseParams
 
         sys.path.insert(0, str(Path(__file__).parent.parent / "e2"))
-        import e2_headed_gha as E
+        from app import e2_headed_gha as E
 
         from playwright.sync_api import sync_playwright
         display = os.environ.get("DISPLAY", ":99")

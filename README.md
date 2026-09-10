@@ -158,8 +158,15 @@ error:           null
 
 ```
 xuexitong/
-├── app/                      # MVP 产品层
+├── app/                      # MVP 产品层/运行时
+│   ├── __init__.py
 │   ├── run.py                #    入口：initialize/run/scheduler/switch/tdvp/probe
+│   ├── e2_headed_gha.py      #    E2 headed-browser 引擎（10 项闭合验证，参数化）
+│   ├── registry/             #    任务注册表 / reconcile / click-probe
+│   │   ├── __init__.py
+│   │   ├── task_registry.py  #    TaskRecord, save/load, done_chapter_ids, reconcile_queue, points
+│   │   ├── reconcile.py      #    reconcile_registry, stale_completed_by_catalog, pick_conflict
+│   │   └── click_probe.py    #    click_probe_chapter_id
 │   └── requirements.txt
 ├── scheduler/                # E6: 调度决策引擎
 │   ├── __init__.py
@@ -173,15 +180,7 @@ xuexitong/
 │   ├── tdvp_tasks.json       #    TDVP 任务注册表（章节→任务状态）
 │   └── courses/              #    每门课程独立状态文件
 │       └── <course_id>_<clazz_id>.json
-├── e2/                       # 内部验证引擎（E-series 模式，保留）
-│   └── e2_headed_gha.py      # 参数化 10 项闭合验证
-├── e3/                       # 内部可靠性实验（保留）
-│   ├── e3_ci_run.py
-│   └── E3_Final_Report.md
-├── e6/                       # E6 Evidence Pack
-│   ├── E6_scheduler_report.md
-│   └── evidence_e6.json
-├── e7/                       # E7 Evidence Pack
+├── e7/                       # E7 Evidence Pack（历史报告/证据）
 │   ├── E7_tdvp_report.md
 │   └── evidence_e7.json
 ├── tests/

@@ -260,7 +260,7 @@ class TestE_Persistence:
 class TestRegression:
     def test_resolve_does_not_break_existing_parse(self):
         """解析逻辑应与现有 parse_course_url 兼容。"""
-        from e2_headed_gha import parse_course_url
+        from app.e2_headed_gha import parse_course_url
         old = parse_course_url(COURSE_A_URL)
         new = resolve_course(COURSE_A_URL)
         assert new.is_ok()

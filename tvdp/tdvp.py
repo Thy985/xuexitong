@@ -359,7 +359,7 @@ def fetch_course_discovery(course_url: str, cx_user: Optional[str] = None,
         chapter_id = params.get("chapter_id") or ""
 
         sys.path.insert(0, str(Path(__file__).parent.parent / "e2"))
-        import e2_headed_gha as E
+        from app import e2_headed_gha as E
         cp = _tdvp_course_params(params)
 
         from playwright.sync_api import sync_playwright
@@ -581,7 +581,7 @@ def fetch_course_detail_and_verify(
         params = _parse_url_params(course_url)
         chapter_id = params.get("chapter_id") or ""
         sys.path.insert(0, str(Path(__file__).parent.parent / "e2"))
-        import e2_headed_gha as E
+        from app import e2_headed_gha as E
         cp = _tdvp_course_params(params)
         from playwright.sync_api import sync_playwright
         import re as _re
@@ -655,7 +655,7 @@ def resolve_click_probe_chapter_id(course_url: str, ch_idx: int, cell_idx: int) 
         params = _parse_url_params(course_url)
         chapter_id = params.get("chapter_id") or ""
         sys.path.insert(0, str(Path(__file__).parent.parent / "e2"))
-        import e2_headed_gha as E
+        from app import e2_headed_gha as E
         cp = _tdvp_course_params(params)
 
         from playwright.sync_api import sync_playwright
@@ -741,7 +741,7 @@ def fetch_page_html(course_url: str, cx_user: Optional[str] = None,
         chapter_id = params.get("chapter_id") or ""
 
         sys.path.insert(0, str(Path(__file__).parent.parent / "e2"))
-        import e2_headed_gha as E
+        from app import e2_headed_gha as E
         cp = _tdvp_course_params(params)
 
         from playwright.sync_api import sync_playwright

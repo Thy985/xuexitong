@@ -22,7 +22,7 @@ def main() -> int:
 
     from resolvers.course_resolver import _parse_url_params
     from models import CourseParams
-    from e2_headed_gha import build_base_url
+    from app.e2_headed_gha import build_base_url
     from utils.cookie_store import ensure_login
     from playwright.sync_api import sync_playwright
 

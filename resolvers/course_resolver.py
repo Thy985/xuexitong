@@ -178,7 +178,7 @@ def _verify_via_browser(url: str, cx_user: str, cx_pass: str,
     """通过真实浏览器验证课程页面，提取标题并确认 URL 参数与页面一致。"""
     import os
     sys.path.insert(0, str(Path(__file__).parent.parent / "e2"))
-    from e2_headed_gha import build_base_url
+    from app.e2_headed_gha import build_base_url
     from models import CourseParams
 
     display = os.environ.get("DISPLAY", ":99")

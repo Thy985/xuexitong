@@ -6,7 +6,7 @@
 # 「max_ct>=95% 已知时长」当完成凭据（会被恢复的历史进度污染）。
 import pytest
 
-from e2.e2_headed_gha import next_unit_decision
+from app.e2_headed_gha import next_unit_decision
 
 
 @pytest.mark.parametrize(
