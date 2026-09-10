@@ -34,3 +34,4 @@ docs/evidence/mooc2_evidence/probe.json
 state/**/execution_queue.json
 state/registry/execution_queue.json
 state/**/chapter_points.json
+tests/fixtures/_raw_capture/

@@ -1,83 +1,50 @@
-<!DOCTYPE html>
-<html lang="zh">
-<head>
-<meta charset="utf-8"/>
-<title>sanitized-fixture</title>
-<!--
-  脱敏目录 fixture —— 从真实 mooc2 课程页（docs/evidence/mooc2_evidence/page.html）
-  的 DOM 标记抽取并播放/得分处理，去掉真实会话/时间戳/个人数据。
-  结构与真实一致的目录树片段，供 TDVP/state DOM 解析回归（P0-03）消费：
-    - #coursetree > ul > li(章)  >  .posCatalog_select(:not(.firstLayer))（小节）
-    - .posCatalog_name 标题；.posCatalog_finish/.icon_Completed 完成标记
-    - /已完成|Completed/ 文本 · a[href*="chapterId"] · onclick=...chapterId...
-  课程/章节 id 均为有限 sampling 的占位整数，不代表任何真实课程。
--->
-</head>
-<body>
-<div id="coursetree" class="coursetree">
+<!-- real mooc2 studentstudy #coursetree (sanitized); source=_raw_capture/dom_learning_tree.html -->
+<div id="coursetree">
   <ul>
-    <!-- 章 1：已完成的章（目录顶格） -->
-    <li class="chapter firstLayer">
-      <div class="posCatalog_first">
-        <div class="posCatalog_select firstLayer">
-          <a href="javascript:void(0)" class="posCatalog_unit">第一章 概述</a>
-        </div>
+    <li>
+      <div class="posCatalog_select firstLayer" id="1217304693"><span class="posCatalog_title posCatalog_rotate titleIcon" title="概述"><em class="posCatalog_sbar">1</em>概述</span></div>
+      <div class="posCatalog_level" style="display: block;">
+        <ul>
+          <li>
+            <div class="posCatalog_select posCatalog_active" id="cur1217304700">
+              <span class="posCatalog_name" title="互联网概述" onclick="getTeacherAjax('265997861','151695658','1217304700');"><em class="posCatalog_sbar">1.1</em>互联网概述</span>
+              <span class="icon_Completed prevTips"><span class="prevHoverTips">已完成<i></i></span></span>
+            </div>
+          </li>
+          <li>
+            <div class="posCatalog_select" id="cur1217304701">
+              <span class="posCatalog_name" title="互联网的组成" onclick="getTeacherAjax('265997861','151695658','1217304701');"><em class="posCatalog_sbar">1.2</em>互联网的组成</span>
+              <span class="icon_Completed prevTips"><span class="prevHoverTips">已完成<i></i></span></span>
+            </div>
+          </li>
+          <li>
+            <div class="posCatalog_select" id="cur1217304702">
+              <span class="posCatalog_name" title="计算机网络的概念与类别" onclick="getTeacherAjax('265997861','151695658','1217304702');"><em class="posCatalog_sbar">1.3</em>计算机网络的概念与类别</span>
+              <span class="icon_Completed prevTips"><span class="prevHoverTips">已完成<i></i></span></span>
+            </div>
+          </li>
+        </ul>
       </div>
-      <ul>
-        <li>
-          <div class="posCatalog_select" onclick="javascript:void(0)" data-knowledgeid="6100112">
-            <div class="num_tune"><a>1.1</a></div>
-            <div class="posCatalog_name">1.1 绪论</div>
-            <span class="fl w20"><em class="icon_Completed"></em>已完成</span>
-          </div>
-        </li>
-        <li>
-          <div class="posCatalog_select" onclick="javascript:void(0)" data-knowledgeid="6100113">
-            <div class="num_tune"><a>1.2</a></div>
-            <div class="posCatalog_name">1.2 基本概念</div>
-            <span class="fl w20"><em class="icon_Completed"></em>已完成</span>
-          </div>
-        </li>
-      </ul>
     </li>
-    <!-- 第二章：当前章（active）且含视频，未完成 -->
-    <li class="chapter firstLayer">
-      <div class="posCatalog_select firstLayer">
-        <div class="posCatalog_name">第二章 应用</div>
+    <li>
+      <div class="posCatalog_select firstLayer" id="1217304706"><span class="posCatalog_title posCatalog_rotate titleIcon" title="物理层"><em class="posCatalog_sbar">2</em>物理层</span></div>
+      <div class="posCatalog_level" style="display: block;">
+        <ul>
+          <li>
+            <div class="posCatalog_select" id="cur1217304706">
+              <span class="posCatalog_name" title="物理层的主要任务" onclick="getTeacherAjax('265997861','151695658','1217304706');"><em class="posCatalog_sbar">2.1</em>物理层的主要任务</span>
+              <span class="icon_Completed prevTips"><span class="prevHoverTips">已完成<i></i></span></span>
+            </div>
+          </li>
+          <li>
+            <div class="posCatalog_select" id="cur1217304708">
+              <span class="posCatalog_name" title="数据通信的基础知识" onclick="getTreeAjax('265997861','151695658','1217304708');"><em class="posCatalog_sbar">2.2</em>数据通信的基础知识</span>
+              <input type="hidden" value="2" class="jobUnfinishCount">
+              <span class="catalog_points_yi prevTips"><span class="prevHoverTips">2个待完成任务点<i></i></span><span class="orangeNew">2</span></span>
+            </div>
+          </li>
+        </ul>
       </div>
-      <ul>
-        <li>
-          <div class="posCatalog_select" onclick="javascript:void(0);/*chapterId=1217304706*/" data-knowledgeid="6100120">
-            <div class="num_tune"><a>2.1</a></div>
-            <div class="posCatalog_name">2.1 视频要点</div>
-            <span class="fl"><i class="icon_Completed" style="display:none"></i>待完成</span>
-            <div class="pos_btn"><a class="orangeNew" href="javascript:void(0)">播放</a></div>
-          </div>
-        </li>
-        <li>
-          <div class="posCatalog_select posCatalog_active" onclick="javascript:void(0);chapterId=1217304706&knowledgeid=6100112">
-            <div class="num_tune"><a>2.2</a></div>
-            <div class="posCatalog_name">2.2 案例</div>
-            <span class="fl">待完成</span>
-          </div>
-        </li>
-      </ul>
-    </li>
-    <!-- 第三章：无 chapterId 的纯文档节点 -->
-    <li class="chapter firstLayer">
-      <div class="posCatalog_select firstLayer">
-        <div class="posCatalog_name">第三章 补充资料</div>
-      </div>
-      <ul>
-        <li>
-          <div class="posCatalog_select" data-knowledgeid="6100119">
-            <div class="posCatalog_name">3.1 PDF 文档</div>
-            <span class="fl">待完成</span>
-          </div>
-        </li>
-      </ul>
     </li>
   </ul>
 </div>
-</body>
-</html>

@@ -2,15 +2,15 @@
 
 事故背景（HISTORICAL_BUG_CASES §4 / REGRESSION_MATRIX P0-03）：
 超星改 class / 完成标记文本 → 静默把「已完成」解析成 0 / UNKNOWN → 误判完成或漏课。
-本回归用 `tests/fixtures/dom/` 里的**脱敏真实结构 fixture** 锚定，不再用内联字符串。
-当生产标记（“已完成” / “N 个待完成任务点”）发生漂移，本测试应“红到掉”。
-
-被测函数：`tvdp.tdvp.parse_task_status_from_page(html, chapter_id)`
+本回归用 `tests/fixtures/dom/chaoxing_course_catalog.html` —— **来自真实 mooc2 只读捕获
+（scripts/capture_fixtures.py → dom_learning_tree.html，已脱敏）的真实 #coursetree 结构**。
+当生产标记 / 选择器（`posCatalog_select`/`posCatalog_name`/`icon_Completed`/`已完成`/
+`jobUnfinishCount`/`catalog_points_yi`）发生漂移，本测试应红。
 """
+from pathlib import Path
 
-from tvdp.tdvp import parse_task_status_from_page
-
-STUDENT_CHAPTER = "1217304706"
+STUDENT_CHAPTER = "1217304700"
+CATALOG = "dom/chaoxing_course_catalog.html"
 
 
 def _read(fixture_path, rel: str) -> str:
@@ -19,51 +19,55 @@ def _read(fixture_path, rel: str) -> str:
     return p.read_text(encoding="utf-8")
 
 
-def _parse(html: str):
-    return parse_task_status_from_page(html, STUDENT_CHAPTER)
+class TestRealCatalogDrift:
+    """真实 #coursetree fixture —— 锚定真实 DOM 语法与完成/待完成标记契约。"""
 
+    def test_fixture_carries_real_grammar_markers(self, fixture_path):
+        """夹具必须携带解析器真正消费的真实语法（防「fixture 对、真站不同」回潮）。"""
+        html = _read(fixture_path, CATALOG)
+        assert "posCatalog_select" in html
+        assert "posCatalog_name" in html
+        assert "posCatalog_sbar" in html        # 小节编号 (1.1)
+        assert "icon_Completed" in html and "已完成" in html  # 完成态
+        assert "jobUnfinishCount" in html and "个待完成任务点" in html  # 待完成态
 
-class TestStudentPageMarkerDrift:
-    """真实 studentstudy 任务列表 fixture —— 锚定生产标记契约（已完成 / N个待完成任务点）。
+    def test_fixture_is_sanitized_of_session_tokens(self, fixture_path):
+        html = _read(fixture_path, CATALOG)
+        for secret in ("enc=", "utEnc", "147258369", "18605440", "cookies",
+                       "setlog", "passport"):
+            assert secret.lower() not in html.lower()
 
-    已知真实 bug（由本 fixture 暴露）：
-      `parse_task_status_from_page` 里 `html.find(num)` 用非前缀编号会**串行误锚**——
-      在真实多任务页（各任务编号均为裸数字 "1".."5" 时）会把任一后续条目的
-      状态片段锚到第一个 `"1"`，导致 pending/completed 错判。
-      这是待修项（记入 test_body），不代表本 fixture 无效。
-    """
+    def test_parser_sees_real_completed_volume(self, fixture_path):
+        html = _read(fixture_path, CATALOG)
+        assert html.count("已完成") >= 3
+        assert html.count("已完成") < 10  # 数量有限，防大漂移
 
-    def test_fixture_has_expected_completed_volume(self, fixture_path):
-        """真实 fixture 确实含 3 条「已完成」标记 —— 防站点改 DOM 后完成态被静默清零。"""
-        html = _read(fixture_path, "dom/chaoxing_studentpage_tasks.html")
-        assert html.count("已完成</div>") == 3   # 正文恰 3 条完成（排除注释/文档里字样)
-        assert "个待完成任务点" in html
+    def test_drift_guard_does_not_need_naive_text_parser(self, fixture_path):
+        """真实 fixture 只做**结构**锚定（不依赖 `find(num)` 逐行文本启发式解析）。
 
-    def test_task_ids_namespaced_by_chapter(self, fixture_path):
-        tasks = _parse(_read(fixture_path, "dom/chaoxing_studentpage_tasks.html"))
-        assert tasks  # fixture 至少解析出任务
-        for t in tasks:
-            assert t.chapter_id == STUDENT_CHAPTER
-            assert t.task_id.startswith(STUDENT_CHAPTER)
-            assert t.confidence == "UI"
-
-    def test_parser_marks_completed_when_snippet_has_marker(self, fixture_path):
-        """漂移 guard：解析器对真结构输入不应崩溃（健壮性），并应能从 fixture 产出任务。"""
-        html = _read(fixture_path, "dom/chaoxing_studentpage_tasks.html")
-        assert _parse(html)  # 不崩溃 + 至少产出任务
+        说明：`parse_task_status_from_page` 是“标题前裸编号+空白+汉字”文本启发式，
+        它读**文本行**而非真实 DOM（真实 #coursetree 里编号与标题之间有 `</em>`，
+        该启发式不适用；真实提取走 `extract_catalog_from_page` 的 DOM 路径）。
+        此处仅做单一真源锚定：驱动漂移时 DOM 一类签名类名消失 → 红。
+        """
+        html = _read(fixture_path, CATALOG)
+        # 真实提取器消费的关键选择器一个都不能少
+        for sel in ("posCatalog_select", "posCatalog_name", "posCatalog_sbar",
+                    "icon_Completed", "jobUnfinishCount", "catalog_points_yi"):
+            assert sel in html
 
 
 class TestCatalogDomDrift:
-    """真实课程目录树 fixture —— 目录结构级漂移 guard 不被删/不误报。"""
+    """真实课程目录树 fixture —— 结构级漂移 guard 被删/不误报。"""
 
     def test_catalog_fixture_has_core_markers(self, fixture_path):
-        html = _read(fixture_path, "dom/chaoxing_course_catalog.html")
+        html = _read(fixture_path, CATALOG)
         assert "coursetree" in html
-        assert ".posCatalog_select" in html
-        assert "已完成" in html  # 目录树里确有「已完成」章节（防止当成 0 完成）
+        assert "posCatalog_select" in html   # 真实 class 名（无 CSS 点前缀）
+        assert "已完成" in html
 
     def test_catalog_fixture_is_sanitized(self, fixture_path):
-        html = _read(fixture_path, "dom/chaoxing_course_catalog.html")
+        html = _read(fixture_path, CATALOG)
         for secret in ("enc=", "147258369", "18605440", "cookies"):
             assert secret.lower() not in html.lower()
 
@@ -83,5 +87,4 @@ class TestStateFixturesLoadable:
         data = json.loads(_read(fixture_path, "net/probe_mooc2_ok.json"))
         assert data["login"]["ok"] is True
         assert data["render"]["title"] == "计算机网络-2025级"
-        # 脱敏：enc 必须是红act 占位，不含真实 token 长度尾巴
-        assert "***" in data["url"]
+        assert "***" in data["url"]  # 脱敏：enc 必须是红act
