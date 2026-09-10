@@ -218,9 +218,14 @@ class CourseState:
 # ── 公共 API ───────────────────────────────────────────────────────
 
 def _ensure_dirs():
-    """确保状态目录存在。"""
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
-    COURSES_DIR.mkdir(parents=True, exist_ok=True)
+    """确保状态目录存在。
+
+    权限：课程/状态目录以 0o700（属主私有）创建，避免持默认 umask(0o755)
+    暴露给同机其他用户 —— course_state 可能含活动/诊断数据。POSIX 有效，
+    Windows 上 Path.mkdir 忽略 mode（测试已 skipif win32）。
+    """
+    STATE_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
+    COURSES_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
 
 
 def load_active_course() -> Optional[CourseIdentity]:
