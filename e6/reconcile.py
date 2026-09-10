@@ -151,6 +151,7 @@ def reconcile_registry(
     new_tids = {t.task_id for t in discovery_tasks}
     upgraded: dict[str, TaskRecord] = {}
     repaired: dict[str, TaskRecord] = {}
+    migrated_old: list[str] = []   # P0-11：迁移中被替换的旧 task_id（唯一化，需从结果淘汰）
 
     for old_tid, old_rec in list(existing.items()):
         if old_tid in new_tids:
@@ -179,6 +180,7 @@ def reconcile_registry(
                     "reason": "migration, no completion evidence"}
                 report.downgraded += 1
             repaired[matched.task_id] = migrated
+            migrated_old.append(old_tid)   # P0-11：旧 key 迁移后唯一化并淘汰
         else:
             # 不在最新 discovery，也没匹配到新 title → 保留诊断，不删除历史。
             # 若曾是 COMPLETED 但无证据 → 修正为 UNKNOWN。
@@ -191,6 +193,9 @@ def reconcile_registry(
 
     # 统一 canonical 状态
     result: dict[str, TaskRecord] = dict(existing)
+    # P0-11：迁移产生的旧 task_id 一律淘汰，保证 canonical 唯一（不双键）。
+    for _old in migrated_old:
+        result.pop(_old, None)
     result.update(repaired)
     result.update(upgraded)
 
@@ -200,8 +205,26 @@ def reconcile_registry(
         dom_done = _dom_is_completed(cid, dom_status)
         old = result.get(tid)
         if dom_done:
-            # 服务器 DOM completed 标记
-            if old is None:
+            # P0-09：即使服务器 DOM 标 completed，若 live 复核确认该 task 仍有
+            # 未完成的真实视频点（live_pending），也不能静默 COMPLETED → 漏课。
+            # live 真源优先于 DOM 标记（服务器擅长 DOM 缓存可能延迟/被污染）。
+            if tid in live_pending:
+                if old is not None:
+                    old.mark_stale(detail="live verification: now pending "
+                                          "(DOM showed completed)")
+                    old.downgrade_to_pending(detail="live re-check confirmed pending")
+                    old.task_type = getattr(t, "task_type", "video") \
+                        or getattr(old, "task_type", "video")
+                    result[tid] = old
+                else:
+                    rec = _make_discovered(t)
+                    rec.status = "PENDING"
+                    result[tid] = rec
+                report.downgraded += 1
+                report.repair_map[tid] = {
+                    "before": "COMPLETED(DOM)", "after": "PENDING",
+                    "reason": "DOM completed but live shows unfinished points"}
+            elif old is None:
                 result[tid] = _make_ui_completed(t)
                 report.upgraded_ui += 1
                 report.repair_map[tid] = {

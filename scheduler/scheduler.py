@@ -630,16 +630,33 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
 
     timing = time.time() - t0
 
-    # 汇总：任一章成功 → SUCCESS（部分推进）；否则 FAILED。
-    any_success = any(c not in chapters_failed for c in chapters_attempted)
+    # 汇总（P0-06）：不得用「任一章成功」归一成全局 SUCCESS 掩盖真实失败。
+    #   * real_failures：非 TIMEOUT 的真实失败章（TIMEOUT 由 watchdog 单独记账，见下）。
+    #   * successful：本次真正推进成功的章（不在 chapters_failed 中）。
+    # 规则：
+    #   - 有真实失败 → 全局 FAILED（不归一 SUCCESS，也不让 record_result 清零失败 budget）
+    #   - 无真实失败但没有任何成功章（全超时/全失败）→ FAILED
+    #   - 否则（部分推进，可含零星 TIMEOUT）→ SUCCESS
+    real_failures = [c for c in chapters_failed if c not in chapters_timed_out]
+    successful = [c for c in chapters_attempted if c not in chapters_failed]
+    if real_failures:
+        agg_result = "FAILED"
+        agg_passed = False
+    elif not successful:
+        agg_result = "FAILED"
+        agg_passed = False
+    else:
+        agg_result = "SUCCESS"
+        agg_passed = True
+
     exec_result = ExecutionResult(
         decision="RUN",
-        result="SUCCESS" if any_success else "FAILED",
+        result=agg_result,
         trigger=trigger,
         course_key=identity_key,
         run_id=run_id,
         timing_s=round(timing, 1),
-        passed=any_success,
+        passed=agg_passed,
         verdict=last_verdict,
         failure_stage=last_failure_stage,
         evidence=runtime_evidence,

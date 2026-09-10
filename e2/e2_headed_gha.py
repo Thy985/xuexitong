@@ -99,7 +99,7 @@ def build_base_url(chap_id: str, params: "CourseParams | None" = None) -> str:
     p = params or default_params()
     return CourseParams(**{**p.to_dict(), "chapter_id": chap_id}).build_base_url()
 
-V3_SCRIPT_PATH = Path(__file__).parent.parent / "xuexitongScript" / "v3_optimized.user.js"
+V3_SCRIPT_PATH = Path(__file__).parent.parent / "scripts" / "v3_optimized.user.js"
 
 MAX_PLAY_SECONDS     = 1500   # 25 min timeout
 IS_PASSED_SETTLE_S   = 20
@@ -124,6 +124,19 @@ def masked(s: str) -> str:
 
 def is_session_kicked(url: str) -> bool:
     return "detect.chaoxing.com" in url or "i.mooc.chaoxing.com/space" in url
+
+
+# P0-04：isPassed 判定单一真源（服务端返回体 JSON 里的标记）。
+# 提取为纯函数，便于离线回归保护 —— 若超星改字段名/大小写导致判定失效，
+# 本 helper 的回归会红，而不是在真站/CI 里才暴露（二次 fetch / 误判）。
+_IS_PASSED_PATTERNS = ('"isPassed":true',)
+
+
+def has_is_passed_marker(body: "str|None") -> bool:
+    """返回体 JSON 是否标 isPassed=true。当前规则：包含 `"isPassed":true`。"""
+    if not body:
+        return False
+    return any(p in body for p in _IS_PASSED_PATTERNS)
 
 
 # ── 视频状态获取（与 e1_2_ch16_v2.py 完全一致）───────────────────
@@ -527,7 +540,7 @@ def run_test(args, params: "CourseParams | None" = None):
                     body = None
                 entry["body"] = (body or "")[:300]
                 ml_parsed.append(entry)
-                if body and '"isPassed":true' in body:
+                if has_is_passed_marker(body):
                     isPassed_seen = True
                     isPassed_at = ev["t"]
                     obj_id = entry.get("objectId")
