@@ -9,7 +9,7 @@ e2/__pycache__/
 !/.github/workflows/
 e3out/
 e6_out/
-evidence/
+/evidence/
 *.tmp
 
 # 安全：绝不把登录 Cookie/会话凭证入库或上传为 artifact
@@ -35,3 +35,12 @@ state/**/execution_queue.json
 state/registry/execution_queue.json
 state/**/chapter_points.json
 tests/fixtures/_raw_capture/
+
+# —— CI 证据整包快照（曾经在根目录铺 GOs — mvp-evidence-<run>/ 整份 repo 副本，勿再入库）。
+# 只手动收敛有意义的抽样到 docs/evidence/snapshot-archive/（见其 README）。
+e6_*/
+e6_c*/
+mvp-evidence-*/
+tmp_artifacts*/
+tmp_success*/
+evidence_dl/

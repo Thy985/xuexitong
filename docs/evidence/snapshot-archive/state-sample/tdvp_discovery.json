@@ -1,0 +1,552 @@
+[
+  {
+    "chapter_id": "1217304700",
+    "title": "互联网概述",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 0,
+    "cell_index": 0,
+    "text": "1.1 互联网概述 Completed",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304701",
+    "title": "互联网的组成",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 1,
+    "cell_index": 1,
+    "text": "1.2 互联网的组成 Completed",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304702",
+    "title": "计算机网络的概念与类别",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 2,
+    "cell_index": 2,
+    "text": "1.3 计算机网络的概念与类别 Completed",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304703",
+    "title": "计算机网络的拓扑结构",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 3,
+    "cell_index": 3,
+    "text": "1.4 计算机网络的拓扑结构 Completed",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304704",
+    "title": "计算机网络的性能",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 4,
+    "cell_index": 4,
+    "text": "1.5 计算机网络的性能 Completed",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304705",
+    "title": "计算机网络的体系结构",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 5,
+    "cell_index": 5,
+    "text": "1.6 计算机网络的体系结构 Completed",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304707",
+    "title": "知识扩展",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 6,
+    "cell_index": 6,
+    "text": "1.7 知识扩展 Completed",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304710",
+    "title": "线上学习任务",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 7,
+    "cell_index": 7,
+    "text": "1.8 线上学习任务 Completed",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304711",
+    "title": "思维导图简介",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 8,
+    "cell_index": 8,
+    "text": "1.9 思维导图简介 Completed",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304713",
+    "title": "本章思维导图",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 9,
+    "cell_index": 9,
+    "text": "1.10 本章思维导图 Completed",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304706",
+    "title": "物理层的主要任务",
+    "status": "unknown",
+    "is_active": true,
+    "chapter_index": 10,
+    "cell_index": 10,
+    "text": "2.1 物理层的主要任务 1pending task point1",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304708",
+    "title": "数据通信的基础知识",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 11,
+    "cell_index": 11,
+    "text": "2.2 数据通信的基础知识 3pending task point3",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304712",
+    "title": "物理层下面的传输媒体",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 12,
+    "cell_index": 12,
+    "text": "2.3 物理层下面的传输媒体 2pending task point2",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304714",
+    "title": "信道复用技术",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 13,
+    "cell_index": 13,
+    "text": "2.4 信道复用技术 2pending task point2",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304715",
+    "title": "数字传输系统",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 14,
+    "cell_index": 14,
+    "text": "2.5 数字传输系统 Completed",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304716",
+    "title": "宽带接入技术",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 15,
+    "cell_index": 15,
+    "text": "2.6 宽带接入技术 Completed",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304717",
+    "title": "数据链路层概述",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 18,
+    "cell_index": 18,
+    "text": "3.1 数据链路层概述 2pending task point2",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304719",
+    "title": "点对点协议PPP",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 19,
+    "cell_index": 19,
+    "text": "3.2 点对点协议PPP 2pending task point2",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304721",
+    "title": "使用广播信道的数据链路层",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 20,
+    "cell_index": 20,
+    "text": "3.3 使用广播信道的数据链路层 11pending task point11",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304722",
+    "title": "扩展的以太网",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 21,
+    "cell_index": 21,
+    "text": "3.4 扩展的以太网 2pending task point2",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304724",
+    "title": "高速以太网",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 22,
+    "cell_index": 22,
+    "text": "3.5 高速以太网 Completed",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304725",
+    "title": "能力提升",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 23,
+    "cell_index": 23,
+    "text": "3.6 能力提升 0",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304726",
+    "title": "学习目标和重点难点",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 24,
+    "cell_index": 24,
+    "text": "3.7 学习目标和重点难点 0",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304728",
+    "title": "网络层概述",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 27,
+    "cell_index": 27,
+    "text": "4.1 网络层概述 2pending task point2",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304730",
+    "title": "分类的IP地址",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 28,
+    "cell_index": 28,
+    "text": "4.2 分类的IP地址 2pending task point2",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304731",
+    "title": "子网划分",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 29,
+    "cell_index": 29,
+    "text": "4.3 子网划分 2pending task point2",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304732",
+    "title": "无分类编址CIDR",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 30,
+    "cell_index": 30,
+    "text": "4.4 无分类编址CIDR 2pending task point2",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304733",
+    "title": "IP数据报的格式",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 31,
+    "cell_index": 31,
+    "text": "4.5 IP数据报的格式 2pending task point2",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304734",
+    "title": "IP数据报的分片与重组",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 32,
+    "cell_index": 32,
+    "text": "4.6 IP数据报的分片与重组 2pending task point2",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304735",
+    "title": "IP层转发分组的流程",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 33,
+    "cell_index": 33,
+    "text": "4.7 IP层转发分组的流程 1pending task point1",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304736",
+    "title": "ARP协议",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 34,
+    "cell_index": 34,
+    "text": "4.8 ARP协议 2pending task point2",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304737",
+    "title": "ICMP协议",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 35,
+    "cell_index": 35,
+    "text": "4.9 ICMP协议 2pending task point2",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304738",
+    "title": "IPV6",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 36,
+    "cell_index": 36,
+    "text": "4.10 IPV6 3pending task point3",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304739",
+    "title": "路由协议概述",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 37,
+    "cell_index": 37,
+    "text": "4.11 路由协议概述 1pending task point1",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304740",
+    "title": "RIP协议",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 38,
+    "cell_index": 38,
+    "text": "4.12 RIP协议 3pending task point3",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304741",
+    "title": "OSPF协议",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 39,
+    "cell_index": 39,
+    "text": "4.13 OSPF协议 3pending task point3",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304742",
+    "title": "IP多播",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 40,
+    "cell_index": 40,
+    "text": "4.14 IP多播 1pending task point1",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304743",
+    "title": "VPN和NAT",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 41,
+    "cell_index": 41,
+    "text": "4.15 VPN和NAT 2pending task point2",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304745",
+    "title": "课后习题",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 43,
+    "cell_index": 43,
+    "text": "4.17 课后习题 0",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304749",
+    "title": "运输层协议概述",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 47,
+    "cell_index": 47,
+    "text": "5.1 运输层协议概述 2pending task point2",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304750",
+    "title": "UDP和TCP概述",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 48,
+    "cell_index": 48,
+    "text": "5.2 UDP和TCP概述 3pending task point3",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304751",
+    "title": "TCP报文段的格式",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 49,
+    "cell_index": 49,
+    "text": "5.3 TCP报文段的格式 3pending task point3",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304752",
+    "title": "可靠传输的工作原理",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 50,
+    "cell_index": 50,
+    "text": "5.4 可靠传输的工作原理 3pending task point3",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304753",
+    "title": "TCP可靠传输的实现",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 51,
+    "cell_index": 51,
+    "text": "5.5 TCP可靠传输的实现 2pending task point2",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304754",
+    "title": "TCP的流量控制",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 52,
+    "cell_index": 52,
+    "text": "5.6 TCP的流量控制 3pending task point3",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304755",
+    "title": "TCP的拥塞控制",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 53,
+    "cell_index": 53,
+    "text": "5.7 TCP的拥塞控制 3pending task point3",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304756",
+    "title": "TCP的运输连接管理",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 54,
+    "cell_index": 54,
+    "text": "5.8 TCP的运输连接管理 2pending task point2",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304758",
+    "title": "扩展阅读",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 56,
+    "cell_index": 56,
+    "text": "5.10 扩展阅读 0",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304763",
+    "title": "DNS域名服务器",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 61,
+    "cell_index": 61,
+    "text": "6.1 DNS域名服务器 3pending task point3",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304764",
+    "title": "文件传送协议FTP",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 62,
+    "cell_index": 62,
+    "text": "6.2 文件传送协议FTP 3pending task point3",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304771",
+    "title": "万维网WWW",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 63,
+    "cell_index": 63,
+    "text": "6.3 万维网WWW 3pending task point3",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304773",
+    "title": "电子邮件E_mail",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 64,
+    "cell_index": 64,
+    "text": "6.4 电子邮件E_mail 2pending task point2",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304775",
+    "title": "动态主机配置协议DHCP",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 65,
+    "cell_index": 65,
+    "text": "6.5 动态主机配置协议DHCP 2pending task point2",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304781",
+    "title": "目的和要求",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 70,
+    "cell_index": 70,
+    "text": "7.1 目的和要求 0",
+    "mirrored": false
+  },
+  {
+    "chapter_id": "1217304784",
+    "title": "参考资料",
+    "status": "unknown",
+    "is_active": false,
+    "chapter_index": 71,
+    "cell_index": 71,
+    "text": "7.2 参考资料 1pending task point1",
+    "mirrored": false
+  }
+]
