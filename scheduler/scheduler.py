@@ -541,6 +541,7 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
     if decision != "RUN":
         summary = get_scheduler_summary(identity_key, decision, reason)
         _write_summary(summary)
+        _try_sync_progress(identity_key)  # 3D/P1-12: 任何结束都刷新本地进度账，避免恒 0
         return ExecutionResult(
             decision=decision, result="NOOP" if decision == "NOOP" else "BLOCKED",
             trigger=trigger, course_key=identity_key, run_id=run_id,
@@ -566,6 +567,7 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
         # 队列为空 → 没有可执行任务
         summary = get_scheduler_summary(identity_key, "NOOP", "No pending task")
         _write_summary(summary)
+        _try_sync_progress(identity_key)  # 3D/P1-12
         return ExecutionResult(
             decision="NOOP", result="NOOP", trigger=trigger,
             course_key=identity_key, run_id=run_id, timing_s=0,
@@ -669,6 +671,9 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
     # 记录结果（aggregate 后 commit 一次）
     record_result(identity_key, exec_result)
 
+    # 3D / P1-12：把「已完成章」同步进 course_state.progress（由 registry 派生，单一真源）。
+    _try_sync_progress(identity_key)
+
     # 生成 summary
     summary = get_scheduler_summary(identity_key, "RUN", "Executing course task")
     summary["result"] = exec_result.result
@@ -691,6 +696,46 @@ def _write_summary(summary: dict) -> None:
             Path(summary_path).write_text(md, encoding="utf-8")
     except Exception:
         pass
+
+
+def _sync_progress_from_registry(course_key: str) -> None:
+    """3D / P1-12：由 task registry 派生并写回 `course_state.progress.completed`。
+
+    single source of truth：`progress.completed` = 已完成章节数（`done_chapter_ids_from_registry`），
+    `total` = registry 里出现过的章节数。这是修复历史「runtime 从不写 `.completed`」的会计断：
+    运行后 `completed` 能反映本地账（0→N），而不是恒 0。
+
+    只对「本地账」负责；服务器是否真接受由 TDVP 探针独立判定（见 PROGRESS_OUTCOME_DATAFLOW.md）。
+    """
+    from e6.task_registry import load_registry, done_chapter_ids_from_registry
+    from state.course_state import load_course_state, save_course_state, CourseProgress
+
+    registry = load_registry(course_key)
+    if not registry:
+        return  # 无 registry 时不推进（无信息）
+
+    done_ids = done_chapter_ids_from_registry(registry)
+    chapters = {t.chapter_id for t in registry.values() if t.chapter_id}
+
+    state = load_course_state(course_key)
+    if state is None:
+        return
+    if state.progress is None:
+        state.progress = CourseProgress(completed=len(done_ids), total=len(chapters))
+    else:
+        # 直接写回 registry 派生的真值；不额外 clamp（done 集合只随 reconcile 演进）。
+        state.progress.completed = len(done_ids)
+        if state.progress.total is None:
+            state.progress.total = len(chapters)
+    save_course_state(state)
+
+
+def _try_sync_progress(course_key: str) -> None:
+    """调用进度同步且不因同步失败影响主流程（会计失败只记日志，不抛）。"""
+    try:
+        _sync_progress_from_registry(course_key)
+    except Exception as _sync_err:
+        print(f"[scheduler] progress sync skipped: {_sync_err}", file=sys.stderr)
 
 
 def _split_video_target(task_or_cid) -> tuple[str, int]:
