@@ -1,0 +1,57 @@
+name: test
+
+# 3A-1: 让现有 149 tests 在每次 push / PR 自动执行（堵住 TFS-6「CI 从不跑 pytest」）。
+# 仅跑离线层面（unit / integration / regression 纯逻辑 + subprocess），
+# 不装浏览器、不连真站；playwright 仅作为可导入模块（模块级 import），不 launch。
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov playwright==1.62.0
+
+      # 不执行 `playwright install chromium`：离线测试只 import playwright 模块，
+      # 不 launch 浏览器（用 `scripts/mooc2_probe.py` 等做真站冒烟时才需要）。
+
+      - name: Run pytest (unit + integration + regression)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pytest tests/unit tests/integration tests/regression -q \
+            --cov=app --cov=e6 --cov=scheduler --cov=state --cov=tvdp \
+            --cov=resolvers --cov=e2 --cov=utils \
+            --cov-report=term-missing -p no:cacheprovider \
+            --maxfail=5 2>&1 | tee pytest.log
+
+      - name: Upload pytest log (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-log
+          path: pytest.log
+
+      - name: Assert python version parity
+        run: python -c "import sys; assert sys.version_info[:2]==(3,12), sys.version"

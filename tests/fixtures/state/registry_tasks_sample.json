@@ -1,0 +1,69 @@
+{
+  "note": "sanitized state fixture — modeled after state/registry/<key>/tasks.json (canonical). Course/run IDs are placeholders; timestamps are rounded; no personal data.",
+  "key": "123456_654321",
+  "0301": {
+    "task_id": "0301",
+    "chapter_id": "0301",
+    "title": "第一课 已通过",
+    "task_type": "video",
+    "status": "COMPLETED",
+    "priority": 100,
+    "attempt_count": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": { "run_id": null, "started_at_utc": null, "expires_at_utc": null },
+    "verification": {
+      "level": "SERVER_VERIFIED",
+      "verified_at_utc": "2026-09-01T12:00:00+00:00",
+      "run_id": "9000000001",
+      "source_detail": "passed_object_ids=3"
+    },
+    "completion_evidence": {
+      "type": "NONE", "source": "", "run_id": "",
+      "observed_at_utc": "2026-09-01T12:00:00+00:00", "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": { "stage": "", "run_id": "", "detail": "", "consecutive_failures": 0, "occurred_at_utc": null },
+    "created_at_utc": "2026-09-01T00:00:00+00:00",
+    "updated_at_utc": "2026-09-01T12:00:00+00:00",
+    "last_success_at_utc": "2026-09-01T12:00:00+00:00",
+    "last_failure_at_utc": null
+  },
+  "0302": {
+    "task_id": "0302",
+    "chapter_id": "0302",
+    "title": "第二课 运行中(lease)",
+    "task_type": "video",
+    "status": "VERIFYING",
+    "priority": 90,
+    "attempt_count": 2,
+    "consecutive_failures": 1,
+    "max_attempts": 3,
+    "lease": { "run_id": "9990000002", "started_at_utc": "2026-09-01T11:30:00+00:00", "expires_at_utc": "2026-09-01T12:15:00+00:00" },
+    "verification": { "level": "UNKNOWN", "verified_at_utc": null, "run_id": null, "source_detail": "" },
+    "completion_evidence": { "type": "NONE", "source": "", "run_id": "", "observed_at_utc": null, "detail": "", "passed_object_ids": [] },
+    "failure": { "stage": "PLAYBACK", "run_id": "9990000002", "detail": "stub", "consecutive_failures": 1, "occurred_at_utc": "2026-09-01T11:30:10+00:00" },
+    "created_at_utc": "2026-09-01T00:10:00+00:00",
+    "updated_at_utc": "2026-09-01T11:30:10+00:00",
+    "last_failure_at_utc": "2026-09-01T11:30:10+00:00"
+  },
+  "0303": {
+    "task_id": "0303",
+    "chapter_id": "0303",
+    "title": "第三课 · 未开始",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 80,
+    "attempt_count": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": { "run_id": null, "started_at_utc": null, "expires_at_utc": null },
+    "verification": { "level": "UNKNOWN", "verified_at_utc": null, "run_id": null, "source_detail": null },
+    "completion_evidence": { "type": "NONE", "source": "", "run_id": "", "observed_at_utc": null, "detail": "", "passed_object_ids": [] },
+    "failure": { "stage": "", "run_id": "", "detail": "", "consecutive_failures": 0, "occurred_at_utc": null },
+    "created_at_utc": "2026-09-01T00:20:00+00:00",
+    "updated_at_utc": "2026-09-01T00:20:00+00:00",
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null
+  }
+}

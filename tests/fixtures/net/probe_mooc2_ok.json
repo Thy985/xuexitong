@@ -1,0 +1,21 @@
+{
+  "_note": "sanitized network/evidence fixture — derived from docs/evidence/mooc2_evidence/probe.json. The enc/t session tokens are redacted (***). Records the mooc2 login+render evidence shape (真实登录可达).",
+  "url": "https://mooc2-ans.chaoxing.com/mooc2-ans/mycourse/stu?courseid=265997861&clazzid=151695658&cpi=506830460&enc=***&t=***&pageHeader=0&v=2&hideHead=0",
+  "creds_present": true,
+  "login": {
+    "ok": true,
+    "url": "https://mooc2-ans.chaoxing.com/mooc2-ans/mycourse/stu?courseid=265997861&clazzid=151695658&cpi=506830460&enc=***&t=***&pageHeader=0&v=2&hideHead=0"
+  },
+  "render": {
+    "html_len": 10650872,
+    "title": "计算机网络-2025级",
+    "screenshot": true
+  },
+  "markers": {
+    "not_logged_in": false,
+    "permission_gate": false,
+    "personal_space": true,
+    "catalog_chapter": true,
+    "course_title_any": true
+  }
+}
