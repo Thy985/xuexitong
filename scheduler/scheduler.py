@@ -707,7 +707,7 @@ def _sync_progress_from_registry(course_key: str) -> None:
 
     只对「本地账」负责；服务器是否真接受由 TDVP 探针独立判定（见 PROGRESS_OUTCOME_DATAFLOW.md）。
     """
-    from e6.task_registry import load_registry, done_chapter_ids_from_registry
+    from app.registry.task_registry import load_registry, done_chapter_ids_from_registry
     from state.course_state import load_course_state, save_course_state, CourseProgress
 
     registry = load_registry(course_key)
@@ -802,7 +802,7 @@ def _fallback_chapter(course_url: str, course_key: str,
         return url_cid
     # URL 章已在本轮处理过（或取不到）→ 从持久化 registry/队列找下一个真正 pending 的章
     try:
-        from e6.task_registry import (
+        from app.registry.task_registry import (
             load_registry, done_chapter_ids_from_registry, reconcile_queue,
         )
         reg = load_registry(course_key)
@@ -840,16 +840,16 @@ def _run_tdvp_probe(course_url: str, course_key: str,
     try:
         from tvdp.tdvp import fetch_course_discovery, build_tasks_from_discovery
         from tvdp.tdvp import live_verify_chapter
-        from e6.task_registry import load_registry, save_registry
-        from e6.reconcile import reconcile_registry
-        from e6.task_registry import done_chapter_ids_from_registry, reconcile_queue
-        from e6.click_probe import click_probe_chapter_id
+        from app.registry.task_registry import load_registry, save_registry
+        from app.registry.reconcile import reconcile_registry
+        from app.registry.task_registry import done_chapter_ids_from_registry, reconcile_queue
+        from app.registry.click_probe import click_probe_chapter_id
         from resolvers.course_resolver import _parse_url_params
 
         params = _parse_url_params(course_url)
 
         # 洞3：先读现有 registry 预测一个「疑似队首章」。
-        from e6.task_registry import load_chapter_points, merge_done_with_points
+        from app.registry.task_registry import load_chapter_points, merge_done_with_points
         _pts_map = load_chapter_points(course_key)
         _current_reg = load_registry(course_key)
         _pred_head = params.get("chapter_id")
@@ -904,14 +904,14 @@ def _run_tdvp_probe(course_url: str, course_key: str,
         #     来源两路：
         #      (a) 目录层 job_remaining>0（L1，廉价）
         #      (b) 点级快照显示还有 video 点未 finish（洞2，已持久化的前一棵树）
-        from e6.reconcile import (stale_completed_by_catalog,
+        from app.registry.reconcile import (stale_completed_by_catalog,
                                   stale_completed_by_points)
-        from e6.task_registry import load_chapter_points
+        from app.registry.task_registry import load_chapter_points
         stale1 = stale_completed_by_catalog(existing, chapters_raw)
         stale2 = stale_completed_by_points(existing, load_chapter_points(course_key))
         stale_ids = list(dict.fromkeys(stale1 + stale2))
         if stale_ids:
-            from e6.task_registry import TaskRecord
+            from app.registry.task_registry import TaskRecord
             for sid in stale_ids:
                 rec = existing.get(sid)
                 if rec is not None:
@@ -924,7 +924,7 @@ def _run_tdvp_probe(course_url: str, course_key: str,
         # 3. done_ids 仅为 derived cache（canonical 状态在 registry.completion）。
         #    洞2：用持久化的点级快照校准——凡有快照显示"还有 video 点未 finish"的章，
         #    即使 registry 把它记为 COMPLETED，也不放行（不会当 done 跳过）。
-        from e6.task_registry import load_chapter_points, merge_done_with_points
+        from app.registry.task_registry import load_chapter_points, merge_done_with_points
         pts_map = load_chapter_points(course_key)
         done_ids = merge_done_with_points(
             done_chapter_ids_from_registry(existing), set(), pts_map)
@@ -967,7 +967,7 @@ def _run_tdvp_probe(course_url: str, course_key: str,
                     total_v = verify.get("video_total", 0)
                     live_pending = verify.get("live_pending") or set()
                     # 洞2：点级真源快照存进 registry（缓存层）；done 由点级校准。
-                    from e6.task_registry import (
+                    from app.registry.task_registry import (
                         set_chapter_point_snapshot, load_chapter_points,
                         merge_done_with_points,
                     )
@@ -1089,11 +1089,11 @@ def _run_tdvp_probe(course_url: str, course_key: str,
 def sync_tdvp_on_switch(new_identity, course_url: str) -> None:
     """课程切换时同步任务登记表（TDVP/E6 清空，新课程从零开始）。
 
-    架构：调度器实际使用的是 e6.task_registry（state/registry/<key>/tasks.json）。
+    架构：调度器实际使用的是 app.registry.task_registry（state/registry/<key>/tasks.json）。
     旧版误写在已弃用的 tvdp_tasks.json，导致切换课程后 e6 registry 残留旧任务。
     """
     try:
-        from e6.task_registry import save_registry
+        from app.registry.task_registry import save_registry
         # 清空新课程（即将激活）的任务登记；旧课程 registry 保留作诊断
         save_registry(new_identity.key(), {})
     except Exception:

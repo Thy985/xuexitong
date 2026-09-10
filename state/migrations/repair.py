@@ -65,7 +65,7 @@ def repair_course(course_key: str) -> tuple[dict, dict]:
     Returns:
         (new_registry_mapping, report)
     """
-    from e6.task_registry import TaskRecord
+    from app.registry.task_registry import TaskRecord
 
     raw = load_registry_file(course_key)
     downgraded = 0

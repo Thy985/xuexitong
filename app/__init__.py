@@ -1,0 +1,1 @@
+# app: 运行时层（run/registry/…）

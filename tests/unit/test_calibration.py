@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 @pytest.fixture
 def tmp_registry(tmp_path):
-    import e6.task_registry as tr
+    import app.registry.task_registry as tr
     orig = tr.TASKS_DIR
     tr.TASKS_DIR = tmp_path / "registry"
     yield tmp_path
@@ -29,7 +29,7 @@ def tmp_registry(tmp_path):
 # -- 1) 状态机: COMPLETED -> STALE -> PENDING -------------------------------
 
 def test_task_record_stale_flags_conflict():
-    from e6.task_registry import TaskRecord
+    from app.registry.task_registry import TaskRecord
     t = TaskRecord("1217304706", "1217304706", "物理层的主要任务")
     t.mark_completed(run_id="run-123", source="isPassed")
     assert t.status == "COMPLETED"
@@ -42,7 +42,7 @@ def test_task_record_stale_flags_conflict():
 
 
 def test_stale_task_requeues_after_downgrade(tmp_registry):
-    from e6.task_registry import TaskRecord, reconcile_queue
+    from app.registry.task_registry import TaskRecord, reconcile_queue
     t = TaskRecord("1217304706", "1217304706", "物理层的主要任务")
     t.mark_completed(run_id="r-pre", source="isPassed")
     t.mark_stale()
@@ -56,7 +56,7 @@ def test_stale_task_requeues_after_downgrade(tmp_registry):
 # -- 2) STALE 章节不再算完成 --------------------------------------------
 
 def test_stale_chapter_not_done():
-    from e6.task_registry import (TaskRecord, chapter_aggregate_status,
+    from app.registry.task_registry import (TaskRecord, chapter_aggregate_status,
                                   done_chapter_ids_from_registry)
     t = TaskRecord("1217304706", "1217304706", "物理层的主要任务")
     t.mark_completed(run_id="r", source="isPassed")
@@ -90,8 +90,8 @@ def test_build_live_pending_only_unfinished():
 # -- 4) 成本梯度：只选「有 COMPLETED + DOM 待完成」的冲突章节做 L2 ---------
 
 def test_pick_conflict_chapters_only_conflicted():
-    from e6.task_registry import TaskRecord
-    from e6.reconcile import pick_conflict_chapters
+    from app.registry.task_registry import TaskRecord
+    from app.registry.reconcile import pick_conflict_chapters
     done_4706 = TaskRecord("1217304706", "1217304706", "T")
     done_4706.mark_completed(run_id="r", source="isPassed")
     done_4705 = TaskRecord("1217304705", "1217304705", "T")
@@ -108,9 +108,9 @@ def test_pick_conflict_chapters_only_conflicted():
 # -- 5) 端到端: registry COMPLETED(强证据) + live_pending → 降级 PENDING ---
 
 def test_reconcile_downgrades_4706_via_live_pending(tmp_registry):
-    from e6.task_registry import (TaskRecord, chapter_aggregate_status,
+    from app.registry.task_registry import (TaskRecord, chapter_aggregate_status,
                                   done_chapter_ids_from_registry, reconcile_queue)
-    from e6.reconcile import reconcile_registry
+    from app.registry.reconcile import reconcile_registry
     from tvdp.tdvp import TaskEvidence, TaskInfo
 
     old = TaskRecord("1217304706", "1217304706", "物理层的主要任务")
@@ -142,8 +142,8 @@ def test_reconcile_downgrades_4706_via_live_pending(tmp_registry):
 # -- 6) 无 live 冲突时，强证据 COMPLETED 仍保留（防抖） --------------------
 
 def test_reconcile_keeps_completed_without_live_conflict(tmp_path):
-    from e6.task_registry import TaskRecord
-    from e6.reconcile import reconcile_registry
+    from app.registry.task_registry import TaskRecord
+    from app.registry.reconcile import reconcile_registry
     from tvdp.tdvp import TaskEvidence, TaskInfo
 
     old = TaskRecord("1217304700", "1217304700", "互联网概述")

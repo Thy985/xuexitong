@@ -376,14 +376,14 @@ class TestFallbackChapter:
             chapter_id = "1217304719"
             consecutive_failures = 0
             max_attempts = 3
-        monkeypatch.setattr("e6.task_registry.load_registry",
+        monkeypatch.setattr("app.registry.task_registry.load_registry",
                             lambda key: {"4719": _Rec()})
-        monkeypatch.setattr("e6.task_registry.done_chapter_ids_from_registry",
+        monkeypatch.setattr("app.registry.task_registry.done_chapter_ids_from_registry",
                             lambda reg: set())
         class _Q:
             items = [{"task_id": "4719", "chapter_id": "1217304719",
                       "priority": 0, "state": "READY", "course_key": "k"}]
-        monkeypatch.setattr("e6.task_registry.reconcile_queue",
+        monkeypatch.setattr("app.registry.task_registry.reconcile_queue",
                             lambda *a, **k: _Q())
         out = sched._fallback_chapter("http://x?chapterId=1217304706",
                                       "k", {"1217304706"})
@@ -393,7 +393,7 @@ class TestFallbackChapter:
         from scheduler import scheduler as sched
         monkeypatch.setattr("resolvers.course_resolver._parse_url_params",
                             lambda url: {"chapter_id": "1217304706"})
-        monkeypatch.setattr("e6.task_registry.load_registry",
+        monkeypatch.setattr("app.registry.task_registry.load_registry",
                             lambda key: None)
         out = sched._fallback_chapter("http://x?chapterId=1217304706",
                                       "k", {"1217304706"})

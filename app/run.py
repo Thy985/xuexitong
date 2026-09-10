@@ -265,7 +265,7 @@ def cmd_run(args) -> int:
     # 旧版只写 PASS，失败路径完全不更新 registry → 失败任务卡在 Queue 头部重复执行。
     if identity and chapter:
         try:
-            from e6.task_registry import load_registry, save_registry
+            from app.registry.task_registry import load_registry, save_registry
             reg = load_registry(identity.key())
             # E6.2：同一章可有多个视频 task（<chapterId>, <chapterId>:video2, ...）。
             # 标记「本章第一个尚未完成的 video task」——即本次播放的那个视频点的任务，

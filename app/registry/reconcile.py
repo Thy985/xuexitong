@@ -20,7 +20,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional
 
-from e6.task_registry import (
+from app.registry.task_registry import (
     CompletionEvidence,
     TaskRecord,
     Verification,
@@ -359,7 +359,7 @@ def stale_completed_by_points(
 
     返回需要降级的任务 task_id；调用方负责 mark_stale + save。
     """
-    from e6.task_registry import chapter_done_from_snapshot
+    from app.registry.task_registry import chapter_done_from_snapshot
     downgraded = []
     for tid, t in existing.items():
         if t.status != "COMPLETED":

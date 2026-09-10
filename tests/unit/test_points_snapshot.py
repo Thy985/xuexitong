@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 @pytest.fixture
 def tmp_registry(tmp_path):
-    import e6.task_registry as tr
+    import app.registry.task_registry as tr
     orig = tr.TASKS_DIR
     tr.TASKS_DIR = tmp_path / "registry"
     yield tmp_path
@@ -18,7 +18,7 @@ def tmp_registry(tmp_path):
 
 
 def test_set_and_load_point_snapshot(tmp_registry):
-    from e6.task_registry import set_chapter_point_snapshot, load_chapter_points
+    from app.registry.task_registry import set_chapter_point_snapshot, load_chapter_points
     set_chapter_point_snapshot("k1", "1217304708",
                                video_total=2, video_finished=0, has_video=True)
     set_chapter_point_snapshot("k1", "1217304705",
@@ -32,7 +32,7 @@ def test_set_and_load_point_snapshot(tmp_registry):
 
 def test_merge_done_keeps_and_removes_by_points(tmp_registry):
     """洞2: 有点级快照未完成的章，即使 registry 记 COMPLETED 也不放行。"""
-    from e6.task_registry import (
+    from app.registry.task_registry import (
         set_chapter_point_snapshot, load_chapter_points,
         save_chapter_points, merge_done_with_points,
     )
@@ -49,7 +49,7 @@ def test_merge_done_keeps_and_removes_by_points(tmp_registry):
 
 
 def test_chapter_done_true_when_all_finished(tmp_registry):
-    from e6.task_registry import chapter_done_from_snapshot
+    from app.registry.task_registry import chapter_done_from_snapshot
     pts_all = {"1217304708": {"has_video": True, "video_total": 2, "video_finished": 2}}
     pts_part = {"1217304708": {"has_video": True, "video_total": 2, "video_finished": 1}}
     pts_none = {}
@@ -60,7 +60,7 @@ def test_chapter_done_true_when_all_finished(tmp_registry):
 
 def test_reconcile_points_exclude_non_video_chapter(tmp_registry):
     """洞1(队列级): has_video==False 的章, 即使 registry 有 video task, 也不进 READY。"""
-    from e6.task_registry import TaskRecord, reconcile_queue
+    from app.registry.task_registry import TaskRecord, reconcile_queue
     cid = "1217304705"
     t = TaskRecord(cid, cid, "体系结构", task_type="video")
     t.status = "FAILED"          # 未达阈值 → 否则本来会进 READY

@@ -30,7 +30,7 @@ KEY = "265997861_151695658"
 
 def _done_chapter(chapter_id: str, title: str = "物理层要点"):
     """构造一个「全部 task COMPLETED(SERVER_VERIFIED)」的 chapter 任务集合。"""
-    from e6.task_registry import (TaskRecord, CompletionEvidence, Verification)
+    from app.registry.task_registry import (TaskRecord, CompletionEvidence, Verification)
     return TaskRecord(
         task_id=f"{chapter_id}_v1", chapter_id=chapter_id, title=title,
         task_type="video", status="COMPLETED", priority=0,
@@ -45,7 +45,7 @@ def _done_chapter(chapter_id: str, title: str = "物理层要点"):
 
 @pytest.fixture
 def act(monkeypatch, tmp_path):
-    from e6 import task_registry as tr
+    from app.registry import task_registry as tr
     with patch("state.course_state.STATE_DIR", tmp_path / "state"), \
          patch("state.course_state.COURSES_DIR", tmp_path / "state" / "courses"), \
          patch("state.course_state.ACTIVE_FILE", tmp_path / "state" / "active_course.json"), \
@@ -69,7 +69,7 @@ def test_progress_completed_reflects_done_chapters_after_run(act, monkeypatch, t
     修复后：run_scheduler 结束时按 registry 派生并写回 progress → 绿。
     """
     from scheduler import scheduler as sched
-    from e6.task_registry import (save_registry, load_registry,
+    from app.registry.task_registry import (save_registry, load_registry,
                                   done_chapter_ids_from_registry)
 
     # 1. 种子 registry：一章的 task 全部 COMPLETED(SERVER_VERIFIED) == 恰一个 done 章

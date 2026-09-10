@@ -22,8 +22,8 @@ Expected: 迁移后 registry 中**只有一个** task_id（新 key），旧 key 
 
 import pytest
 
-from e6.reconcile import reconcile_registry
-from e6.task_registry import (
+from app.registry.reconcile import reconcile_registry
+from app.registry.task_registry import (
     TaskRecord, CompletionEvidence, Verification,
 )
 from tvdp.tdvp import TaskInfo, TaskEvidence

@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 @pytest.fixture
 def tmp_registry(tmp_path):
-    import e6.task_registry as tr
+    import app.registry.task_registry as tr
     orig = tr.TASKS_DIR
     tr.TASKS_DIR = tmp_path / "registry"
     yield tmp_path
@@ -81,7 +81,7 @@ def test_discovery_done_chapter_no_residual(tmp_registry):
 # ── 2) Chapter ≠ Task；Chapter = aggregate(Task)（E6.2 §7）────────────
 
 def test_chapter_aggregate_is_completed_only_when_all_tasks_completed():
-    from e6.task_registry import (
+    from app.registry.task_registry import (
         TaskRecord, chapter_aggregate_status, done_chapter_ids_from_registry)
     video = TaskRecord("1217304705", "1217304705", "T")
     video.mark_completed(run_id="r1", source="isPassed")   # video 完成（SERVER_VERIFIED）
@@ -94,7 +94,7 @@ def test_chapter_aggregate_is_completed_only_when_all_tasks_completed():
 
 
 def test_chapter_aggregate_completed_when_video_and_other_done():
-    from e6.task_registry import (
+    from app.registry.task_registry import (
         TaskRecord, chapter_aggregate_status, done_chapter_ids_from_registry)
     video = TaskRecord("470", "1217304700", "T")
     video.mark_completed(run_id="r1", source="isPassed")
@@ -106,7 +106,7 @@ def test_chapter_aggregate_completed_when_video_and_other_done():
 # ── 3) Queue 只接受真正可执行 task（video）── §8 ─────────────────────
 
 def test_reconcile_queue_excludes_non_video_task(tmp_registry):
-    from e6.task_registry import (
+    from app.registry.task_registry import (
         TaskRecord, reconcile_queue, save_registry)
     video_pending = TaskRecord("1217304705", "1217304705", "T",
                                status="PENDING", task_type="video")
@@ -121,7 +121,7 @@ def test_reconcile_queue_excludes_non_video_task(tmp_registry):
 
 def test_registry_queue_skips_completed_video_but_chapter_not_done(tmp_registry):
     """E6.2 §9: video 已完成 + other 未完成 → 该 video 不进队列、章不算完成。"""
-    from e6.task_registry import (
+    from app.registry.task_registry import (
         TaskRecord, reconcile_queue, done_chapter_ids_from_registry)
     video = TaskRecord("1217304705", "1217304705", "T")
     video.mark_completed(run_id="r-pre", source="isPassed")   # SERVER_VERIFIED
@@ -142,10 +142,10 @@ def test_reconcile_real_case_4705(tmp_registry):
     """真实案例回归（E6.2 §10）：
        4705 video 已有 SERVER_VERIFIED 完成证据，但该章仍有 non-video PENDING
        → reconcile 后 chapter 不得 COMPLETED，done 排除 4705。"""
-    from e6.task_registry import (
+    from app.registry.task_registry import (
         TaskRecord, save_registry, load_registry,
         done_chapter_ids_from_registry, chapter_aggregate_status)
-    from e6.reconcile import reconcile_registry
+    from app.registry.reconcile import reconcile_registry
     from tvdp.tdvp import TaskInfo, TaskEvidence
 
     # 预置：video task 已有 SERVER_VERIFIED 完成证据（历史 run）

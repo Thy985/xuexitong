@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 @pytest.fixture
 def tmp_registry(tmp_path):
-    import e6.task_registry as tr
+    import app.registry.task_registry as tr
     orig = tr.TASKS_DIR
     tr.TASKS_DIR = tmp_path / "registry"
     yield tmp_path
@@ -25,8 +25,8 @@ def tmp_registry(tmp_path):
 
 def test_4708_two_video_queue_splits(tmp_registry):
     """构建阶段：2 视频章 → `zh` 与 `zh:video2` 都是 READY。"""
-    from e6.task_registry import reconcile_queue, done_chapter_ids_from_registry
-    from e6.reconcile import reconcile_registry
+    from app.registry.task_registry import reconcile_queue, done_chapter_ids_from_registry
+    from app.registry.reconcile import reconcile_registry
     from tvdp.tdvp import build_tasks_from_discovery
 
     cid = "1217304708"
@@ -46,8 +46,8 @@ def test_4708_two_video_queue_splits(tmp_registry):
 
 def test_after_first_video_second_stays_queued(tmp_registry):
     """回归核心：v1 完成后 v2 仍 READY，下次 action 继续执行 v2。"""
-    from e6.task_registry import TaskRecord, reconcile_queue, done_chapter_ids_from_registry
-    from e6.reconcile import reconcile_registry
+    from app.registry.task_registry import TaskRecord, reconcile_queue, done_chapter_ids_from_registry
+    from app.registry.reconcile import reconcile_registry
     from tvdp.tdvp import build_tasks_from_discovery
 
     cid = "1217304708"
@@ -81,8 +81,8 @@ def test_reconcile_does_not_keep_done_video_ahead_of_pending_video(tmp_registry)
     """E6.2 重点:scheduler 不应把已完成 v1 当作整章 done 而跳过 v2。"""
     cid = "1217304708"
     course_key = "k1"
-    from e6.task_registry import (TaskRecord, reconcile_queue, done_chapter_ids_from_registry)
-    from e6.reconcile import reconcile_registry
+    from app.registry.task_registry import (TaskRecord, reconcile_queue, done_chapter_ids_from_registry)
+    from app.registry.reconcile import reconcile_registry
     from tvdp.tdvp import build_tasks_from_discovery
 
     chapters = [{"chapter_id": cid, "title": "数据通信",
@@ -108,8 +108,8 @@ def test_catalog_stale_downgrades_completed_when_jobs_remain(tmp_registry):
     （被旧代码 isPassed 一次性标完成）→ 现在必须被目录校准重新拉起，
     而不是当 done 永久跳过（用户报告：遗留视频总是被跳过）。
     """
-    from e6.task_registry import (TaskRecord, reconcile_queue, done_chapter_ids_from_registry)
-    from e6.reconcile import stale_completed_by_catalog
+    from app.registry.task_registry import (TaskRecord, reconcile_queue, done_chapter_ids_from_registry)
+    from app.registry.reconcile import stale_completed_by_catalog
 
     cid = "1217304708"
     # 旧协议把整章标成单个 COMPLETED video task
@@ -142,8 +142,8 @@ def test_catalog_stale_downgrades_completed_when_jobs_remain(tmp_registry):
 def test_no_video_chapter_never_emits_video_task(tmp_registry):
     """洞1: 已知无视频的章（video_counts=0，如 4705 文档/知识扩展章）
     不产 video task → 不会进入"待播"队列（reconcile_queue 只要 video）。"""
-    from e6.task_registry import reconcile_queue, done_chapter_ids_from_registry
-    from e6.reconcile import reconcile_registry
+    from app.registry.task_registry import reconcile_queue, done_chapter_ids_from_registry
+    from app.registry.reconcile import reconcile_registry
     from tvdp.tdvp import build_tasks_from_discovery
 
     cid = "1217304705"

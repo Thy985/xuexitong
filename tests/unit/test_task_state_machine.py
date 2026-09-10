@@ -27,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 @pytest.fixture
 def tmp_registry(tmp_path):
     """把 e6 registry 的文件路径指向临时目录，避免污染仓库。"""
-    import e6.task_registry as tr
+    import app.registry.task_registry as tr
     orig = tr.TASKS_DIR
     tr.TASKS_DIR = tmp_path / "registry"
     yield tmp_path
@@ -38,7 +38,7 @@ def tmp_registry(tmp_path):
 
 class TestStateMachine:
     def test_mark_completed_requires_evidence(self):
-        from e6.task_registry import TaskRecord
+        from app.registry.task_registry import TaskRecord
         t = TaskRecord("A", "c1", "T")
         with pytest.raises(ValueError):
             t.mark_completed(run_id="", source="isPassed")
@@ -46,7 +46,7 @@ class TestStateMachine:
             t.mark_completed(run_id="r1", evidence_level="NONE")
 
     def test_mark_completed_with_evidence_ok(self):
-        from e6.task_registry import TaskRecord
+        from app.registry.task_registry import TaskRecord
         t = TaskRecord("A", "c1", "T")
         t.mark_completed(run_id="r1", source="isPassed", passed_object_ids=["obj1"])
         assert t.status == "COMPLETED"
@@ -55,7 +55,7 @@ class TestStateMachine:
         assert t.consecutive_failures == 0
 
     def test_mark_failed_increments_and_keeps_stage(self):
-        from e6.task_registry import TaskRecord
+        from app.registry.task_registry import TaskRecord
         t = TaskRecord("A", "c1", "T")
         t.mark_failed(run_id="r1", failure_stage="VIDEO_METADATA", detail="90s timeout")
         assert t.status == "FAILED"
@@ -65,7 +65,7 @@ class TestStateMachine:
         assert t.completion_evidence.type == "NONE"
 
     def test_threshold_reaches_blocked(self):
-        from e6.task_registry import TaskRecord
+        from app.registry.task_registry import TaskRecord
         t = TaskRecord("A", "c1", "T", max_attempts=3)
         statuses = []
         for i in range(3):
@@ -74,7 +74,7 @@ class TestStateMachine:
         assert t.consecutive_failures == 3
 
     def test_serialization_roundtrip_preserves_evidence(self):
-        from e6.task_registry import TaskRecord
+        from app.registry.task_registry import TaskRecord
         t = TaskRecord("A", "c1", "T")
         t.mark_completed(run_id="r1", source="isPassed", detail="passed_object_ids=3")
         d = TaskRecord.from_dict(json.loads(json.dumps(t.to_dict())))
@@ -87,7 +87,7 @@ class TestStateMachine:
 
 class TestQueueReconcile:
     def test_completed_task_not_queued(self, tmp_registry):
-        from e6.task_registry import TaskRecord, reconcile_queue, done_chapter_ids_from_registry
+        from app.registry.task_registry import TaskRecord, reconcile_queue, done_chapter_ids_from_registry
         a = TaskRecord("A", "c1", "T"); a.mark_completed(run_id="r1", source="isPassed")
         b = TaskRecord("B", "c2", "T")
         q = reconcile_queue("k", {"A": a, "B": b})
@@ -97,14 +97,14 @@ class TestQueueReconcile:
         assert done_chapter_ids_from_registry({"A": a}) == {"c1"}
 
     def test_failed_task_can_retry(self, tmp_registry):
-        from e6.task_registry import TaskRecord, reconcile_queue
+        from app.registry.task_registry import TaskRecord, reconcile_queue
         f = TaskRecord("F", "c1", "T"); f.mark_failed(run_id="r", failure_stage="S")
         q = reconcile_queue("k", {"F": f})
         assert [i["task_id"] for i in q.items] == ["F"]
         assert q.items[0]["state"] == "RETRY"
 
     def test_blocked_task_skipped(self, tmp_registry):
-        from e6.task_registry import TaskRecord, reconcile_queue
+        from app.registry.task_registry import TaskRecord, reconcile_queue
         b = TaskRecord("B", "c1", "T", max_attempts=2)
         for i in range(2):
             b.mark_failed(run_id=str(i), failure_stage="S")
@@ -112,7 +112,7 @@ class TestQueueReconcile:
         assert [i["task_id"] for i in q.items] == []
 
     def test_queue_is_derived_not_authoritative(self, tmp_registry):
-        from e6.task_registry import TaskRecord, reconcile_queue
+        from app.registry.task_registry import TaskRecord, reconcile_queue
         a = TaskRecord("A", "c1", "T")
         q = reconcile_queue("k2", {"A": a})
         assert [i["task_id"] for i in q.items] == ["A"]
@@ -127,8 +127,8 @@ class TestReconcile:
                         TaskEvidence("UNKNOWN", "UI", ""))
 
     def test_completed_without_evidence_downgraded(self):
-        from e6.task_registry import TaskRecord
-        from e6.reconcile import reconcile_registry
+        from app.registry.task_registry import TaskRecord
+        from app.registry.reconcile import reconcile_registry
         bad = TaskRecord("C1", "c1", "Ch1", status="COMPLETED")
         tasks = [self._mk("C1", "c1")]
         reg, rep = reconcile_registry("k", {"C1": bad}, tasks, {})
@@ -136,8 +136,8 @@ class TestReconcile:
         assert rep.downgraded == 1
 
     def test_completed_with_server_evidence_retained(self):
-        from e6.task_registry import TaskRecord
-        from e6.reconcile import reconcile_registry
+        from app.registry.task_registry import TaskRecord
+        from app.registry.reconcile import reconcile_registry
         good = TaskRecord("C2", "c2", "T")
         good.mark_completed(run_id="r1", source="isPassed")
         tasks = [self._mk("C2", "c2")]
@@ -148,8 +148,8 @@ class TestReconcile:
     def test_nextunit_url_change_never_completes(self):
         """E6.1 §13 回归：target=1217304721，nextUnit URL 跳到 1217304708，
         1217304708 绝不因页面跳转而进入 COMPLETED。"""
-        from e6.task_registry import TaskRecord
-        from e6.reconcile import reconcile_registry
+        from app.registry.task_registry import TaskRecord
+        from app.registry.reconcile import reconcile_registry
         polluted = TaskRecord("1217304721", "1217304721", "Target",
                               status="COMPLETED")  # 无证据（污染）。
         tasks = [self._mk("1217304721", "1217304721"),
@@ -166,7 +166,7 @@ class TestReconcile:
 
 class TestFailurePersistence:
     def test_runtime_fail_writes_back(self, tmp_registry):
-        from e6.task_registry import TaskRecord, save_registry, load_registry
+        from app.registry.task_registry import TaskRecord, save_registry, load_registry
         t = TaskRecord("1217304708", "1217304708", "Target")
         save_registry("ck", {"1217304708": t})
         t = load_registry("ck")["1217304708"]
@@ -178,7 +178,7 @@ class TestFailurePersistence:
         assert saved.failure.stage == "VIDEO_METADATA"
 
     def test_success_resets_consecutive_failures(self, tmp_registry):
-        from e6.task_registry import TaskRecord, save_registry, load_registry
+        from app.registry.task_registry import TaskRecord, save_registry, load_registry
         t = TaskRecord("T", "c1", "x", consecutive_failures=2)
         save_registry("kk", {"T": t})
         t = load_registry("kk")["T"]
@@ -193,8 +193,8 @@ class TestFailurePersistence:
 class TestMigration:
     def test_bad_done_ids_repaired(self):
         """历史污染：无证据 COMPLETED 被修复为 UNKNOWN（Registry + History 分离）。"""
-        from e6.task_registry import TaskRecord
-        from e6.reconcile import reconcile_registry
+        from app.registry.task_registry import TaskRecord
+        from app.registry.reconcile import reconcile_registry
         bad = TaskRecord("X", "chX", "T", status="COMPLETED")
         good = TaskRecord("Y", "chY", "T")
         good.mark_completed(run_id="r1", source="isPassed")
@@ -211,10 +211,10 @@ class TestCmdRunWriteback:
         import argparse
         import app.run as ar
         from unittest.mock import patch
-        import e6.task_registry as tr
+        import app.registry.task_registry as tr
         tr.TASKS_DIR = tmp_registry / "registry"
 
-        from e6.task_registry import TaskRecord, save_registry, load_registry
+        from app.registry.task_registry import TaskRecord, save_registry, load_registry
         # cmd_run 使用 identity.key() → "265997861_151695158" 作为 registry 目录
         save_registry("265997861_151695158",
                       {"1217304708": TaskRecord("1217304708", "1217304708", "Target")})
@@ -249,8 +249,8 @@ class TestCmdRunWriteback:
 class TestSchedulerRecovery:
     def test_scheduler_restart_recovers_from_registry(self, tmp_registry):
         """重启后 reconcile 能从 registry（+discovery）恢复 canonical 状态。"""
-        from e6.task_registry import TaskRecord, save_registry, load_registry
-        from e6.reconcile import reconcile_registry
+        from app.registry.task_registry import TaskRecord, save_registry, load_registry
+        from app.registry.reconcile import reconcile_registry
         ok = TaskRecord("R2", "ch2", "T"); ok.mark_completed(run_id="r-pre", source="isPassed")
         save_registry("rec", {"R2": ok})
         from tvdp.tdvp import TaskInfo, TaskEvidence
