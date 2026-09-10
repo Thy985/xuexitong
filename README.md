@@ -180,19 +180,16 @@ xuexitong/
 │   ├── tdvp_tasks.json       #    TDVP 任务注册表（章节→任务状态）
 │   └── courses/              #    每门课程独立状态文件
 │       └── <course_id>_<clazz_id>.json
-├── e7/                       # E7 Evidence Pack（历史报告/证据）
-│   ├── E7_tdvp_report.md
-│   └── evidence_e7.json
 ├── tests/
 │   ├── unit/                   #    纯函数 / 数据结构 / parser / 状态机
 │   ├── integration/            #    scheduler+registry / persistence / queue
 │   ├── regression/             #    （规划中）历史事故复现测试
 │   └── fixtures/               #    （规划中）真实 DOM/state/历史运行快照
 ├── docs/
-│   ├── architecture/           #    架构 / 状态机 / scheduler / registry / persistence 说明
+│   ├── architecture/           #    架构/状态机/scheduler/registry 说明 + E3/E5/E6/E7 实验报告
 │   ├── engineering-review/     #    工程审计 / 考古 / 回归矩阵 / CI 门禁 / Agent 规则
 │   ├── runbooks/               #    本地 Playwright 运行手册 / 能力矩阵 / 滑块验证码处理
-│   └── evidence/               #    E2E 基线报告 / 真实登录证据 / 历史日志
+│   └── evidence/               #    E2E 基线报告 / 真实登录证据 / evidence_*.json 历史快照
 ├── scripts/                    #    本地诊断/验证脚本 + 用户脚本
 │   ├── mooc2_probe.py          #    真实（mooc2 入口）只读登录 + 目录 E2E 验证
 │   └── v3_optimized.user.js    #    浏览器 end-user script

@@ -20,7 +20,7 @@
     ".github/workflows/run.yml"
   ],
   "evidence_pack": {
-    "report": "e6/E6_scheduler_report.md"
+    "report": "docs/architecture/E6_scheduler_report.md"
   },
   "integration_tests": {
     "E6_A_manual_noop": {

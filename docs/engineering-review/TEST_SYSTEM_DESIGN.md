@@ -5,7 +5,7 @@
 > - 事故库：`HISTORICAL_BUG_CASES.md`（C1..C10 + §3.x + §4.x，159 commits）
 > - 逆向映射：`REGRESSION_MATRIX.md`（P0-01..P0-12 / P1-01..12 / P2，五类 outcome、验证层、TFS-1..6）
 > - CI：`CI_GATES_CANDIDATES.md`（现有 3 workflow 均无 pytest 自动触发 = **TFS-6 最大假安全感**）
-> - 现有代码与测试：`app/` `e2/` `e3/` `e6/` `scheduler/` `tvdp/` `resolvers/` `state/` `utils/`
+> - 现有代码与测试：`app/`（含 `app/registry/`、`app/e2_headed_gha.py`）`scheduler/` `tvdp/` `resolvers/` `state/` `utils/` `scripts/`
 > - 现有测试资产：`tests/`（unit/integration 已起，当前 **149 pass + 1 skip**，139 个 `test_*` 函数）
 > - 真实验证资产：`scripts/mooc2_probe.py` / `local-pw_probe.py` / `diag_login.py`（mooc2 真实登录已通）
 
@@ -47,9 +47,9 @@
 - 迁移双键 / live `video_total:0` 漏校 / 多章 any_success / CourseIdentity-cpi / 双 registry / 双熔断 = 0
 
 ### 1.3 现有 E2E（浏览器/真站验证）
-- `e2/e2_headed_gha.py`：10 项闭合验证（登录→iframe→duration→点击→currentTime 增长→multimedia/log→isPassed→复核），参数化 `courseid/clazzid/cpi/enc/chapterId`。
-- `e3/e3_ci_run.py`：CI 可靠性实验。
-- `e6/`（task_registry / reconcile / evidence）；`tvdp/tdvp.py`（探针 + evidence）。
+- `app/e2_headed_gha.py`：10 项闭合验证（登录→iframe→duration→点击→currentTime 增长→multimedia/log→isPassed→复核），参数化 `courseid/clazzid/cpi/enc/chapterId`（原 `e2/e2_headed_gha.py`）。
+- `scripts/e3_ci_run.py`：CI 可靠性实验（原 `e3/`）。
+- `app/registry/`（task_registry / reconcile / evidence）；`tvdp/tdvp.py`（探针 + evidence）。
 - 当前 **CI 视角**：`e2.yml`/`e3.yml` 均 `workflow_dispatch` 手动触发；`run.yml` 产品工作流。**没有一条自动跑 pytest**（TFS-6）。
 
 ---

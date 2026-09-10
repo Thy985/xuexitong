@@ -12,7 +12,7 @@
   ],
   "modified_files": [],
   "evidence_pack": {
-    "report": "e7/E7_tdvp_report.md"
+    "report": "docs/architecture/E7_tdvp_report.md"
   },
   "data_model": {
     "TaskEvidence": {

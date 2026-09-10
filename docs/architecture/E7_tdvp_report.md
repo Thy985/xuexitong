@@ -214,8 +214,8 @@ next_task = '1217304702_1_3'
 - `tvdp/__init__.py` — 模块导出
 - `tests/test_tdvp.py` — 16 单元测试
 - `tests/test_tdvp_integration.py` — 2 集成测试
-- `e7/E7_tdvp_report.md` — 本报告
-- `e7/evidence_e7.json` — Evidence Pack JSON
+- `docs/architecture/E7_tdvp_report.md` — 本报告
+- `docs/evidence/E7_evidence.json` — Evidence Pack JSON
 
 ---
 
