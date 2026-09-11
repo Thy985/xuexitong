@@ -210,6 +210,11 @@ def observe_long_play(page, max_s: int = 150, poll_s: int = 6) -> dict:
     while time.time() < end_deadline:
         st = get_video_state(page)
         ct = st.get("currentTime") if st.get("found") else None
+        # 真实播放器被平台暂停（反挂机/缓冲）时自动重新触发 play，继续推进
+        if isinstance(ct, (int, float)) and st.get("paused") and not st.get("ended"):
+            _trigger_real_play(page)
+            st = get_video_state(page)
+            ct = st.get("currentTime") if st.get("found") else None
         if isinstance(ct, (int, float)):
             ts.append(ct)
             max_ct = max(max_ct, ct)
@@ -218,6 +223,8 @@ def observe_long_play(page, max_s: int = 150, poll_s: int = 6) -> dict:
                         "paused": st.get("paused"), "ended": st.get("ended"),
                         "duration": st.get("duration")})
         if is_passed_seen and len(ml_logs) >= 1:
+            break
+        if isinstance(ct, (int, float)) and st.get("ended"):
             break
         time.sleep(poll_s)
     elapsed = time.time() - started

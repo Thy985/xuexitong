@@ -1,35 +1,35 @@
 {
   "_note": "real mooc2 E2E capability-audit observations (脱敏：enc/t/cookie 打码). Compiled by scripts/local_e2e_audit.py.",
-  "started_at_utc": "2026-09-10T23:04:36.606404+00:00",
-  "ended_at_utc": "2026-09-10T23:04:54.625533+00:00",
+  "started_at_utc": "2026-09-11T04:50:57.344072+00:00",
+  "ended_at_utc": "2026-09-11T04:55:57.679106+00:00",
   "status": "LONG_PLAY_OBSERVATION",
   "steps": [
     {
       "step": "browser-start",
-      "t": "2026-09-10T23:04:38.028629+00:00",
+      "t": "2026-09-11T04:50:58.700182+00:00",
       "headless": true,
       "version": "145.0.7632.6",
       "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.7632.6 Safari/537.36"
     },
     {
       "step": "entry",
-      "t": "2026-09-10T23:04:38.032863+00:00",
-      "url": "https://mooc1.chaoxing.com/mycourse/studentstudy?chapterId=1217304705=***&courseId=265997861=***&clazzid=151695658=***&cpi=506830460=***&enc=***&mooc2=1",
-      "chapter": "1217304705",
+      "t": "2026-09-11T04:50:58.703765+00:00",
+      "url": "https://mooc1.chaoxing.com/mycourse/studentstudy?chapterId=1217304708=***&courseId=265997861=***&clazzid=151695658=***&cpi=506830460=***&enc=***&mooc2=1",
+      "chapter": "1217304708",
       "course": "265997861",
       "clazz": "151695658"
     },
     {
       "step": "login",
-      "t": "2026-09-10T23:04:42.149887+00:00",
+      "t": "2026-09-11T04:51:02.875759+00:00",
       "ok": true,
       "title": "学生学习页面",
       "on_login_page": false,
-      "url": "https://mooc1.chaoxing.com/mycourse/studentstudy?chapterId=1217304705=***&courseId=2659978"
+      "url": "https://mooc1.chaoxing.com/mycourse/studentstudy?chapterId=1217304708=***&courseId=2659978"
     },
     {
       "step": "course-parse",
-      "t": "2026-09-10T23:04:42.188286+00:00",
+      "t": "2026-09-11T04:51:02.909152+00:00",
       "title": "学生学习页面",
       "catalog_anchor_count": 80,
       "is_mooc2": false,
@@ -37,12 +37,12 @@
     },
     {
       "step": "catalog-discovery",
-      "t": "2026-09-10T23:04:42.197395+00:00",
+      "t": "2026-09-11T04:51:02.916593+00:00",
       "chapter_nodes": 79
     },
     {
       "step": "video-discovery",
-      "t": "2026-09-10T23:04:42.362043+00:00",
+      "t": "2026-09-11T04:51:03.064890+00:00",
       "video": {
         "src_start": "s://cdn/***.mp4",
         "duration": null
@@ -50,59 +50,471 @@
     },
     {
       "step": "long-play",
-      "t": "2026-09-10T23:04:54.497449+00:00",
-      "max_seconds": 220.0,
-      "elapsed": 12.1,
+      "t": "2026-09-11T04:55:57.441043+00:00",
+      "max_seconds": 460.0,
+      "elapsed": 294.4,
       "play_trigger": {
         "ok": true,
-        "currentTime": 0,
+        "currentTime": 281,
         "duration": null,
         "paused": false,
         "ended": false,
         "src": "s://cdn/***.mp4"
       },
-      "ml_log_total": 1,
+      "ml_log_total": 7,
       "isPassed_seen_true": true,
-      "is_passed_at_sec": 12.1,
+      "is_passed_at_sec": 294.4,
       "is_passed_body_excerpt": "{\"isPassed\":true,\"videoTimeLimit\":false,\"hasJobLimit\":false}",
       "currentTime_increased": true,
-      "max_currentTime": 11.692343,
+      "max_currentTime": 573.290036,
       "first_last_currentTime": [
-        0,
-        11.692343
+        281,
+        573.290036
       ],
       "ml_logs": [
         {
-          "t_ms": 6050,
+          "t_ms": 6054,
           "status": 200,
-          "url": "https://mooc1.chaoxing.com/mooc-ans/multimedia/log/a/506830460/7e8e0419fd1598a3436328b4941e17c8?clazzId=151695658=***&playingTime=",
+          "url": "https://mooc1.chaoxing.com/mooc-ans/multimedia/log/a/506830460/fe3a56f9acf15d236fef1a53c02c711f?clazzId=151695658=***&playingTime=",
+          "body_contains_isPassed_true": false
+        },
+        {
+          "t_ms": 66113,
+          "status": 200,
+          "url": "https://mooc1.chaoxing.com/mooc-ans/multimedia/log/a/506830460/fe3a56f9acf15d236fef1a53c02c711f?clazzId=151695658=***&playingTime=",
+          "body_contains_isPassed_true": false
+        },
+        {
+          "t_ms": 102148,
+          "status": 200,
+          "url": "https://mooc1.chaoxing.com/mooc-ans/multimedia/log/a/506830460/fe3a56f9acf15d236fef1a53c02c711f?clazzId=151695658=***&playingTime=",
+          "body_contains_isPassed_true": false
+        },
+        {
+          "t_ms": 108169,
+          "status": 200,
+          "url": "https://mooc1.chaoxing.com/mooc-ans/multimedia/log/a/506830460/fe3a56f9acf15d236fef1a53c02c711f?clazzId=151695658=***&playingTime=",
+          "body_contains_isPassed_true": false
+        },
+        {
+          "t_ms": 168248,
+          "status": 200,
+          "url": "https://mooc1.chaoxing.com/mooc-ans/multimedia/log/a/506830460/fe3a56f9acf15d236fef1a53c02c711f?clazzId=151695658=***&playingTime=",
+          "body_contains_isPassed_true": false
+        },
+        {
+          "t_ms": 228306,
+          "status": 200,
+          "url": "https://mooc1.chaoxing.com/mooc-ans/multimedia/log/a/506830460/fe3a56f9acf15d236fef1a53c02c711f?clazzId=151695658=***&playingTime=",
+          "body_contains_isPassed_true": false
+        },
+        {
+          "t_ms": 288366,
+          "status": 200,
+          "url": "https://mooc1.chaoxing.com/mooc-ans/multimedia/log/a/506830460/fe3a56f9acf15d236fef1a53c02c711f?clazzId=151695658=***&playingTime=",
           "body_contains_isPassed_true": true
         }
       ],
       "samples": [
         {
-          "t_ms": 45,
-          "currentTime": 0,
+          "t_ms": 44,
+          "currentTime": 281,
           "found": true,
           "paused": false,
           "ended": false,
           "duration": null
         },
         {
-          "t_ms": 6129,
-          "currentTime": 5.612083,
+          "t_ms": 6060,
+          "currentTime": 286.432009,
           "found": true,
           "paused": false,
           "ended": false,
-          "duration": 906
+          "duration": 655.978
         },
         {
-          "t_ms": 12135,
-          "currentTime": 11.692343,
+          "t_ms": 12067,
+          "currentTime": 292.441096,
           "found": true,
           "paused": false,
           "ended": false,
-          "duration": 906
+          "duration": 655.978
+        },
+        {
+          "t_ms": 18073,
+          "currentTime": 298.447185,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 24079,
+          "currentTime": 304.453437,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 30084,
+          "currentTime": 310.458723,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 36090,
+          "currentTime": 316.464532,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 42096,
+          "currentTime": 322.470509,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 48100,
+          "currentTime": 328.474931,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 54105,
+          "currentTime": 334.480034,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 60111,
+          "currentTime": 340.485714,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 66115,
+          "currentTime": 346.490838,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 72122,
+          "currentTime": 352.496066,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 78127,
+          "currentTime": 358.501808,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 84133,
+          "currentTime": 364.507603,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 90139,
+          "currentTime": 370.513314,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 96145,
+          "currentTime": 376.519326,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 102166,
+          "currentTime": 381.14,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 108178,
+          "currentTime": 387.092162,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 114184,
+          "currentTime": 393.098991,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 120193,
+          "currentTime": 399.107874,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 126202,
+          "currentTime": 405.116756,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 132209,
+          "currentTime": 411.123303,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 138214,
+          "currentTime": 417.129085,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 144221,
+          "currentTime": 423.135031,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 150227,
+          "currentTime": 429.141533,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 156239,
+          "currentTime": 435.153733,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 162245,
+          "currentTime": 441.160006,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 168252,
+          "currentTime": 447.165671,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 174258,
+          "currentTime": 453.172401,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 180264,
+          "currentTime": 459.178332,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 186270,
+          "currentTime": 465.184663,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 192276,
+          "currentTime": 471.190273,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 198280,
+          "currentTime": 477.195241,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 204286,
+          "currentTime": 483.200932,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 210292,
+          "currentTime": 489.206801,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 216297,
+          "currentTime": 495.212062,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 222303,
+          "currentTime": 501.217688,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 228309,
+          "currentTime": 507.223631,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 234315,
+          "currentTime": 513.22959,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 240321,
+          "currentTime": 519.236098,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 246328,
+          "currentTime": 525.241931,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 252334,
+          "currentTime": 531.248287,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 258339,
+          "currentTime": 537.25396,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 264345,
+          "currentTime": 543.259312,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 270351,
+          "currentTime": 549.265435,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 276357,
+          "currentTime": 555.271708,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 282363,
+          "currentTime": 561.277915,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 288370,
+          "currentTime": 567.284038,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
+        },
+        {
+          "t_ms": 294376,
+          "currentTime": 573.290036,
+          "found": true,
+          "paused": false,
+          "ended": false,
+          "duration": 655.978
         }
       ]
     }
