@@ -46,7 +46,7 @@ on:
         required: false
         default: "2"
   schedule:
-    - cron: '*/5 * * * *'  # [定时测试] 每 5 分钟自动触发（验证自动跑课；验证后按需还原为 0 2 * * *）
+    - cron: '0 16 * * *'  # 每天北京时间 00:00 触发（GitHub cron 为 UTC，北京时间=UTC+8 → 每日 UTC 16:00）
 
 permissions:
   contents: write  # 允许将 state/ 持久化回仓库
