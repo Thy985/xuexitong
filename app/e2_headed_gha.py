@@ -412,29 +412,55 @@ def run_test(args, params: "CourseParams | None" = None):
             evidence.setdefault("errors", []).append(f"v3_inject: {e}")
             log(f"v3 inject failed: {e}")
 
-        # ── F. 等待视频 metadata ────────────────────────────────────
-        log("--- Step F: Wait video metadata ---")
+        # ── F. 等待视频 metadata（video 帧 flaky → 有界重载恢复）────────
+        log("--- Step F: Wait video metadata (with reload recovery) ---")
         video_ready = False
+        video_reload_count = 0
+        max_video_reload = 3
+        stall_reload_after_s = 20      # 持续“无视频”秒数阈值 → 触发 reload
+        stall_s = 0                    # 累计“无视频”秒数
+        stall_reasons = ("no_video_in_cards", "no_cards_doc", "no_cards_frame")
         for i in range(90):
             try:
                 page.wait_for_timeout(1000)
             except Exception:
                 break
             if is_session_kicked(page.url):
-                evidence["verdict"] = "FAIL(session kicked during video-wait)"
+                evidence["verdict"] = "FAIL(session-kicked during video-wait)"
                 break
             st = get_video_state(page)
             dur = st.get("duration")
-            if dur and dur > 0:
-                evidence["video_duration"] = dur
-                video_ready = True
-                # video 找到 = 递归 iframe（cards→ananas→video）访问成功，
-                # 在 nextUnit 切换前记录（Step I 在切换后采集会拿不到）
-                evidence["checks"]["cards_has_video"] = True
-                log(f"Video ready: duration={dur:.0f}s ct={st.get('currentTime',0):.1f}s rs={st.get('readyState')}")
-                break
+            if st.get("found"):
+                stall_s = 0
+                if dur and dur > 0:
+                    evidence["video_duration"] = dur
+                    video_ready = True
+                    evidence["checks"]["cards_has_video"] = True
+                    log(f"Video ready: duration={dur:.0f}s "
+                        f"ct={st.get('currentTime',0):.1f}s rs={st.get('readyState')}")
+                    break
+            else:
+                reason = st.get("reason") or ""
+                stall_s = (stall_s + 1) if reason in stall_reasons else 0
+                # flaky 恢复：headed-Xvfb 偶发 video iframe 不渲染(no_video_in_cards)。
+                # 持续无视频超阈值 → 有界重载并从 v3 注入，强迫 fresh render，而不是
+                # 原地空转整 90s 就放弃。
+                if stall_s >= stall_reload_after_s:
+                    stall_s = 0
+                    if video_reload_count < max_video_reload:
+                        video_reload_count += 1
+                        evidence["checks"]["video_reload_count"] = video_reload_count
+                        log(f"[recover] no video frame ({reason}); reload page #{video_reload_count}")
+                        try:
+                            page.goto(base, wait_until="domcontentloaded")
+                            page.wait_for_timeout(2000)
+                            page.add_script_tag(content=script_src)
+                            page.wait_for_timeout(1500)
+                        except Exception as re_:
+                            log(f"[recover] reload failed: {re_}")
             if i % 10 == 0:
-                log(f"  waiting ({i+1}s) found={st.get('found')} dur={dur} reason={st.get('reason')}")
+                log(f"  waiting ({i+1}s) found={st.get('found')} dur={dur} "
+                    f"reason={st.get('reason')} reloads={video_reload_count}")
 
         if not video_ready:
             evidence["verdict"] = "FAIL(video metadata not ready in GHA headed)"
