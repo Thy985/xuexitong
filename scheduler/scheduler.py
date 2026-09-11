@@ -386,10 +386,13 @@ def _run_one_chapter(course_url: str, chapter_id: str, task_id: str = "",
     except Exception:
         pass
 
+    # 章视角对齐：用任务自己的 chapter_id 重建课程 URL，避免沿用 state 里
+    # 旧章 raw_url 的 chapterId 锚点（否则 page 落到的章节视图与任务不对齐）。
+    spawn_url = _align_chapter_url(course_url, chapter_id)
     cmd = [
         sys.executable, "-m", "app.run",
         "--action", "run",
-        "--course-url", course_url,
+        "--course-url", spawn_url,
         "--chapter-id", chapter_id,
         "--output", evidence_path,
         "--xvfb-display", os.environ.get("DISPLAY", ":99"),
@@ -589,6 +592,20 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
 
         # Options B：把选中的 task（<cid> 或 <cid>:videoN）解析成 (chapter, video_index)
         run_cid, run_vidx = _split_video_target(next_task)
+        # BLOCKED 跳过的运行时护栏：任务已 BLOCKED / 连续失败达上限（max_attempts）
+        # 则不再重跑，直接换下一候选（reconcile_queue 已排除 BLOCKED，但某章可能
+        # 在本轮中途才跨过阈值，这里显式兜底，避免把 budget 打在注定失败的重放上）。
+        if _task_is_blocked(identity_key, next_task, run_cid):
+            print(f"[scheduler] skip blocked/cap-reached task {next_task} "
+                  f"(chapter {run_cid}); pick next", flush=True)
+            chapters_attempted.append(next_task)
+            if executed < max_chapters:
+                next_task = _run_tdvp_probe(
+                    course_url, identity_key, run_id=run_id,
+                    exclude_chapters=set(chapters_attempted))
+            else:
+                next_task = None
+            continue
         chapters_attempted.append(next_task)
         # 自适应看门狗：长视频按实际时长展开 per-chapter 预算（避免 838s 视频被
         # 900s 静态墙钟在 play ~46% 时误杀成 TIMEOUT）。取不到时长则回 base。
@@ -903,6 +920,55 @@ def _fallback_chapter(course_url: str, course_key: str,
     except Exception as e:
         print(f"[scheduler] TDVP: registry fallback failed: {e}", file=sys.stderr)
     return None
+
+
+def _task_is_blocked(course_key: str, task_id: str, chapter_id: str = "",
+                     reg=None) -> bool:
+    """判断单需要 task 是否已 BLOCKED / 达到连续失败上限，用于「跳过」而非重跑。
+
+    场景：某 video 章反复在跑（如 1217304719 抓不到 video），consecutive_failures
+    在某次 run 内才累计跨过 max_attempts → 本次循环重探时仍可能被 re-probe 重选。
+    调度循环需在真正执行前显式跳过它，避免重跑一个注定失败的任务。
+    reg 可显式传入 registry（便于测试）；缺省从磁盘加载。
+    """
+    try:
+        if reg is None:
+            from app.registry.task_registry import load_registry
+            reg = load_registry(course_key)
+        rec = None
+        if task_id and task_id in reg:
+            rec = reg[task_id]
+        elif chapter_id:
+            for t in reg.values():
+                if getattr(t, "chapter_id", "") == chapter_id:
+                    rec = t
+                    break
+        if rec is None:
+            return False
+        if getattr(rec, "status", "") == "BLOCKED":
+            return True
+        cf = int(getattr(rec, "consecutive_failures", 0) or 0)
+        ma = int(getattr(rec, "max_attempts", 0) or 0)
+        return ma > 0 and cf >= ma
+    except Exception:
+        return False
+
+
+def _align_chapter_url(course_url: str, chapter_id: str) -> str:
+    """章视角对齐：用任务自己的 chapter_id 重建课程 URL（锚定该章），
+    避免沿用 state 里旧章的 raw_url 锚点。失败/无 chapter_id 时原样返回。
+    """
+    if not chapter_id:
+        return course_url
+    try:
+        from resolvers.course_resolver import _parse_url_params
+        from tvdp.tdvp import _tdvp_course_params
+        from app.e2_headed_gha import build_base_url
+        _p = _parse_url_params(course_url)
+        _cp = _tdvp_course_params(_p)
+        return build_base_url(chapter_id, _cp) or course_url
+    except Exception:
+        return course_url
 
 
 def _run_tdvp_probe(course_url: str, course_key: str,
