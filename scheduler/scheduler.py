@@ -1076,6 +1076,12 @@ def _run_tdvp_probe(course_url: str, course_key: str,
         reg_before = load_registry(course_key)
         existing, report = reconcile_registry(course_key, reg_before, tasks, dom_status)
         save_registry(course_key, existing)
+        # [DIAG] 确认第一次 reconcile 后 BLOCKED 是否存活（活体可能在此被 dom_done 覆盖）
+        _dp = "1217304719"
+        _dr = existing.get(_dp)
+        print(f"[scheduler] DIAG reconcile1 ppp_status={getattr(_dr, 'status', None)} "
+              f"ppp_dom={dom_status.get(_dp)} cf={getattr(_dr, 'consecutive_failures', None)}",
+              flush=True)
         print(f"[scheduler] TDVP: reconcile → {len(existing)} tasks "
               f"(upcoming={report.upcoming} kept={report.kept_completed} "
               f"downgraded={report.downgraded} upgraded_ui={report.upgraded_ui})",
@@ -1115,6 +1121,12 @@ def _run_tdvp_probe(course_url: str, course_key: str,
         # 4. Reconcile Queue（派生物）
         queue = reconcile_queue(course_key, existing, done_ids, points_map=pts_map)
         print(f"[scheduler] TDVP: queue has {len(queue.items)} READY tasks", flush=True)
+        # [DIAG] 建队时 BLOCKED 集：若 ppp 不在 freeze、却在队列里 → 泄漏在 reconcile1/queue 本身
+        _dq4 = existing.get(_dp)
+        _dq_frozen = sorted({t.chapter_id for t in existing.values()
+                             if getattr(t, "status", "") == "BLOCKED"})
+        print(f"[scheduler] DIAG queue4 ppp_status={getattr(_dq4, 'status', None)} "
+              f"frozen={_dq_frozen}", flush=True)
 
         # 4.5 E6.2：对候选目标章做 L2 live 复核，把「多视频章」拆成逐个 video task，
         #     并让「当前未完成的视频」不被提前当作完成（4708 双视频只播 1 个的问题）。
@@ -1165,6 +1177,10 @@ def _run_tdvp_probe(course_url: str, course_key: str,
                         course_key, existing, tasks2, dom_status, live_pending=live_pending)
                     save_registry(course_key, existing2)
                     existing = existing2
+                    # [DIAG] E6.2 二次 reconcile 后该章 BLOCKED 是否存活
+                    _dp2 = existing.get(_dp)
+                    print(f"[scheduler] DIAG E6.2 head={head_cid} "
+                          f"ppp_after_e62={getattr(_dp2, 'status', None)}", flush=True)
                     pts_map = load_chapter_points(course_key)
                     done_ids = merge_done_with_points(
                         done_chapter_ids_from_registry(existing), set(), pts_map)
