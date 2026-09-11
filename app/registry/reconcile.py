@@ -161,20 +161,26 @@ def reconcile_registry(
         # 旧 task_id 不在最新 discovery：可能发生了 task_id 格式迁移
         matched = by_title.get(old_rec.title)
         if matched and getattr(matched, "task_id", None):
+            was_blocked = getattr(old_rec, "status", "") == "BLOCKED"
             migrated = TaskRecord(
                 task_id=matched.task_id,
                 chapter_id=getattr(matched, "chapter_id", "") or "",
                 title=matched.title or old_rec.title,
                 task_type="video",
-                status=("COMPLETED" if (has_strong_evidence(old_rec) or has_ui_evidence(old_rec))
-                        else "UNKNOWN"),
+                status=("BLOCKED" if was_blocked
+                        else ("COMPLETED" if (has_strong_evidence(old_rec)
+                                              or has_ui_evidence(old_rec))
+                              else "UNKNOWN")),
                 priority=old_rec.priority,
                 _ch_idx=getattr(matched, "_ch_idx", 0),
                 _cell_idx=getattr(matched, "_cell_idx", 0),
                 completion_evidence=old_rec.completion_evidence,
                 verification=old_rec.verification,
+                consecutive_failures=getattr(old_rec, "consecutive_failures", 0) or 0,
+                max_attempts=getattr(old_rec, "max_attempts", 3) or 3,
+                attempt_count=getattr(old_rec, "attempt_count", 0) or 0,
             )
-            if not (has_strong_evidence(old_rec) or has_ui_evidence(old_rec)):
+            if migrated.status == "UNKNOWN":
                 report.repair_map[old_tid] = {
                     "before": "COMPLETED", "after": "UNKNOWN",
                     "reason": "migration, no completion evidence"}
