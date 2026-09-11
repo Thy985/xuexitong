@@ -1079,9 +1079,15 @@ def _run_tdvp_probe(course_url: str, course_key: str,
         # [DIAG] 确认第一次 reconcile 后 BLOCKED 是否存活（活体可能在此被 dom_done 覆盖）
         _dp = "1217304719"
         _dr = existing.get(_dp)
-        print(f"[scheduler] DIAG reconcile1 ppp_status={getattr(_dr, 'status', None)} "
-              f"ppp_dom={dom_status.get(_dp)} cf={getattr(_dr, 'consecutive_failures', None)}",
-              flush=True)
+        _dpp_disc = [(_t.task_id, _t.title, getattr(_t, "task_type", ""))
+                     for _t in (tasks or [])
+                     if (getattr(_t, "chapter_id", "") == _dp)
+                     or (getattr(_t, "task_id", "") == _dp)]
+        _dpp_blocked = sorted({t.chapter_id for t in existing.values()
+                               if getattr(t, "status", "") == "BLOCKED"})
+        print(f"[scheduler] DIAG reconcile1 prev_key_status={getattr(_dr, 'status', None)} "
+              f"ppp_dom={dom_status.get(_dp)} cf={getattr(_dr, 'consecutive_failures', None)} "
+              f"discovery_ppp={_dpp_disc} blocked_after={_dpp_blocked}", flush=True)
         print(f"[scheduler] TDVP: reconcile → {len(existing)} tasks "
               f"(upcoming={report.upcoming} kept={report.kept_completed} "
               f"downgraded={report.downgraded} upgraded_ui={report.upgraded_ui})",
