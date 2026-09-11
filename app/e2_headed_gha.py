@@ -141,34 +141,55 @@ def has_is_passed_marker(body: "str|None") -> bool:
 
 # ── 视频状态获取（与 e1_2_ch16_v2.py 完全一致）───────────────────
 def get_video_state(page) -> dict:
+    """Playwright 原生遍历所有 frames（含跨域/nested iframe）读视频状态。
+
+    旧版用顶层 page.evaluate 逐层按 contentDocument 挖 iframe——一旦目标 <video>
+    落在跨域 or 更深层 iframe，contentDocument 不可达 → 恒 `no_video_in_cards`
+    （如点对点协议PPP 1217304719 在 headed-Xvfb 三连败，3 次 reload 仍找不到）。
+    Playwright 的 page.frames 能枚举并进入跨域/nested frame，对每帧探测 <video>，
+    任一帧有 video 元素即命中（duration 为 null 说明仍在加载，非“无视频”）。
+    """
     try:
-        return page.evaluate("""() => {
-            const cards = Array.from(document.querySelectorAll('iframe'))
-                .find(f => /knowledge\\/cards/.test(f.src || ''));
-            if (!cards) return {found:false, reason:'no_cards_frame'};
-            let doc = cards.contentDocument;
-            if (!doc) return {found:false, reason:'no_cards_doc'};
-            let v = doc.querySelector('video#video_html5_api, video[id*="video_html5"], video');
-            if (!v) {
-                const nf = Array.from(doc.querySelectorAll('iframe'))
-                    .find(f => /video|ans-insertvideo/.test(f.src || ''));
-                if (nf && nf.contentDocument) {
-                    v = nf.contentDocument.querySelector('video');
-                    doc = nf.contentDocument;
-                }
-            }
-            if (!v) return {found:false, reason:'no_video_in_cards'};
-            const d = v.duration;
-            return {
-                found:true, currentTime: v.currentTime,
-                duration: (isFinite(d) && d>0) ? d : null,
-                paused: v.paused, readyState: v.readyState,
-                playbackRate: v.playbackRate, ended: v.ended,
-                src: v.currentSrc || v.src || ''
-            };
-        }""")
+        frames = page.frames
     except Exception as e:
         return {"found": False, "err": str(e)}
+    if not frames:
+        return {"found": False, "reason": "no_frames"}
+
+    def _probe(fr):
+        try:
+            return fr.evaluate("""() => {
+                const v = document.querySelector(
+                    'video#video_html5_api, video[id*="video_html5"], video');
+                if (!v) return null;
+                return {
+                    currentTime: v.currentTime,
+                    duration: (isFinite(v.duration) && v.duration > 0) ? v.duration : null,
+                    paused: v.paused, readyState: v.readyState,
+                    playbackRate: v.playbackRate, ended: v.ended,
+                    src: v.currentSrc || v.src || ''
+                };
+            }""")
+        except Exception:
+            return None
+
+    has_cards = any(("knowledge/cards" in (f.url or "")) for f in frames)
+
+    # 优先 knowledge/cards 卡片帧里的视频
+    for fr in frames:
+        if "knowledge/cards" not in (fr.url or ""):
+            continue
+        st = _probe(fr)
+        if st:
+            return {"found": True, "frame": "cards", **st}
+    # 兜底：任一帧含 video 元素（含跨域 video iframe帧）
+    for fr in frames:
+        st = _probe(fr)
+        if st:
+            return {"found": True, "frame": fr.url and fr.url.split('/')[-1][:24] or "any", **st}
+    if has_cards:
+        return {"found": False, "reason": "no_video_in_cards"}
+    return {"found": False, "reason": "no_cards_frame"}
 
 
 # ── Banner 与侧栏状态 ─────────────────────────────────────────────
