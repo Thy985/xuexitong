@@ -8,7 +8,9 @@
 """
 import pytest
 
-from scheduler.scheduler import _task_is_blocked, _align_chapter_url
+from scheduler.scheduler import (
+    _task_is_blocked, _align_chapter_url, _drop_frozen_candidates,
+)
 from app.registry.task_registry import TaskRecord
 
 
@@ -65,3 +67,28 @@ class TestAlignChapterUrl:
         # 解析失败的输入 → 原样返回，不抛异常
         out = _align_chapter_url("not-a-url-without-params", "123")
         assert isinstance(out, str) and out
+
+
+class TestDropFrozenCandidates:
+    def test_drop_same_chapter_frozen_variant(self):
+        # existing 里 1217304719 是 BLOCKED，候选含同章衍生的新 task → 该候选剔除
+        existing = {
+            "1217304719": _mk("1217304719", "1217304719", status="BLOCKED",
+                              consecutive=3, ma=3),
+            "1217304719:video1": _mk("1217304719:video1", "1217304719", status="PENDING"),
+            "1217304721": _mk("1217304721", "1217304721", status="PENDING"),
+        }
+        cands = [{"task_id": "1217304721"}, {"task_id": "1217304719:video1"}]
+        dropped, out, frozen = _drop_frozen_candidates(cands, existing)
+        assert dropped == 1
+        assert [c["task_id"] for c in out] == ["1217304721"]
+        assert "1217304719" in frozen
+
+    def test_unfrozen_kept(self):
+        existing = {
+            "A": _mk("A", "1", status="PENDING"),
+            "B": _mk("B", "2", status="PENDING"),
+        }
+        dropped, out, _ = _drop_frozen_candidates(
+            [{"task_id": "A"}, {"task_id": "B"}], existing)
+        assert dropped == 0 and {c["task_id"] for c in out} == {"A", "B"}

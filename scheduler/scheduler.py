@@ -954,6 +954,28 @@ def _task_is_blocked(course_key: str, task_id: str, chapter_id: str = "",
         return False
 
 
+def _drop_frozen_candidates(candidates, existing):
+    """选下一个前，按 existing 里的 BLOCKED 章整章过滤。
+
+    reconcile 的章级冻结会把 BLOCKED 章删出队列，但 E6.2 实时重建/同章衍生可能把
+    同章的「新 task」重新建成 PENDING；本护栏在最终选择前再次按 BLOCKED 章剔除，
+    确保被冻结的候选（含衍生同章任务）绝不进入待执行。
+    Returns: (dropped:int, filtered:list, frozen:set[str])
+    """
+    frozen = {
+        (t.chapter_id or "") for t in existing.values()
+        if getattr(t, "status", "") == "BLOCKED"
+    }
+    out = []
+    for _c in candidates:
+        _rr = existing.get(_c.get("task_id", ""))
+        _cid = (getattr(_rr, "chapter_id", "") if _rr is not None else "")
+        if _cid and _cid in frozen:
+            continue   # 冻结章（含衍生同本章任务），不选
+        out.append(_c)
+    return len(candidates) - len(out), out, frozen
+
+
 def _align_chapter_url(course_url: str, chapter_id: str) -> str:
     """章视角对齐：用任务自己的 chapter_id 重建课程 URL（锚定该章），
     避免沿用 state 里旧章的 raw_url 锚点。失败/无 chapter_id 时原样返回。
@@ -1170,6 +1192,14 @@ def _run_tdvp_probe(course_url: str, course_key: str,
 
         # 5. 选下一个任务（剔除本轮已处理过的章节，避免 re-probe 重复重选同一章）
         candidates = _apply_excluded(queue, exclude_chapters)
+        # 终极护栏：即使 E6.2 实时重建/同章衍生把某章重建回 PENDING（如 1217304719）
+        # 或 QUEUE 重建漏筛，这里在「选下一个」的最后一刻，仍按 existing 里 BLOCKED
+        # 的章整章剔除；同时打印当前冻结集，供诊断泄漏发生在 reconcile 还是衍生。
+        _dropped, candidates, _frozen = _drop_frozen_candidates(candidates, existing)
+        if _dropped:
+            print(f"[scheduler] TDVP: frozen-chapter gate dropped {_dropped} "
+                  f"candidate(s); frozen={sorted(_frozen) if len(_frozen) <= 4 else 'many'}",
+                  flush=True)
         if not candidates:
             print("[scheduler] TDVP: queue empty (or all remaining chapters "
                   "already handled this run)", flush=True)
