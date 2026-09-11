@@ -46,7 +46,7 @@ on:
         required: false
         default: "2"
   schedule:
-    - cron: '0 2 * * *'  # 每天 UTC 02:00 触发
+    - cron: '*/5 * * * *'  # [定时测试] 每 5 分钟自动触发（验证自动跑课；验证后按需还原为 0 2 * * *）
 
 permissions:
   contents: write  # 允许将 state/ 持久化回仓库
