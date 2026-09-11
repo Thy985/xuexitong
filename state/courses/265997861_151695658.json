@@ -13,7 +13,7 @@
     "resolved_at_utc": "2026-09-03T13:36:56.394188+00:00"
   },
   "progress": {
-    "completed": 0,
+    "completed": 16,
     "total": 4,
     "last_completed_task": "1217304706",
     "active_task": null
@@ -375,15 +375,15 @@
     }
   ],
   "scheduler": {
-    "last_scheduled_at": "2026-09-11T05:13:04.164890+00:00",
-    "last_started_at": "2026-09-11T05:13:04.164890+00:00",
-    "last_finished_at": "2026-09-11T05:13:04.165159+00:00",
-    "last_result": "SUCCESS",
-    "last_run_id": "34564369602",
+    "last_scheduled_at": "2026-09-11T07:01:15.516541+00:00",
+    "last_started_at": "2026-09-11T07:01:15.516541+00:00",
+    "last_finished_at": "2026-09-11T07:01:15.516960+00:00",
+    "last_result": "FAILED",
+    "last_run_id": "34571235181",
     "last_trigger": "manual",
-    "consecutive_failures": 0,
-    "execution_id": "34564369602",
-    "attempt": 53,
+    "consecutive_failures": 1,
+    "execution_id": "34571235181",
+    "attempt": 54,
     "blocked_since": null,
     "blocked_hits": 0,
     "blocked_retry_interval": 0
