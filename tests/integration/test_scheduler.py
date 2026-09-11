@@ -399,6 +399,21 @@ class TestFallbackChapter:
                                       "k", {"1217304706"})
         assert out is None
 
+    # 修复回归：目录探测空(PROBE_EMPTY)时，自动探针不得臆测/回落选章，
+    #           必须返回 None 让外层 NOOP，而不是走到 _fallback_chapter 硬猜。
+    #   真实事故：run 34564369602 TDVP fetch empty -> 落到非目标章，视频点推进错位。
+    def test_probe_empty_catalog_returns_none_no_guess(self, monkeypatch):
+        from scheduler import scheduler as sched
+        monkeypatch.setattr("resolvers.course_resolver._parse_url_params",
+                            lambda url: {"chapter_id": "1217304706"})
+        monkeypatch.setattr(
+            "tvdp.tdvp.fetch_course_detail_and_verify",
+            lambda *a, **k: None)  # 目录深度探测失败
+        monkeypatch.setattr("tvdp.tdvp.fetch_course_discovery",
+                            lambda url: [])  # 目录抓取空（含重试仍空）
+        out = sched._run_tdvp_probe("http://x?chapterId=1217304706", "k")
+        assert out is None  # 不臆测选章 → 外层 NOOP
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

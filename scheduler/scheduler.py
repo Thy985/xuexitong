@@ -564,14 +564,16 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
     next_task = chapter_id or _run_tdvp_probe(course_url, identity_key,
                                               run_id=run_id)
     if not next_task:
-        # 队列为空 → 没有可执行任务
-        summary = get_scheduler_summary(identity_key, "NOOP", "No pending task")
+        # 无显式章 + 自动探测未给出 → 要么确实无 pending，要么探针空(PROBE_EMPTY)。
+        # 由 _run_tdv_probe 内部已打 PROBE_EMPTY 提示；这里不臆测选章，诚实报 NOOP。
+        summary = get_scheduler_summary(identity_key, "NOOP",
+                                        "No pending task / probe empty")
         _write_summary(summary)
         _try_sync_progress(identity_key)  # 3D/P1-12
         return ExecutionResult(
             decision="NOOP", result="NOOP", trigger=trigger,
             course_key=identity_key, run_id=run_id, timing_s=0,
-            passed=False, verdict="No pending task to execute",
+            passed=False, verdict="No pending task / probe empty (no guess)",
         )
 
     consecutive_fail_in_run = 0
@@ -876,12 +878,23 @@ def _run_tdvp_probe(course_url: str, course_key: str,
             from tvdp.tdvp import fetch_course_discovery
             chapters_raw = fetch_course_discovery(course_url)
             _combined_points = []
-        # 回退：目录拉不到 → 用 URL/持久化 registry 选一个未处理章（遵守 exclude）
+        # 目录拉取空：可能是 CI/Xvfb 抖动的瞬时失败，先显式重试一次。
+        # 重试后仍空 → **不臆测选章**（不调用 _fallback_chapter 硬猜）：
+        #   否则会像 run 34564369602 那样「目录空 → 兜底到非目标章」，
+        #   与「前进到图里下一个真正未完成点」的意图相违背。
+        #   返回 None → 外层 run_scheduler 判 NOOP；日志暴露 PROBE_EMPTY 供追溯。
         if not chapters_raw:
-            print("[scheduler] TDVP: fetch returned empty, falling back "
-                  f"(exclude={sorted(set(exclude_chapters or []))})", file=sys.stderr)
-            return _fallback_chapter(course_url, course_key,
-                                     exclude_chapters=exclude_chapters)
+            try:
+                print("[scheduler] TDVP: catalog empty, retrying once …", flush=True)
+                from tvdp.tdvp import fetch_course_discovery as _retry_fetch
+                chapters_raw = _retry_fetch(course_url)
+            except Exception as _re:
+                print(f"[scheduler] TDVP: catalog retry error: {_re}",
+                      file=sys.stderr)
+        if not chapters_raw:
+            print("[scheduler] TDVP: PROBE_EMPTY — 目录探测空(含重试)，不臆测选章，"
+                  "本轮跳过 (next=None)", file=sys.stderr)
+            return None
 
         # 1.5 服务器端 DOM 渲染状态 map
         dom_status = {}
