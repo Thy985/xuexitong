@@ -1,0 +1,476 @@
+{
+  "1217304693": {
+    "chapter": "概述",
+    "chapter_sbar": "1",
+    "section": "概述",
+    "section_sbar": "1"
+  },
+  "1217304694": {
+    "chapter": "物理层",
+    "chapter_sbar": "2",
+    "section": "物理层",
+    "section_sbar": "2"
+  },
+  "1217304695": {
+    "chapter": "数据链路层",
+    "chapter_sbar": "3",
+    "section": "数据链路层",
+    "section_sbar": "3"
+  },
+  "1217304696": {
+    "chapter": "网络层",
+    "chapter_sbar": "4",
+    "section": "网络层",
+    "section_sbar": "4"
+  },
+  "1217304697": {
+    "chapter": "运输层",
+    "chapter_sbar": "5",
+    "section": "运输层",
+    "section_sbar": "5"
+  },
+  "1217304698": {
+    "chapter": "应用层",
+    "chapter_sbar": "6",
+    "section": "应用层",
+    "section_sbar": "6"
+  },
+  "1217304699": {
+    "chapter": "综合项目设计",
+    "chapter_sbar": "7",
+    "section": "综合项目设计",
+    "section_sbar": "7"
+  },
+  "1217304700": {
+    "chapter": "概述",
+    "chapter_sbar": "1",
+    "section": "互联网概述",
+    "section_sbar": "1.1"
+  },
+  "1217304701": {
+    "chapter": "概述",
+    "chapter_sbar": "1",
+    "section": "互联网的组成",
+    "section_sbar": "1.2"
+  },
+  "1217304702": {
+    "chapter": "概述",
+    "chapter_sbar": "1",
+    "section": "计算机网络的概念与类别",
+    "section_sbar": "1.3"
+  },
+  "1217304703": {
+    "chapter": "概述",
+    "chapter_sbar": "1",
+    "section": "计算机网络的拓扑结构",
+    "section_sbar": "1.4"
+  },
+  "1217304704": {
+    "chapter": "概述",
+    "chapter_sbar": "1",
+    "section": "计算机网络的性能",
+    "section_sbar": "1.5"
+  },
+  "1217304705": {
+    "chapter": "概述",
+    "chapter_sbar": "1",
+    "section": "计算机网络的体系结构",
+    "section_sbar": "1.6"
+  },
+  "1217304706": {
+    "chapter": "物理层",
+    "chapter_sbar": "2",
+    "section": "物理层的主要任务",
+    "section_sbar": "2.1"
+  },
+  "1217304707": {
+    "chapter": "概述",
+    "chapter_sbar": "1",
+    "section": "知识扩展",
+    "section_sbar": "1.7"
+  },
+  "1217304708": {
+    "chapter": "物理层",
+    "chapter_sbar": "2",
+    "section": "数据通信的基础知识",
+    "section_sbar": "2.2"
+  },
+  "1217304710": {
+    "chapter": "概述",
+    "chapter_sbar": "1",
+    "section": "线上学习任务",
+    "section_sbar": "1.8"
+  },
+  "1217304711": {
+    "chapter": "概述",
+    "chapter_sbar": "1",
+    "section": "思维导图简介",
+    "section_sbar": "1.9"
+  },
+  "1217304712": {
+    "chapter": "物理层",
+    "chapter_sbar": "2",
+    "section": "物理层下面的传输媒体",
+    "section_sbar": "2.3"
+  },
+  "1217304713": {
+    "chapter": "概述",
+    "chapter_sbar": "1",
+    "section": "本章思维导图",
+    "section_sbar": "1.10"
+  },
+  "1217304714": {
+    "chapter": "物理层",
+    "chapter_sbar": "2",
+    "section": "信道复用技术",
+    "section_sbar": "2.4"
+  },
+  "1217304715": {
+    "chapter": "物理层",
+    "chapter_sbar": "2",
+    "section": "数字传输系统",
+    "section_sbar": "2.5"
+  },
+  "1217304716": {
+    "chapter": "物理层",
+    "chapter_sbar": "2",
+    "section": "宽带接入技术",
+    "section_sbar": "2.6"
+  },
+  "1217304717": {
+    "chapter": "数据链路层",
+    "chapter_sbar": "3",
+    "section": "数据链路层概述",
+    "section_sbar": "3.1"
+  },
+  "1217304718": {
+    "chapter": "物理层",
+    "chapter_sbar": "2",
+    "section": "线上学习任务",
+    "section_sbar": "2.7"
+  },
+  "1217304719": {
+    "chapter": "数据链路层",
+    "chapter_sbar": "3",
+    "section": "点对点协议PPP",
+    "section_sbar": "3.2"
+  },
+  "1217304720": {
+    "chapter": "物理层",
+    "chapter_sbar": "2",
+    "section": "本章思维导图",
+    "section_sbar": "2.8"
+  },
+  "1217304721": {
+    "chapter": "数据链路层",
+    "chapter_sbar": "3",
+    "section": "使用广播信道的数据链路层",
+    "section_sbar": "3.3"
+  },
+  "1217304722": {
+    "chapter": "数据链路层",
+    "chapter_sbar": "3",
+    "section": "扩展的以太网",
+    "section_sbar": "3.4"
+  },
+  "1217304724": {
+    "chapter": "数据链路层",
+    "chapter_sbar": "3",
+    "section": "高速以太网",
+    "section_sbar": "3.5"
+  },
+  "1217304725": {
+    "chapter": "数据链路层",
+    "chapter_sbar": "3",
+    "section": "能力提升",
+    "section_sbar": "3.6"
+  },
+  "1217304726": {
+    "chapter": "数据链路层",
+    "chapter_sbar": "3",
+    "section": "学习目标和重点难点",
+    "section_sbar": "3.7"
+  },
+  "1217304727": {
+    "chapter": "数据链路层",
+    "chapter_sbar": "3",
+    "section": "线上学习任务",
+    "section_sbar": "3.8"
+  },
+  "1217304728": {
+    "chapter": "网络层",
+    "chapter_sbar": "4",
+    "section": "网络层概述",
+    "section_sbar": "4.1"
+  },
+  "1217304729": {
+    "chapter": "数据链路层",
+    "chapter_sbar": "3",
+    "section": "本章思维导图",
+    "section_sbar": "3.9"
+  },
+  "1217304730": {
+    "chapter": "网络层",
+    "chapter_sbar": "4",
+    "section": "分类的IP地址",
+    "section_sbar": "4.2"
+  },
+  "1217304731": {
+    "chapter": "网络层",
+    "chapter_sbar": "4",
+    "section": "子网划分",
+    "section_sbar": "4.3"
+  },
+  "1217304732": {
+    "chapter": "网络层",
+    "chapter_sbar": "4",
+    "section": "无分类编址CIDR",
+    "section_sbar": "4.4"
+  },
+  "1217304733": {
+    "chapter": "网络层",
+    "chapter_sbar": "4",
+    "section": "IP数据报的格式",
+    "section_sbar": "4.5"
+  },
+  "1217304734": {
+    "chapter": "网络层",
+    "chapter_sbar": "4",
+    "section": "IP数据报的分片与重组",
+    "section_sbar": "4.6"
+  },
+  "1217304735": {
+    "chapter": "网络层",
+    "chapter_sbar": "4",
+    "section": "IP层转发分组的流程",
+    "section_sbar": "4.7"
+  },
+  "1217304736": {
+    "chapter": "网络层",
+    "chapter_sbar": "4",
+    "section": "ARP协议",
+    "section_sbar": "4.8"
+  },
+  "1217304737": {
+    "chapter": "网络层",
+    "chapter_sbar": "4",
+    "section": "ICMP协议",
+    "section_sbar": "4.9"
+  },
+  "1217304738": {
+    "chapter": "网络层",
+    "chapter_sbar": "4",
+    "section": "IPV6",
+    "section_sbar": "4.10"
+  },
+  "1217304739": {
+    "chapter": "网络层",
+    "chapter_sbar": "4",
+    "section": "路由协议概述",
+    "section_sbar": "4.11"
+  },
+  "1217304740": {
+    "chapter": "网络层",
+    "chapter_sbar": "4",
+    "section": "RIP协议",
+    "section_sbar": "4.12"
+  },
+  "1217304741": {
+    "chapter": "网络层",
+    "chapter_sbar": "4",
+    "section": "OSPF协议",
+    "section_sbar": "4.13"
+  },
+  "1217304742": {
+    "chapter": "网络层",
+    "chapter_sbar": "4",
+    "section": "IP多播",
+    "section_sbar": "4.14"
+  },
+  "1217304743": {
+    "chapter": "网络层",
+    "chapter_sbar": "4",
+    "section": "VPN和NAT",
+    "section_sbar": "4.15"
+  },
+  "1217304744": {
+    "chapter": "网络层",
+    "chapter_sbar": "4",
+    "section": "能力提升",
+    "section_sbar": "4.16"
+  },
+  "1217304745": {
+    "chapter": "网络层",
+    "chapter_sbar": "4",
+    "section": "课后习题",
+    "section_sbar": "4.17"
+  },
+  "1217304746": {
+    "chapter": "网络层",
+    "chapter_sbar": "4",
+    "section": "学习目标和重点难点",
+    "section_sbar": "4.18"
+  },
+  "1217304747": {
+    "chapter": "网络层",
+    "chapter_sbar": "4",
+    "section": "线上学习任务",
+    "section_sbar": "4.19"
+  },
+  "1217304748": {
+    "chapter": "网络层",
+    "chapter_sbar": "4",
+    "section": "本章思维导图",
+    "section_sbar": "4.20"
+  },
+  "1217304749": {
+    "chapter": "运输层",
+    "chapter_sbar": "5",
+    "section": "运输层协议概述",
+    "section_sbar": "5.1"
+  },
+  "1217304750": {
+    "chapter": "运输层",
+    "chapter_sbar": "5",
+    "section": "UDP和TCP概述",
+    "section_sbar": "5.2"
+  },
+  "1217304751": {
+    "chapter": "运输层",
+    "chapter_sbar": "5",
+    "section": "TCP报文段的格式",
+    "section_sbar": "5.3"
+  },
+  "1217304752": {
+    "chapter": "运输层",
+    "chapter_sbar": "5",
+    "section": "可靠传输的工作原理",
+    "section_sbar": "5.4"
+  },
+  "1217304753": {
+    "chapter": "运输层",
+    "chapter_sbar": "5",
+    "section": "TCP可靠传输的实现",
+    "section_sbar": "5.5"
+  },
+  "1217304754": {
+    "chapter": "运输层",
+    "chapter_sbar": "5",
+    "section": "TCP的流量控制",
+    "section_sbar": "5.6"
+  },
+  "1217304755": {
+    "chapter": "运输层",
+    "chapter_sbar": "5",
+    "section": "TCP的拥塞控制",
+    "section_sbar": "5.7"
+  },
+  "1217304756": {
+    "chapter": "运输层",
+    "chapter_sbar": "5",
+    "section": "TCP的运输连接管理",
+    "section_sbar": "5.8"
+  },
+  "1217304757": {
+    "chapter": "运输层",
+    "chapter_sbar": "5",
+    "section": "能力提升",
+    "section_sbar": "5.9"
+  },
+  "1217304758": {
+    "chapter": "运输层",
+    "chapter_sbar": "5",
+    "section": "扩展阅读",
+    "section_sbar": "5.10"
+  },
+  "1217304759": {
+    "chapter": "运输层",
+    "chapter_sbar": "5",
+    "section": "课后习题",
+    "section_sbar": "5.11"
+  },
+  "1217304760": {
+    "chapter": "运输层",
+    "chapter_sbar": "5",
+    "section": "学习目标和重点难点",
+    "section_sbar": "5.12"
+  },
+  "1217304761": {
+    "chapter": "运输层",
+    "chapter_sbar": "5",
+    "section": "线上学习任务",
+    "section_sbar": "5.13"
+  },
+  "1217304762": {
+    "chapter": "运输层",
+    "chapter_sbar": "5",
+    "section": "本章思维导图",
+    "section_sbar": "5.14"
+  },
+  "1217304763": {
+    "chapter": "应用层",
+    "chapter_sbar": "6",
+    "section": "DNS域名服务器",
+    "section_sbar": "6.1"
+  },
+  "1217304764": {
+    "chapter": "应用层",
+    "chapter_sbar": "6",
+    "section": "文件传送协议FTP",
+    "section_sbar": "6.2"
+  },
+  "1217304771": {
+    "chapter": "应用层",
+    "chapter_sbar": "6",
+    "section": "万维网WWW",
+    "section_sbar": "6.3"
+  },
+  "1217304773": {
+    "chapter": "应用层",
+    "chapter_sbar": "6",
+    "section": "电子邮件E_mail",
+    "section_sbar": "6.4"
+  },
+  "1217304775": {
+    "chapter": "应用层",
+    "chapter_sbar": "6",
+    "section": "动态主机配置协议DHCP",
+    "section_sbar": "6.5"
+  },
+  "1217304776": {
+    "chapter": "应用层",
+    "chapter_sbar": "6",
+    "section": "能力提升",
+    "section_sbar": "6.6"
+  },
+  "1217304778": {
+    "chapter": "应用层",
+    "chapter_sbar": "6",
+    "section": "学习目标和重点难点",
+    "section_sbar": "6.7"
+  },
+  "1217304779": {
+    "chapter": "应用层",
+    "chapter_sbar": "6",
+    "section": "线上学习任务",
+    "section_sbar": "6.8"
+  },
+  "1217304780": {
+    "chapter": "应用层",
+    "chapter_sbar": "6",
+    "section": "本章思维导图",
+    "section_sbar": "6.9"
+  },
+  "1217304781": {
+    "chapter": "综合项目设计",
+    "chapter_sbar": "7",
+    "section": "目的和要求",
+    "section_sbar": "7.1"
+  },
+  "1217304784": {
+    "chapter": "综合项目设计",
+    "chapter_sbar": "7",
+    "section": "参考资料",
+    "section_sbar": "7.2"
+  }
+}
