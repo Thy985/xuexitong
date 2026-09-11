@@ -590,9 +590,14 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
         # Options B：把选中的 task（<cid> 或 <cid>:videoN）解析成 (chapter, video_index)
         run_cid, run_vidx = _split_video_target(next_task)
         chapters_attempted.append(next_task)
+        # 自适应看门狗：长视频按实际时长展开 per-chapter 预算（避免 838s 视频被
+        # 900s 静态墙钟在 play ~46% 时误杀成 TIMEOUT）。取不到时长则回 base。
         one = _run_one_chapter(course_url, run_cid, task_id=next_task,
                                trigger=trigger, run_id=run_id,
-                               video_index=run_vidx, max_s=chapter_max_s)
+                               video_index=run_vidx,
+                               max_s=_adaptive_video_watch_s(
+                                   chapter_max_s,
+                                   _probe_video_duration_s(course_url, run_cid)))
         passed = one["passed"]
         verdict = one["verdict"]
         rt_ev = one["runtime_evidence"]
@@ -738,6 +743,81 @@ def _try_sync_progress(course_key: str) -> None:
         _sync_progress_from_registry(course_key)
     except Exception as _sync_err:
         print(f"[scheduler] progress sync skipped: {_sync_err}", file=sys.stderr)
+
+
+def _adaptive_video_watch_s(base_max_s: int,
+                            video_duration_s: Optional[float] = None,
+                            ceiling_s: int = 2400) -> int:
+    """按**实际视频时长**自适应 per-chapter 看门狗预算（P0-01/P0-07）。
+
+    事故：run 34571235181 选了 1217304712（视频 838s），静态默认 900s 看门狗
+    在 play 到 ~46% 时把子进程杀掉 → TIMEOUT（本不该发生）。长视频按
+    `视频时长 * 1.5 + 300s`（播放正确时长 + 登录/进入/逐段过渡/心跳 overhead）
+    展开预算；不知道时长则回落到 base_max_s，并用 ceiling_s 设硬顶（防跑飞顶
+    掉 GHA 50min 上限）。
+
+    Args:
+        base_max_s: 兜底预算（取不到时长时用的保底值，默认 env/900）。
+        video_duration_s: 该章真实视频总长（秒）；None/<=0 时不启用自适应。
+        ceiling_s: 自适应预算的硬顶（秒），防超工作流时限。
+    Returns:
+        该章应使用的看门狗上限（秒）。
+    """
+    base = int(base_max_s or 0)
+    if not video_duration_s or video_duration_s <= 0:
+        return base
+    ceil = max(base, int(ceiling_s or 0))
+    est = int(video_duration_s * 1.5 + 400)
+    return max(base, min(est, ceil))
+
+
+def _probe_video_duration_s(course_url: str, chapter_id: str) -> Optional[float]:
+    """尽力而为读取章节视频总时长（秒），供自适应看门狗用。
+
+    复用一个 headed（Xvfb）页面走到章节 video iframe 读 `video#x5_api.duration`。
+    任何失败都返回 None（调用方回退 base），绝不让时长探测成为新故障点。
+    环境显式给 `XUE_VIDEO_DURATION_S` 时直接采用，免多余开浏览器。
+    """
+    import os as _os2
+    ev = _os2.environ.get("XUE_VIDEO_DURATION_S")
+    if ev:
+        try:
+            v = float(ev)
+            return v if v > 0 else None
+        except ValueError:
+            return None
+    if not chapter_id:
+        return None
+    try:
+        from resolvers.course_resolver import _parse_url_params
+        from app.e2_headed_gha import get_video_state, build_base_url
+        from tvdp.tdvp import _tdvp_course_params
+        import os as _os3
+        from playwright.sync_api import sync_playwright
+        params = _parse_url_params(course_url)
+        cp = _tdvp_course_params(params)
+        base = build_base_url(chapter_id, cp)
+        user = _os3.environ.get("CX_USER")
+        pw = _os3.environ.get("CX_PASS")
+        display = _os3.environ.get("DISPLAY", ":99")
+        with sync_playwright() as pwc:
+            browser = pwc.chromium.launch(
+                headless=False, channel="chromium",
+                args=[f"--display={display}", "--no-sandbox",
+                      "--disable-dev-shm-usage", "--disable-gpu"],
+            )
+            ctx = browser.new_context()
+            page = ctx.new_page()
+            from utils.cookie_store import ensure_login
+            ensure_login(page, ctx, base, user, pw)
+            page.goto(base, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(4000)
+            st = get_video_state(page)
+            browser.close()
+            d = (st or {}).get("duration")
+            return float(d) if d and d > 0 else None
+    except Exception:
+        return None
 
 
 def _split_video_target(task_or_cid) -> tuple[str, int]:

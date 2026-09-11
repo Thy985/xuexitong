@@ -415,5 +415,20 @@ class TestFallbackChapter:
         assert out is None  # 不臆测选章 → 外层 NOOP
 
 
+# 自适应看门狗：长视频按实际时长展开 per-chapter 预算（修复 run 34571235181
+# 中 838s 视频被 900s 静态墙钟在 play ~40% 误杀成 TIMEOUT）。纯函数单测，不开浏览器。
+def test_adaptive_video_watch_s():
+    from scheduler.scheduler import _adaptive_video_watch_s as W
+    # 取不到时长 → 回 base
+    assert W(900, None) == 900
+    assert W(900, 0) == 900
+    # 长视频(838s) → 自适应预算 > base 且 ≥ 1.5*838+400
+    v = W(900, 838)
+    assert v >= 900
+    assert v >= int(838 * 1.5 + 400)
+    # 硬顶封顶（防超 GHA 工作流时限）
+    assert 900 <= W(200, 20000) <= 2400
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
