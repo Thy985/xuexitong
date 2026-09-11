@@ -1085,8 +1085,11 @@ def _run_tdvp_probe(course_url: str, course_key: str,
                      or (getattr(_t, "task_id", "") == _dp)]
         _dpp_blocked = sorted({t.chapter_id for t in existing.values()
                                if getattr(t, "status", "") == "BLOCKED"})
-        print(f"[scheduler] DIAG reconcile1 prev_key_status={getattr(_dr, 'status', None)} "
-              f"ppp_dom={dom_status.get(_dp)} cf={getattr(_dr, 'consecutive_failures', None)} "
+        print(f"[scheduler] DIAG reconcile1 "
+              f"reg_entry={getattr(reg_before.get(_dp), 'status', None)} "
+              f"cf_entry={getattr(reg_before.get(_dp), 'consecutive_failures', None)} "
+              f"after={getattr(_dr, 'status', None)} "
+              f"ppp_dom={dom_status.get(_dp)} cf_after={getattr(_dr, 'consecutive_failures', None)} "
               f"discovery_ppp={_dpp_disc} blocked_after={_dpp_blocked}", flush=True)
         print(f"[scheduler] TDVP: reconcile → {len(existing)} tasks "
               f"(upcoming={report.upcoming} kept={report.kept_completed} "
