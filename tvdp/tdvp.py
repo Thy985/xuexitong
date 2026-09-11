@@ -288,9 +288,36 @@ _CATALOG_EXTRACT_JS = """
 
 
 def extract_catalog_from_page(page, course_url: str) -> list[dict]:
-    """从已登录的课程目录页提取章节列表（可在已打开的同 browser 里复用）。"""
+    """从已登录的课程目录页提取章节列表（可在已打开的同 browser 里复用）。
+
+    目录渲染竞态防护：真实站点的 #coursetree 先挂空 `<ul>`，章节节点是异步
+    填充的。若 selector 一附加就提取，极易拿到空（CI/Xvfb 上尤其明显——
+    对应 real run 34564369602「TDVP fetch returned empty」）。这里在首轮取
+    得为空且 #coursetree 已存在时，轮询等 `.posCatalog_select` 出现（最多
+    约 12s）再重取，显著降低「探针空→整轮空抓」抖动。
+    """
+    import time as _time
     import re as _re
     chapters = page.evaluate(_CATALOG_EXTRACT_JS)
+
+    if not chapters:
+        # 只等目录树子节点 hydration，不额外开新浏览器
+        try:
+            trees = page.locator("#coursetree").count()
+        except Exception:
+            trees = 0
+        if trees:
+            deadline = _time.time() + 12.0
+            while _time.time() < deadline:
+                try:
+                    cells = page.locator(
+                        "#coursetree .posCatalog_select:not(.firstLayer)").count()
+                except Exception:
+                    cells = 0
+                if cells > 0:
+                    break
+                _time.sleep(1.5)
+            chapters = page.evaluate(_CATALOG_EXTRACT_JS)
 
     by_title = {}
     for ch in chapters:

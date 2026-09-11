@@ -50,3 +50,16 @@ PYTHONPATH=. python scripts/local_e2e_audit.py --long --max-s 220   # 长播放�
 # → 写 docs/evidence/e2e_local_audit.json（脱敏）
 ```
 > 提醒：这是会触真站/真登录/真实播放的审计，会产生真实学习记录、触发验证码/风控，不要在正式环境反复跑。
+## 5. 探针空（TDVP fetch returned empty）根因与修复
+
+**现象（CI/Xvfb run.yml run 34564369602）**：scheduler 自动选章前，TDVP 探针报 `fetch returned empty`，旧逻辑回落到 `_fallback_chapter` 硬猜章，视频任务点推进错位（落到非目标章，而非「图里下一个真正未完成点」）。
+
+**根因**：真实 `#coursetree` 先挂空 `<ul>`，章节节点是**异步渲染/填充**的。探针在 `wait_for_selector("#coursetree")` 一附加（shell 在、子节点还空）就立即 `extract`，在较慢的 CI/Xvfb 上极容易取到空。本地 `course_health.py` 多了一段 settle wait 所以未暴露；CI 环境更快触发。
+
+**修复**（commit 见 `git log`）：
+1. `tvdp/tdvp.py::extract_catalog_from_page`：首轮取空且 `#coursetree` 已存在时，**轮询等 `.posCatalog_select` 节点出现（≤12s）再重取**，显著降低「目录空→整轮空抓」。
+2. `scheduler/scheduler.py::_run_tdvp_probe`：目录空时**先重试一次**；重试后仍空显示 `PROBE_EMPTY` 并返回 None（外层 NOOP），**不再调用 `_fallback_chapter` 硬猜**。
+3. NOOP verdict 改为如实 `No pending / probe empty (no guess)`。
+4. 新增回归：`test_extract_catalog_waits_for_hydration`、`test_probe_empty_catalog_returns_none_no_guess`。
+
+> 仍待下一步：探针在 CI 上是 async hydration（而非登录失败）仍未独立抓到现场证据；若再次「空目录」，建议探针打印 `#coursetree` 的 `outerHTML` 片段辅助分辨。

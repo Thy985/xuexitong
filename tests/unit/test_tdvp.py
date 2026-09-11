@@ -317,3 +317,48 @@ class TestIntegration:
         pending = [t for t in tasks if t.status == "PENDING"]
         assert len(completed) > 0
         assert len(pending) > 0
+
+
+# ── 目录渲染竞态防护（目录空 → 轮询重取）─────────────────────────
+
+def test_extract_catalog_waits_for_hydration():
+    """目录树先挂空、章节节点异步出现时，extract_catalog_from_page 应轮询重取，
+    而不是直接返回空（回归 real run 34564369602「TDVP fetch returned empty」）。
+    """
+    from tvdp.tdvp import extract_catalog_from_page
+
+    # 持久计数：跨 locator() 调用共享，保证「先 0 后 >0」在轮询循环里即时翻转，
+    # 测试既不空转 12s，又能精确断言「目录空→轮询重取」路径。
+    _cells_calls = {"n": 0}
+    _tree_calls = {"n": 0}
+
+    class FakeLocator:
+        def __init__(self, is_tree):
+            self.is_tree = is_tree
+
+        def count(self):
+            if self.is_tree:
+                return 1            # #coursetree 存在
+            _cells_calls["n"] += 1
+            return 0 if _cells_calls["n"] <= 2 else 3   # 前两次 0、之后 >0
+
+    class FakePage:
+        def __init__(self):
+            self.eval_calls = 0
+            self.url = "http://x"
+
+        def locator(self, sel):
+            return FakeLocator(is_tree=(sel == "#coursetree"))
+
+        def evaluate(self, _js, *_):
+            self.eval_calls += 1
+            if self.eval_calls >= 2:
+                return [{"title": "1.1 物理层", "status": "pending",
+                         "chapter_id": "1217304712"}]
+            return []  # 首次目录节点未 hydration → 空
+
+    pg = FakePage()
+    out = extract_catalog_from_page(pg, "http://x")
+    assert len(out) == 1
+    assert out[0]["chapter_id"] == "1217304712"
+    assert pg.eval_calls >= 2  # 触发了重取，而不是直接返回空
