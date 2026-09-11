@@ -1263,8 +1263,8 @@
     "task_id": "1217304732",
     "chapter_id": "1217304732",
     "title": "无分类编址CIDR",
-    "task_type": "video",
-    "status": "COMPLETED",
+    "task_type": "other",
+    "status": "PENDING",
     "priority": 55,
     "attempt_count": 1,
     "attempts": 1,
@@ -1282,11 +1282,11 @@
       "source_detail": "passed_object_ids=1"
     },
     "completion_evidence": {
-      "type": "SERVER_VERIFIED",
+      "type": "CONFLICT",
       "source": "isPassed",
       "run_id": "34601190420",
-      "observed_at_utc": "2026-09-11T13:10:40.043021+00:00",
-      "detail": "passed_object_ids=1",
+      "observed_at_utc": "2026-09-11T14:17:54.483584+00:00",
+      "detail": "chapter has unfinished points",
       "passed_object_ids": [
         "fa8227f3261b1ae7167938c510f33fd0"
       ]
@@ -1299,7 +1299,7 @@
       "occurred_at_utc": "2026-09-11T13:10:40.043031+00:00"
     },
     "created_at_utc": "2026-09-04T11:32:26.160626+00:00",
-    "updated_at_utc": "2026-09-11T13:10:40.043021+00:00",
+    "updated_at_utc": "2026-09-11T14:18:06.258489+00:00",
     "last_run_id": "34601190420",
     "last_run_at_utc": "2026-09-11T13:10:40.043021+00:00",
     "last_started_at": "2026-09-11T13:10:40.043021+00:00",
@@ -1314,10 +1314,10 @@
     "chapter_id": "1217304733",
     "title": "IP数据报的格式",
     "task_type": "video",
-    "status": "DISCOVERED",
+    "status": "COMPLETED",
     "priority": 55,
-    "attempt_count": 0,
-    "attempts": 0,
+    "attempt_count": 1,
+    "attempts": 1,
     "consecutive_failures": 0,
     "max_attempts": 3,
     "lease": {
@@ -1326,33 +1326,35 @@
       "expires_at_utc": null
     },
     "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
+      "level": "SERVER_VERIFIED",
+      "verified_at_utc": "2026-09-11T14:24:13.625023+00:00",
+      "run_id": "34609161262",
+      "source_detail": "passed_object_ids=1"
     },
     "completion_evidence": {
-      "type": "NONE",
-      "source": "",
-      "run_id": "",
-      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
-      "detail": "",
-      "passed_object_ids": []
+      "type": "SERVER_VERIFIED",
+      "source": "isPassed",
+      "run_id": "34609161262",
+      "observed_at_utc": "2026-09-11T14:24:13.625023+00:00",
+      "detail": "passed_object_ids=1",
+      "passed_object_ids": [
+        "d343e2e1dbf7f33004aa7c4252d839a9"
+      ]
     },
     "failure": {
       "stage": "",
       "run_id": "",
       "detail": "",
       "consecutive_failures": 0,
-      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+      "occurred_at_utc": "2026-09-11T14:24:13.625033+00:00"
     },
     "created_at_utc": "2026-09-04T11:32:26.160632+00:00",
-    "updated_at_utc": "2026-09-04T11:32:26.160632+00:00",
-    "last_run_id": null,
-    "last_run_at_utc": null,
-    "last_started_at": null,
-    "last_finished_at": null,
-    "last_success_at_utc": null,
+    "updated_at_utc": "2026-09-11T14:24:13.625023+00:00",
+    "last_run_id": "34609161262",
+    "last_run_at_utc": "2026-09-11T14:24:13.625023+00:00",
+    "last_started_at": "2026-09-11T14:24:13.625023+00:00",
+    "last_finished_at": "2026-09-11T14:24:13.625023+00:00",
+    "last_success_at_utc": "2026-09-11T14:24:13.625023+00:00",
     "last_failure_at_utc": null,
     "_ch_idx": 31,
     "_cell_idx": 31
@@ -2748,54 +2750,6 @@
     "last_failure_at_utc": null,
     "_ch_idx": 27,
     "_cell_idx": 27
-  },
-  "1217304732:other": {
-    "task_id": "1217304732:other",
-    "chapter_id": "1217304732",
-    "title": "无分类编址CIDR",
-    "task_type": "other",
-    "status": "PENDING",
-    "priority": 0,
-    "attempt_count": 0,
-    "attempts": 0,
-    "consecutive_failures": 0,
-    "max_attempts": 3,
-    "lease": {
-      "run_id": null,
-      "started_at_utc": null,
-      "expires_at_utc": null
-    },
-    "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
-    },
-    "completion_evidence": {
-      "type": "NONE",
-      "source": "",
-      "run_id": "",
-      "observed_at_utc": "2026-09-06T01:52:26.626481+00:00",
-      "detail": "",
-      "passed_object_ids": []
-    },
-    "failure": {
-      "stage": "",
-      "run_id": "",
-      "detail": "",
-      "consecutive_failures": 0,
-      "occurred_at_utc": "2026-09-06T01:52:26.626481+00:00"
-    },
-    "created_at_utc": "2026-09-06T01:52:26.626481+00:00",
-    "updated_at_utc": "2026-09-06T01:52:26.626481+00:00",
-    "last_run_id": null,
-    "last_run_at_utc": null,
-    "last_started_at": null,
-    "last_finished_at": null,
-    "last_success_at_utc": null,
-    "last_failure_at_utc": null,
-    "_ch_idx": 30,
-    "_cell_idx": 30
   },
   "1217304733:other": {
     "task_id": "1217304733:other",
