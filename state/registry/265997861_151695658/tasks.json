@@ -1163,8 +1163,8 @@
     "task_id": "1217304730",
     "chapter_id": "1217304730",
     "title": "分类的IP地址",
-    "task_type": "video",
-    "status": "COMPLETED",
+    "task_type": "other",
+    "status": "PENDING",
     "priority": 55,
     "attempt_count": 1,
     "attempts": 1,
@@ -1182,11 +1182,11 @@
       "source_detail": "passed_object_ids=1"
     },
     "completion_evidence": {
-      "type": "SERVER_VERIFIED",
+      "type": "CONFLICT",
       "source": "isPassed",
       "run_id": "34599172497",
-      "observed_at_utc": "2026-09-11T12:49:32.344220+00:00",
-      "detail": "passed_object_ids=1",
+      "observed_at_utc": "2026-09-11T12:53:54.375782+00:00",
+      "detail": "chapter has unfinished points",
       "passed_object_ids": [
         "2b3ec8e64db810f0960b59f21af46514"
       ]
@@ -1199,7 +1199,7 @@
       "occurred_at_utc": "2026-09-11T12:49:32.344227+00:00"
     },
     "created_at_utc": "2026-09-04T11:32:26.160614+00:00",
-    "updated_at_utc": "2026-09-11T12:49:32.344220+00:00",
+    "updated_at_utc": "2026-09-11T12:54:11.008259+00:00",
     "last_run_id": "34599172497",
     "last_run_at_utc": "2026-09-11T12:49:32.344220+00:00",
     "last_started_at": "2026-09-11T12:49:32.344220+00:00",
@@ -1213,11 +1213,11 @@
     "task_id": "1217304731",
     "chapter_id": "1217304731",
     "title": "子网划分",
-    "task_type": "video",
-    "status": "DISCOVERED",
+    "task_type": "other",
+    "status": "PENDING",
     "priority": 55,
-    "attempt_count": 0,
-    "attempts": 0,
+    "attempt_count": 1,
+    "attempts": 1,
     "consecutive_failures": 0,
     "max_attempts": 3,
     "lease": {
@@ -1226,33 +1226,35 @@
       "expires_at_utc": null
     },
     "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
+      "level": "SERVER_VERIFIED",
+      "verified_at_utc": "2026-09-11T13:02:08.317480+00:00",
+      "run_id": "34601190420",
+      "source_detail": "passed_object_ids=1"
     },
     "completion_evidence": {
-      "type": "NONE",
-      "source": "",
-      "run_id": "",
-      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
-      "detail": "",
-      "passed_object_ids": []
+      "type": "CONFLICT",
+      "source": "isPassed",
+      "run_id": "34601190420",
+      "observed_at_utc": "2026-09-11T13:02:27.846739+00:00",
+      "detail": "chapter has unfinished points",
+      "passed_object_ids": [
+        "478ca072d9edde61ec01dd8a8dc56271"
+      ]
     },
     "failure": {
       "stage": "",
       "run_id": "",
       "detail": "",
       "consecutive_failures": 0,
-      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+      "occurred_at_utc": "2026-09-11T13:02:08.317490+00:00"
     },
     "created_at_utc": "2026-09-04T11:32:26.160620+00:00",
-    "updated_at_utc": "2026-09-04T11:32:26.160620+00:00",
-    "last_run_id": null,
-    "last_run_at_utc": null,
-    "last_started_at": null,
-    "last_finished_at": null,
-    "last_success_at_utc": null,
+    "updated_at_utc": "2026-09-11T13:02:39.409422+00:00",
+    "last_run_id": "34601190420",
+    "last_run_at_utc": "2026-09-11T13:02:08.317480+00:00",
+    "last_started_at": "2026-09-11T13:02:08.317480+00:00",
+    "last_finished_at": "2026-09-11T13:02:08.317480+00:00",
+    "last_success_at_utc": "2026-09-11T13:02:08.317480+00:00",
     "last_failure_at_utc": null,
     "_ch_idx": 29,
     "_cell_idx": 29
@@ -1262,10 +1264,10 @@
     "chapter_id": "1217304732",
     "title": "无分类编址CIDR",
     "task_type": "video",
-    "status": "DISCOVERED",
+    "status": "COMPLETED",
     "priority": 55,
-    "attempt_count": 0,
-    "attempts": 0,
+    "attempt_count": 1,
+    "attempts": 1,
     "consecutive_failures": 0,
     "max_attempts": 3,
     "lease": {
@@ -1274,33 +1276,35 @@
       "expires_at_utc": null
     },
     "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
+      "level": "SERVER_VERIFIED",
+      "verified_at_utc": "2026-09-11T13:10:40.043021+00:00",
+      "run_id": "34601190420",
+      "source_detail": "passed_object_ids=1"
     },
     "completion_evidence": {
-      "type": "NONE",
-      "source": "",
-      "run_id": "",
-      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
-      "detail": "",
-      "passed_object_ids": []
+      "type": "SERVER_VERIFIED",
+      "source": "isPassed",
+      "run_id": "34601190420",
+      "observed_at_utc": "2026-09-11T13:10:40.043021+00:00",
+      "detail": "passed_object_ids=1",
+      "passed_object_ids": [
+        "fa8227f3261b1ae7167938c510f33fd0"
+      ]
     },
     "failure": {
       "stage": "",
       "run_id": "",
       "detail": "",
       "consecutive_failures": 0,
-      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+      "occurred_at_utc": "2026-09-11T13:10:40.043031+00:00"
     },
     "created_at_utc": "2026-09-04T11:32:26.160626+00:00",
-    "updated_at_utc": "2026-09-04T11:32:26.160626+00:00",
-    "last_run_id": null,
-    "last_run_at_utc": null,
-    "last_started_at": null,
-    "last_finished_at": null,
-    "last_success_at_utc": null,
+    "updated_at_utc": "2026-09-11T13:10:40.043021+00:00",
+    "last_run_id": "34601190420",
+    "last_run_at_utc": "2026-09-11T13:10:40.043021+00:00",
+    "last_started_at": "2026-09-11T13:10:40.043021+00:00",
+    "last_finished_at": "2026-09-11T13:10:40.043021+00:00",
+    "last_success_at_utc": "2026-09-11T13:10:40.043021+00:00",
     "last_failure_at_utc": null,
     "_ch_idx": 30,
     "_cell_idx": 30
@@ -2744,102 +2748,6 @@
     "last_failure_at_utc": null,
     "_ch_idx": 27,
     "_cell_idx": 27
-  },
-  "1217304730:other": {
-    "task_id": "1217304730:other",
-    "chapter_id": "1217304730",
-    "title": "分类的IP地址",
-    "task_type": "other",
-    "status": "PENDING",
-    "priority": 0,
-    "attempt_count": 0,
-    "attempts": 0,
-    "consecutive_failures": 0,
-    "max_attempts": 3,
-    "lease": {
-      "run_id": null,
-      "started_at_utc": null,
-      "expires_at_utc": null
-    },
-    "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
-    },
-    "completion_evidence": {
-      "type": "NONE",
-      "source": "",
-      "run_id": "",
-      "observed_at_utc": "2026-09-06T01:52:26.626481+00:00",
-      "detail": "",
-      "passed_object_ids": []
-    },
-    "failure": {
-      "stage": "",
-      "run_id": "",
-      "detail": "",
-      "consecutive_failures": 0,
-      "occurred_at_utc": "2026-09-06T01:52:26.626481+00:00"
-    },
-    "created_at_utc": "2026-09-06T01:52:26.626481+00:00",
-    "updated_at_utc": "2026-09-06T01:52:26.626481+00:00",
-    "last_run_id": null,
-    "last_run_at_utc": null,
-    "last_started_at": null,
-    "last_finished_at": null,
-    "last_success_at_utc": null,
-    "last_failure_at_utc": null,
-    "_ch_idx": 28,
-    "_cell_idx": 28
-  },
-  "1217304731:other": {
-    "task_id": "1217304731:other",
-    "chapter_id": "1217304731",
-    "title": "子网划分",
-    "task_type": "other",
-    "status": "PENDING",
-    "priority": 0,
-    "attempt_count": 0,
-    "attempts": 0,
-    "consecutive_failures": 0,
-    "max_attempts": 3,
-    "lease": {
-      "run_id": null,
-      "started_at_utc": null,
-      "expires_at_utc": null
-    },
-    "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
-    },
-    "completion_evidence": {
-      "type": "NONE",
-      "source": "",
-      "run_id": "",
-      "observed_at_utc": "2026-09-06T01:52:26.626481+00:00",
-      "detail": "",
-      "passed_object_ids": []
-    },
-    "failure": {
-      "stage": "",
-      "run_id": "",
-      "detail": "",
-      "consecutive_failures": 0,
-      "occurred_at_utc": "2026-09-06T01:52:26.626481+00:00"
-    },
-    "created_at_utc": "2026-09-06T01:52:26.626481+00:00",
-    "updated_at_utc": "2026-09-06T01:52:26.626481+00:00",
-    "last_run_id": null,
-    "last_run_at_utc": null,
-    "last_started_at": null,
-    "last_finished_at": null,
-    "last_success_at_utc": null,
-    "last_failure_at_utc": null,
-    "_ch_idx": 29,
-    "_cell_idx": 29
   },
   "1217304732:other": {
     "task_id": "1217304732:other",
