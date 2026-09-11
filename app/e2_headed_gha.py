@@ -208,44 +208,54 @@ def get_sidebar(page, cid: str) -> dict | None:
 
 
 # ── 主验证流程 ────────────────────────────────────────────────────
-NextUnitDecision = str  # "none" | "exit_completed" | "wait_playback" | "exit_switch"
+NextUnitDecision = str  # "none" | "exit_complete" | "exit_switch"
 
 
 def next_unit_decision(nextunit_seen: bool, has_passed: bool, max_ct: float,
                        ended_seen: bool = False,
                        initial_duration: float = 0.0) -> str:
-    """完成语义状态机：视频点何时算「本轮真播完」并退出（纯函数，可测）。
+    """完成语义状态机：视频点何时该「本轮推进到完成」并退出（纯函数，可测）。
 
-    真实推进的唯一完成凭据是 ended_seen（本轮视频真的播到了末尾）。基线
-    run 34293378209 就是这样：视频 0→751 真播了 ~503s 后 ended_seen=True，
-    走「Video ended at 751/751 (95%+) ... exiting」，服务端才登记任务点完成。
-    方案2 早期把完成门设成「nextUnit+passed+max_ct>0」，被历史进度污染导致
-    33s 就冒充完成（ended_seen=False → 服务端不认，红点永不消失）。
+    完成凭据有两种，都要求是**本轮运行真实观测**到的信号（不是历史持久态）：
+      1. ended_seen=True —— 本轮视频真实播到了末尾（基线 run 34293378209，
+         视频 0→751 真播 ~503s 后 ended_seen=True，服务端登记任务点完成）。
+      2. nextunit_seen + has_passed（方案A，用户确认）—— 本轮在 multimedia/log
+         里真实新到 isPassed=true（passed_object_ids 非空）**且**服务端把 URL
+         自动切到了**另一章**（chapterId 变化）。服务端只在当前任务已 PASS 后
+         才自动续下一章，因此「服务端 auto 切章 + 本轮真实 isPassed」正是该章
+         已完成的服务端真源（P0-04/P0-05 的单一真源原则）。
+
+    这不是老的「33s 假完成」：旧 bug 的 nextUnit 判定用 title/历史进度启发式会
+    误命中，且不要求本轮真实 isPassed；本函数两种完成路径都要求本轮真观测。而
+    has_passed 在引擎侧只在本轮收到 isPassed=true 时才置真（passed_object_ids
+    仅收集本轮响应），nextunit_seen 只在本轮 URL 的 chapterId 变成另一章时置真
+    （该启发式误命中已被移除，见 run_test）。两者齐备才是可靠的「服务端已完成」。
 
     决策：
-      - ended_seen                                    → "exit_complete"（真·播完，退出）
-      - 未播完且无 nextUnit                            → "none"（继续播，等 ended）
-      - nextUnit 已变 + passed + 未播完                → "wait_playback"（等真正的
-            ended_seen；若永不出现由外层 watchDog 900s 兜底，绝不冒充完成）
-      - nextUnit 已变 + 未 passed                     → "exit_switch"（有效切换，退出）
+      - ended_seen                              → "exit_complete"（本轮真播完）
+      - nextUnit 已切 + has_passed              → "exit_complete"（方案A：服务端
+            已 auto 进下一章 + 本轮 isPassed → 该章完成）
+      - nextUnit 已切 + 未 passed               → "exit_switch"（真切换、非完成）
+      - 其它（未切 Unit / 未 passed）           → "none"（继续播，等完成信号）
     """
-    # 完成态 = 视频在本轮真播到了末尾(ended_seen)。这与真实推进基线
-    # run 34293378209（"Video ended at 751/751 (95%+) ... exiting"，且当时
-    # ended_seen=True）一致。不能用「max_ct>=95%已知时长」当完成凭据——因为
-    # 服务端已恢复的历史进度会让 max_ct 一早就是 ~duration，却没有本轮新播放，
-    # 33s 就冒充完成（run 34332366744），服务端收不到「这段重新播完」的证据。
+    # 防假完成护栏（锤磊自老事故 run 34332366744）：严禁单凭 max_ct/已知时长/
+    # 历史进度近似「完成」判完成。必须本轮真实读到 ended 或「服务端已切章 + 本轮
+    # isPassed」任一真源；否则宁由外层 watchDog 兜底 TIMEOUT，绝不冒充完成。
     if ended_seen:
         return "exit_complete"
     if not nextunit_seen:
         return "none"
-    if has_passed:
-        # URL 已切 + isPassed，但本段视频没真播完 → 不能判完成，等 ended_seen；
-        # 若 ended 永不出现，由外层 watchDog(900s) 兜底 TIMEOUT，而非冒充完成。
-        return "wait_playback"
+    if has_passed and (max_ct > 0 or initial_duration > 0):
+        # 方案A：本轮真实 is_passed + 服务端把 URL 切到另一章（chapterId 变）→
+        # 该章服务端已完成，以此判 exit_complete。要求有实际进度(max_ct>0 或
+        # 已知时长>0)，守住「零进度不判完成」的旧防早切护栏。不再死等旧
+        # video 的 ended_seen——页面已切走、旧视频 ended 永不出现，旧逻辑因此
+        # 死等 900s 看门狗 TIMEOUT（run 34573528666 已实测）。
+        return "exit_complete"
     return "exit_switch"
 
 
-# ── 主验证流程 ────────────────────────────────────────────────────
+
 def run_test(args, params: "CourseParams | None" = None):
     """执行浏览器学习验证。
 
@@ -610,20 +620,21 @@ def run_test(args, params: "CourseParams | None" = None):
                                     ended_seen=ended_seen,
                                     initial_duration=initial_duration)
             if nd == "exit_complete":
-                # 视频真播到末尾(ended/95%) + isPassed → 本章完成（与真实推进基
-                # 线一致），服务端才会登记任务点完成。
-                log(f"[GHA] video really finished: ended={ended_seen} "
+                # 完成可从两条真源之一触发：
+                #   1) ended_seen=True（本轮视频真实播到末尾，真实推进基线）；
+                #   2) 方案A：本轮 isPassed + 服务端把 URL 切到下一章(chapterId 变)
+                #      → 服务端已 PASS 该章（P0-04 服务端为真源）。
+                # 旧引擎只有(1)，遇长视频+服务端自动切章时旧 video 的 ended 永不
+                # 出现 → 死等 900s 看门狗 TIMEOUT（run 34573528666 实测命中）。
+                log(f"[GHA] chapter complete: ended={ended_seen} "
                     f"max_ct={max_ct:.0f}/{('%.0f'%initial_duration) if initial_duration else '?'} "
-                    f"with {len(passed_object_ids)} passed — chapter done, exiting")
+                    f"{len(passed_object_ids)} passed, nextunit_seen={nextunit_seen} "
+                    f"— done, exiting")
                 chapter_completed = True
                 break
-            if nd == "wait_playback":
-                # URL 已切 + passed 但本段视频未真播完 → 等 ended_seen
-                log(f"[GHA] nextUnit without ended (ended={ended_seen}, "
-                    f"{len(passed_object_ids)} passed) — waiting for actual finish")
-                nextunit_seen = False
-            elif nd == "exit_switch":
-                # chapterId 变了、且未记录到 isPassed → 视为有效切换，退出
+            if nd == "exit_switch":
+                # chapterId 变了、但未记录到本轮 isPassed → 视为有效切换，退出
+                # （是切换、非完成，不冒充完成）。
                 page.wait_for_timeout(5000)
                 break
             # 兼容边界：ended 且 95%+ 已知时长但有 passed → 退出（宽限已过，视为最后一段）

@@ -40,16 +40,21 @@ class TestP02MainLoopTerminationModel:
                                                   initial_duration=ini) == "exit_complete"
 
     def test_no_faked_complete_without_ended(self):
-        # ended_seen=False 时，任何 nextunit/has_passed/current_time 组合都不得判完成
+        # 反假完成护栏（方案A更新）：ended_seen=False 时，仅当「本轮信号齐备」
+        # （nextunit_seen 且 has_passed 且有实际进度 max_ct/时长>0）才允许 exit_complete；
+        # 其外任何组合绝不判完成，由外层 watchDog 兜底，绝不冒充完成。
         for nxt in (False, True):
             for passed in (False, True):
                 for mt in (0.0, 1.0, 720.0, 905.0):
                     for ini in (0.0, 750.0):
-                        d = next_unit_decision(nxt, passed, mt,
-                                               ended_seen=False,
+                        d = next_unit_decision(nxt, passed, mt, ended_seen=False,
                                                initial_duration=ini)
-                        assert d != "exit_complete"
-                        assert d in ("none", "wait_playback", "exit_switch")
+                        if nxt and passed and (mt > 0 or ini > 0):
+                            # 方案A：服务端 auto 切章 + 本轮 isPassed + 有进度 → 完成
+                            assert d == "exit_complete"
+                        else:
+                            assert d != "exit_complete", (nxt, passed, mt, ini)
+                            assert d in ("none", "exit_switch")
 
 
 class TestP04IsPassedMarker:

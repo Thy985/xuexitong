@@ -63,3 +63,27 @@ PYTHONPATH=. python scripts/local_e2e_audit.py --long --max-s 220   # 长播放�
 4. 新增回归：`test_extract_catalog_waits_for_hydration`、`test_probe_empty_catalog_returns_none_no_guess`。
 
 > 仍待下一步：探针在 CI 上是 async hydration（而非登录失败）仍未独立抓到现场证据；若再次「空目录」，建议探针打印 `#coursetree` 的 `outerHTML` 片段辅助分辨。
+
+## 6. 完成语义（方案A）——服务端 auto 切章 + 本轮 isPassed 即判完成
+
+**现象（run 34573528666）**：auto 选章正确（选到 1217304712/已切、或下个 pending），
+但长视频章在 watchDog 时 TIMEOUT：服务端 `isPassed=true` 且**自动把 URL 切到下一章**后，
+旧引擎仍坚持要 `ended_seen=True` 才判完成；页面已切走，旧 video 的 `ended` 永不发生 →
+死等 900s 看门狗被砍。
+
+**根因**：`next_unit_decision`（app/e2_headed_gha.py）旧的 anti-fake 规则
+「nextUnit+passed 但未 ended → wait_playback」。副作用就是：服务端已 PASS 并自动续下一章，
+引擎却等一个已被切走的 video 的 ended → 死循环。
+
+**修复（方案A，用户确认，Business Logic=YES）**：完成凭据扩展为两条真源（都要**本轮真实观测**）：
+1. ended_seen=True（本轮视频真播到末尾）；
+2. **nextunit_seen（URL chapterId 已切到另一章）+ 本轮真实 isPassed（passed_object_ids 非空）
+   + 有实际进度(max_ct>0 或已知时长>0)** → exit_complete（服务端 auto 切章已 PASS = 服务端真源）。
+
+护栏保留：`zero-progress`（max_ct=0 且时长=0）+ passed 也绝不判完成 → exit_switch；
+`has_passed` 本身（无 URL 切换）不在别的分支 → none。绝不"单凭 max_ct>=95% / 历史进度"
+判完成（旧 33s 假完成事故的护栏依旧）。
+
+**回归**：`test_next_unit_decision.py`（方案A 行改为 exit_complete、零progress 行改 exit_switch）、
+`test_regression_p0_e2e_term.py`（结束性不变量改为"ended 或 (nextunit+passed+进度) 才允许完整"）。
+全量 `pytest`：182 passed + 1 skipped。
