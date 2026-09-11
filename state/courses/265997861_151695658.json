@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "status": "BLOCKED",
-  "run_count": 62,
-  "success_count": 47,
+  "status": "ACTIVE",
+  "run_count": 63,
+  "success_count": 48,
   "failure_count": 15,
   "course_identity": {
     "course_id": "265997861",
@@ -16,21 +16,13 @@
     "completed": 0,
     "total": 4,
     "last_completed_task": "1217304706",
-    "active_task": "1217304721"
+    "active_task": null
   },
-  "last_run": "2026-09-09T14:31:47.872325+00:00",
-  "last_success": "2026-09-09T14:27:48.905124+00:00",
+  "last_run": "2026-09-11T05:13:04.091975+00:00",
+  "last_success": "2026-09-11T05:13:04.091975+00:00",
   "last_failure": "2026-09-09T14:31:47.872325+00:00",
   "last_completed_task": "1217304706",
-  "active_task": "1217304721",
   "history": [
-    {
-      "run_at_utc": "2026-09-04T07:45:54.959650+00:00",
-      "timing_s": 536.5,
-      "passed": true,
-      "verdict": "PASS",
-      "chapter_id": "1217304706"
-    },
     {
       "run_at_utc": "2026-09-04T08:21:36.474618+00:00",
       "timing_s": 531.5,
@@ -373,20 +365,27 @@
       "passed": false,
       "verdict": "FAIL",
       "chapter_id": "1217304721"
+    },
+    {
+      "run_at_utc": "2026-09-11T05:13:04.091975+00:00",
+      "timing_s": 630.4,
+      "passed": true,
+      "verdict": "PASS",
+      "chapter_id": "1217304706"
     }
   ],
   "scheduler": {
-    "last_scheduled_at": "2026-09-09T14:31:47.957949+00:00",
-    "last_started_at": "2026-09-09T14:31:47.957949+00:00",
-    "last_finished_at": "2026-09-09T14:31:47.958283+00:00",
+    "last_scheduled_at": "2026-09-11T05:13:04.164890+00:00",
+    "last_started_at": "2026-09-11T05:13:04.164890+00:00",
+    "last_finished_at": "2026-09-11T05:13:04.165159+00:00",
     "last_result": "SUCCESS",
-    "last_run_id": "34362683995",
+    "last_run_id": "34564369602",
     "last_trigger": "manual",
     "consecutive_failures": 0,
-    "execution_id": "34362683995",
-    "attempt": 52,
-    "blocked_since": "2026-09-10T06:52:13.696084+00:00",
-    "blocked_hits": 1,
+    "execution_id": "34564369602",
+    "attempt": 53,
+    "blocked_since": null,
+    "blocked_hits": 0,
     "blocked_retry_interval": 0
   }
 }
