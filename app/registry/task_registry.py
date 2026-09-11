@@ -361,9 +361,13 @@ class ExecutionQueue:
 
 # ── 文件存储 ───────────────────────────────────────────────────────
 
-# 固定锚定到仓库 state/registry（与 state/course_state.py 的 REPO_ROOT 一致），
+# 固定锚定到仓库根 state/registry（与 state/course_state.py 的 REPO_ROOT 一致），
 # 避免相对 CWD 在任意目录运行脚本时污染仓库。
-_REPO_ROOT = Path(__file__).resolve().parent.parent
+# 注意：本模块位于 app/registry/，仓库根要再向上 .parent 三级
+# （registry → app → <repo>）；若只退两级（parent.parent）会落在 <repo>/app，
+# 使 TASKS_DIR=<repo>/app/state/registry，与已提交的 <repo>/state/registry 漂移，
+# 运行时读不到 checkpoint（run 34598078954：reg_entry=None，状态空 → BLOCKED 失效）。
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 TASKS_DIR = _REPO_ROOT / "state" / "registry"
 
 
