@@ -204,6 +204,13 @@ def reconcile_registry(
         cid = getattr(t, "chapter_id", "") or ""
         dom_done = _dom_is_completed(cid, dom_status)
         old = result.get(tid)
+        # 已 BLOCKED 的任务：reconcile 不得把它复活。否则每轮 live/DOM 仍显示
+        # 「未完成」→ 下面对其 mark_stale+downgrade_to_pending → status 回到
+        # PENDING → 反复重跑一个已达失败上限（如 headed-Xvfb 抓不到 <video> 的
+        # 1217304719）的任务，形成无限循环。BLOCKED 保持冻结，等显式/冷却恢复。
+        if old is not None and getattr(old, "status", "") == "BLOCKED":
+            result[tid] = old
+            continue
         if dom_done:
             # P0-09：即使服务器 DOM 标 completed，若 live 复核确认该 task 仍有
             # 未完成的真实视频点（live_pending），也不能静默 COMPLETED → 漏课。
