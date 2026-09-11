@@ -113,7 +113,12 @@ def _make_ui_completed(info) -> TaskRecord:
 
 
 def downgrade_to_unknown(t: TaskRecord) -> None:
-    """把无有效证据的 COMPLETED 降级为 UNKNOWN（不再保持 COMPLETED，也不自动执行）。"""
+    """把无有效证据的 COMPLETED 降级为 UNKNOWN（不再保持 COMPLETED，也不自动执行）。
+
+    触发即「服务器回退」信号：此前服务器确认完成/有证据，现服务器不再承认 →
+    调用 mark_rollback()，使调度可在开新课前优先补齐该章。
+    """
+    t.mark_rollback()
     t.status = "UNKNOWN"
     t.updated_at_utc = _now()
 
@@ -285,6 +290,7 @@ def reconcile_registry(
                 if tid in live_pending:
                     # E6.2：COMPLETED 被「实时状态」明确推翻（live verification 确认未完成）。
                     # 强证据也服从实时真相 —— 否则 registry 会变成错误缓存（4706 案例）。
+                    old.mark_rollback()   # 服务器回退信号 → 调度优先补齐
                     old.mark_stale(detail="live verification: now pending")
                     old.downgrade_to_pending(detail="live re-check confirmed pending")
                     result[tid] = old

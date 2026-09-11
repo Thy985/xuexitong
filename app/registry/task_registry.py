@@ -154,6 +154,8 @@ class TaskRecord:
     last_failure_at_utc: Optional[str] = None
     _ch_idx: int = field(default=0, repr=False)    # DOM 目录索引（内部用）
     _cell_idx: int = field(default=0, repr=False)
+    rollback_count: int = 0        # 服务器回退次数（曾确认完成、又被服务器推翻）；>0 时须优先补齐
+    last_rollback_at_utc: str = "" # 最近一次被回退的时刻
 
     def __post_init__(self):
         now = datetime.now(timezone.utc).isoformat()
@@ -203,6 +205,16 @@ class TaskRecord:
 
     def mark_verifying(self) -> None:
         self.status = "VERIFYING"
+        self.updated_at_utc = self._now()
+
+    def mark_rollback(self) -> None:
+        """记录一次服务器回退：此前被确认完成，现被服务器推翻为未完成。
+
+        用于调度：回退章应在开新课之前优先补齐（reconcile_queue 按 rollback_count > 0 排序最前）。
+        不改状态机（回退后具体落 UNKNOWN/PENDING 由调用处决定）。
+        """
+        self.rollback_count = int(self.rollback_count or 0) + 1
+        self.last_rollback_at_utc = self._now()
         self.updated_at_utc = self._now()
 
     def mark_completed(self, *, run_id: str,
@@ -346,6 +358,8 @@ class TaskRecord:
             last_failure_at_utc=d.get("last_failure_at_utc"),
             _ch_idx=ch_idx,
             _cell_idx=cell_idx,
+            rollback_count=int(d.get("rollback_count", 0) or 0),
+            last_rollback_at_utc=d.get("last_rollback_at_utc", ""),
         )
 
 
@@ -631,7 +645,10 @@ def reconcile_queue(course_key: str, registry: dict[str, TaskRecord],
         if t.status == "BLOCKED":
             continue
         if t.status == "UNKNOWN":
-            # 不自动执行；除非有显式重新发现的 pending 证据
+            # 不自动执行；除非是「回退章」（曾确认完成、又被服务器推翻为 UNKNOWN）——
+            # 这类须优先补齐（否则一直不重跑，形成「已完成记录消失」的感知回退）。
+            if t.rollback_count > 0 and (t.task_type or "video") == "video":
+                ready.append(t)
             continue
         # FAILED → 根据 retry policy
         if t.status == "FAILED":
@@ -649,8 +666,10 @@ def reconcile_queue(course_key: str, registry: dict[str, TaskRecord],
         if t.is_executable:
             ready.append(t)
 
-    # 排序：有 chapter_id 优先，再按目录顺序
+    # 排序：回退章（曾确认完成、又被服务器推翻，rollback_count>0）最优先补齐，
+    #       → 有 chapter_id 优先 → 再按目录顺序。即：先重跑被回退的章，再开新课。
     ready.sort(key=lambda t: (
+        0 if t.rollback_count > 0 else 1,
         0 if t.chapter_id else 1,
         t._ch_idx, t._cell_idx, t.task_id,
     ))
