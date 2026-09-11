@@ -587,6 +587,13 @@ def reconcile_queue(course_key: str, registry: dict[str, TaskRecord],
 
     ready: list[TaskRecord] = []
 
+    # 章级整章冻结：一旦某章有任一 BLOCKED（达失败上限）任务，将该章整体冻结，
+    # 避免 reconcile/实时重建（同章衍生/lTO新 task_id）绕过「单任务 BLOCKED」又跑回同一章。
+    blocked_chapters = {
+        (t.chapter_id or "") for t in registry.values()
+        if getattr(t, "status", "") == "BLOCKED"
+    }
+
     def _lease_expired(t: TaskRecord) -> bool:
         exp = t.lease.expires_at_utc
         if not exp:
@@ -597,6 +604,9 @@ def reconcile_queue(course_key: str, registry: dict[str, TaskRecord],
             return True
 
     for t in registry.values():
+        # 章级冻结：该章已有 BLOCKED → 该章全部 task 不再入队（防同章衍生 task 复活）。
+        if (t.chapter_id or "") in blocked_chapters:
+            continue
         # E6.2: Queue 只接受真正的可执行 task（video）。
         # 非 video 任务（quiz/discussion/other/unsupported）当前不被 video runtime 支持，
         # 不进入队列（避免 runtime 误认为可学视频）。

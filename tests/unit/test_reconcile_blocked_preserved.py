@@ -106,6 +106,37 @@ class TestMigrationPreservesBlocked:
                                       live_pending=set())
         rec = fixed.get("1217304700")
         assert rec is not None
-        # 迁移后非 BLOCKED 但带 repID/可重试状态（FAILED 或 PENDING）
+        # 迁移后非 BLOCKED 但带可重试状态（FAILED 或 PENDING）
         assert rec.status in ("UNKNOWN", "PENDING", "FAILED")
         assert rec.consecutive_failures == 1
+
+
+class TestChapterLevelFreeze:
+    def test_blocked_chapter_excludes_same_chapter_tasks(self, tmp_registry):
+        # 章级冻结：reconcile_queue 只要某章有任一 BLOCKED，就把该章所有 task
+        # （含同章衍生新 task_id / videoN 段）整体排除 —— 防止重建出的同章任务又入队。
+        from app.registry.task_registry import (
+            TaskRecord, done_chapter_ids_from_registry, reconcile_queue,
+        )
+
+        base = _blocked_record("1217304719", "1217304719")
+        clone = TaskRecord("1217304719:video2", "1217304719", "点对点协议PPP", "video")
+        clone.status = "PENDING"
+        reg = {"1217304719": base, "1217304719:video2": clone}
+        q = reconcile_queue("k", reg, done_chapter_ids_from_registry(reg))
+        qids = {i["task_id"] for i in q.items}
+        assert "1217304719" not in qids
+        assert "1217304719:video2" not in qids, "chapter-frozen clone must not enqueue"
+
+    def test_unblocked_chapter_still_queues(self):
+        # 对照：无任何 BLOCKED 的章正常入队（不误冻结）。
+        from app.registry.task_registry import (
+            TaskRecord, done_chapter_ids_from_registry, reconcile_queue,
+        )
+
+        a = TaskRecord("K0", "77", "章A", "video"); a.status = "PENDING"
+        b = TaskRecord("K1:video", "77", "章A", "video"); b.status = "PENDING"
+        q = reconcile_queue("k", {"K0": a, "K1:video": b},
+                            done_chapter_ids_from_registry({}))
+        qids = {i["task_id"] for i in q.items}
+        assert "K0" in qids and "K1:video" in qids
