@@ -1573,8 +1573,8 @@
     "task_id": "1217304734",
     "chapter_id": "1217304734",
     "title": "IP数据报的分片与重组",
-    "task_type": "video",
-    "status": "COMPLETED",
+    "task_type": "other",
+    "status": "PENDING",
     "priority": 55,
     "attempt_count": 2,
     "attempts": 2,
@@ -1592,11 +1592,11 @@
       "source_detail": "passed_object_ids=1"
     },
     "completion_evidence": {
-      "type": "SERVER_VERIFIED",
+      "type": "CONFLICT",
       "source": "isPassed",
       "run_id": "34689363739",
-      "observed_at_utc": "2026-09-12T10:54:04.997688+00:00",
-      "detail": "passed_object_ids=1",
+      "observed_at_utc": "2026-09-12T11:11:10.984045+00:00",
+      "detail": "chapter has unfinished points",
       "passed_object_ids": [
         "6bfa3a7f25eafa7b988fc57f4e5adf36"
       ]
@@ -1609,7 +1609,7 @@
       "occurred_at_utc": "2026-09-12T10:54:04.997698+00:00"
     },
     "created_at_utc": "2026-09-04T11:32:26.160640+00:00",
-    "updated_at_utc": "2026-09-12T10:54:04.997688+00:00",
+    "updated_at_utc": "2026-09-12T11:11:22.872040+00:00",
     "last_run_id": "34689363739",
     "last_run_at_utc": "2026-09-12T10:54:04.997688+00:00",
     "last_started_at": "2026-09-12T10:54:04.997688+00:00",
@@ -1618,18 +1618,18 @@
     "last_failure_at_utc": null,
     "_ch_idx": 32,
     "_cell_idx": 32,
-    "rollback_count": 1,
-    "last_rollback_at_utc": "2026-09-11T22:35:36.937505+00:00"
+    "rollback_count": 2,
+    "last_rollback_at_utc": "2026-09-12T11:11:22.872033+00:00"
   },
   "1217304735": {
     "task_id": "1217304735",
     "chapter_id": "1217304735",
     "title": "IP层转发分组的流程",
     "task_type": "video",
-    "status": "DISCOVERED",
+    "status": "COMPLETED",
     "priority": 55,
-    "attempt_count": 0,
-    "attempts": 0,
+    "attempt_count": 1,
+    "attempts": 1,
     "consecutive_failures": 0,
     "max_attempts": 3,
     "lease": {
@@ -1638,33 +1638,35 @@
       "expires_at_utc": null
     },
     "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
+      "level": "SERVER_VERIFIED",
+      "verified_at_utc": "2026-09-12T11:19:38.538460+00:00",
+      "run_id": "34690327647",
+      "source_detail": "passed_object_ids=1"
     },
     "completion_evidence": {
-      "type": "NONE",
-      "source": "",
-      "run_id": "",
-      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
-      "detail": "",
-      "passed_object_ids": []
+      "type": "SERVER_VERIFIED",
+      "source": "isPassed",
+      "run_id": "34690327647",
+      "observed_at_utc": "2026-09-12T11:19:38.538460+00:00",
+      "detail": "passed_object_ids=1",
+      "passed_object_ids": [
+        "27e19b1eea17c71d4812f700f6490a0f"
+      ]
     },
     "failure": {
       "stage": "",
       "run_id": "",
       "detail": "",
       "consecutive_failures": 0,
-      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+      "occurred_at_utc": "2026-09-12T11:19:38.538469+00:00"
     },
     "created_at_utc": "2026-09-04T11:32:26.160646+00:00",
-    "updated_at_utc": "2026-09-04T11:32:26.160646+00:00",
-    "last_run_id": null,
-    "last_run_at_utc": null,
-    "last_started_at": null,
-    "last_finished_at": null,
-    "last_success_at_utc": null,
+    "updated_at_utc": "2026-09-12T11:19:38.538460+00:00",
+    "last_run_id": "34690327647",
+    "last_run_at_utc": "2026-09-12T11:19:38.538460+00:00",
+    "last_started_at": "2026-09-12T11:19:38.538460+00:00",
+    "last_finished_at": "2026-09-12T11:19:38.538460+00:00",
+    "last_success_at_utc": "2026-09-12T11:19:38.538460+00:00",
     "last_failure_at_utc": null,
     "_ch_idx": 33,
     "_cell_idx": 33,
