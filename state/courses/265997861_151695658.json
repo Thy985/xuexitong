@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status": "ACTIVE",
-  "run_count": 87,
-  "success_count": 60,
+  "run_count": 88,
+  "success_count": 61,
   "failure_count": 27,
   "course_identity": {
     "course_id": "265997861",
@@ -13,23 +13,16 @@
     "resolved_at_utc": "2026-09-03T13:36:56.394188+00:00"
   },
   "progress": {
-    "completed": 18,
+    "completed": 19,
     "total": 4,
-    "last_completed_task": "1217304738",
+    "last_completed_task": "1217304739",
     "active_task": null
   },
-  "last_run": "2026-09-13T18:47:23.660007+00:00",
-  "last_success": "2026-09-13T18:47:23.660007+00:00",
+  "last_run": "2026-09-14T20:20:32.921913+00:00",
+  "last_success": "2026-09-14T20:20:32.921913+00:00",
   "last_failure": "2026-09-11T12:22:00.113483+00:00",
-  "last_completed_task": "1217304738",
+  "last_completed_task": "1217304739",
   "history": [
-    {
-      "run_at_utc": "2026-09-05T12:57:12.015237+00:00",
-      "timing_s": 1273.9,
-      "passed": true,
-      "verdict": "PASS",
-      "chapter_id": "1217304700"
-    },
     {
       "run_at_utc": "2026-09-05T13:25:02.785376+00:00",
       "timing_s": 485.5,
@@ -372,18 +365,25 @@
       "passed": true,
       "verdict": "PASS",
       "chapter_id": "1217304738"
+    },
+    {
+      "run_at_utc": "2026-09-14T20:20:32.921913+00:00",
+      "timing_s": 547.8,
+      "passed": true,
+      "verdict": "PASS",
+      "chapter_id": "1217304739"
     }
   ],
   "scheduler": {
-    "last_scheduled_at": "2026-09-13T18:47:23.749375+00:00",
-    "last_started_at": "2026-09-13T18:47:23.749375+00:00",
-    "last_finished_at": "2026-09-13T18:47:23.749655+00:00",
+    "last_scheduled_at": "2026-09-14T20:20:32.976981+00:00",
+    "last_started_at": "2026-09-14T20:20:32.976981+00:00",
+    "last_finished_at": "2026-09-14T20:20:32.977572+00:00",
     "last_result": "SUCCESS",
-    "last_run_id": "34775011470",
+    "last_run_id": "34891229365",
     "last_trigger": "schedule",
     "consecutive_failures": 0,
-    "execution_id": "34775011470",
-    "attempt": 76,
+    "execution_id": "34891229365",
+    "attempt": 77,
     "blocked_since": null,
     "blocked_hits": 0,
     "blocked_retry_interval": 0

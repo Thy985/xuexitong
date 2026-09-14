@@ -1829,8 +1829,8 @@
     "task_id": "1217304738",
     "chapter_id": "1217304738",
     "title": "IPV6",
-    "task_type": "video",
-    "status": "COMPLETED",
+    "task_type": "other",
+    "status": "PENDING",
     "priority": 55,
     "attempt_count": 1,
     "attempts": 1,
@@ -1848,11 +1848,11 @@
       "source_detail": "passed_object_ids=1"
     },
     "completion_evidence": {
-      "type": "SERVER_VERIFIED",
+      "type": "CONFLICT",
       "source": "isPassed",
       "run_id": "34775011470",
-      "observed_at_utc": "2026-09-13T18:47:23.656730+00:00",
-      "detail": "passed_object_ids=1",
+      "observed_at_utc": "2026-09-14T20:11:01.299354+00:00",
+      "detail": "chapter has unfinished points",
       "passed_object_ids": [
         "94382be48a99aae745efd4481afa4af1"
       ]
@@ -1865,7 +1865,7 @@
       "occurred_at_utc": "2026-09-13T18:47:23.656738+00:00"
     },
     "created_at_utc": "2026-09-04T11:32:26.160664+00:00",
-    "updated_at_utc": "2026-09-13T18:47:23.656730+00:00",
+    "updated_at_utc": "2026-09-14T20:11:13.028082+00:00",
     "last_run_id": "34775011470",
     "last_run_at_utc": "2026-09-13T18:47:23.656730+00:00",
     "last_started_at": "2026-09-13T18:47:23.656730+00:00",
@@ -1874,8 +1874,8 @@
     "last_failure_at_utc": null,
     "_ch_idx": 36,
     "_cell_idx": 36,
-    "rollback_count": 0,
-    "last_rollback_at_utc": ""
+    "rollback_count": 1,
+    "last_rollback_at_utc": "2026-09-14T20:11:13.028070+00:00"
   },
   "1217304738:other": {
     "task_id": "1217304738:other",
@@ -1932,10 +1932,10 @@
     "chapter_id": "1217304739",
     "title": "路由协议概述",
     "task_type": "video",
-    "status": "DISCOVERED",
+    "status": "COMPLETED",
     "priority": 55,
-    "attempt_count": 0,
-    "attempts": 0,
+    "attempt_count": 1,
+    "attempts": 1,
     "consecutive_failures": 0,
     "max_attempts": 3,
     "lease": {
@@ -1944,33 +1944,35 @@
       "expires_at_utc": null
     },
     "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
+      "level": "SERVER_VERIFIED",
+      "verified_at_utc": "2026-09-14T20:20:32.917421+00:00",
+      "run_id": "34891229365",
+      "source_detail": "passed_object_ids=1"
     },
     "completion_evidence": {
-      "type": "NONE",
-      "source": "",
-      "run_id": "",
-      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
-      "detail": "",
-      "passed_object_ids": []
+      "type": "SERVER_VERIFIED",
+      "source": "isPassed",
+      "run_id": "34891229365",
+      "observed_at_utc": "2026-09-14T20:20:32.917421+00:00",
+      "detail": "passed_object_ids=1",
+      "passed_object_ids": [
+        "5be2aa29b4b9e5820a1c33133507e8ef"
+      ]
     },
     "failure": {
       "stage": "",
       "run_id": "",
       "detail": "",
       "consecutive_failures": 0,
-      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+      "occurred_at_utc": "2026-09-14T20:20:32.917431+00:00"
     },
     "created_at_utc": "2026-09-04T11:32:26.160672+00:00",
-    "updated_at_utc": "2026-09-04T11:32:26.160672+00:00",
-    "last_run_id": null,
-    "last_run_at_utc": null,
-    "last_started_at": null,
-    "last_finished_at": null,
-    "last_success_at_utc": null,
+    "updated_at_utc": "2026-09-14T20:20:32.917421+00:00",
+    "last_run_id": "34891229365",
+    "last_run_at_utc": "2026-09-14T20:20:32.917421+00:00",
+    "last_started_at": "2026-09-14T20:20:32.917421+00:00",
+    "last_finished_at": "2026-09-14T20:20:32.917421+00:00",
+    "last_success_at_utc": "2026-09-14T20:20:32.917421+00:00",
     "last_failure_at_utc": null,
     "_ch_idx": 37,
     "_cell_idx": 37,
