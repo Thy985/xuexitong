@@ -385,8 +385,8 @@
     "consecutive_failures": 1,
     "execution_id": "35265696173",
     "attempt": 80,
-    "blocked_since": null,
-    "blocked_hits": 0,
+    "blocked_since": "2026-09-18T18:54:45.143032+00:00",
+    "blocked_hits": 1,
     "blocked_retry_interval": 0
   }
 }
