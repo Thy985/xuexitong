@@ -29,7 +29,11 @@ UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
 def main():
     clear_cookie_data()
     with sync_playwright() as p:
-        b = p.chromium.launch(headless=True)
+        # 有头 + 可配浏览器：headless=True 不带 channel 会走 headless-shell，
+        # 本机实测它对公网 ERR_CONNECTION_CLOSED → 诊断会把"连不上"误报成"登录不上"。
+        from utils.browser_factory import launch_kwargs
+        b = p.chromium.launch(headless=False, args=["--no-proxy-server"],
+                              **launch_kwargs())
         ctx = b.new_context(user_agent=UA)
         pg = ctx.new_page()
         pg.goto(COURSE_URL, wait_until="domcontentloaded", timeout=30000)

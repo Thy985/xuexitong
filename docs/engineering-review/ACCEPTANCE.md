@@ -91,11 +91,25 @@ L1  纯逻辑测试（单元/集成/回归）         —— pytest，CI 已跑�
 | 2026-09-19 | M0 | L1 | 升 playwright 1.62.0→1.63.0 后 L1 无回归 | ✅ 达标 | 同上（本地/CI 双测）；`cfb2875` |
 | 2026-09-19 | M0 | L1 | R-02 环境可复现（新机器按 `LOCAL_FIRST_SETUP.md` 可 run） | ✅ 达标 | `uv venv` + `uv pip install` 一次成功；`PROJECT-PASSPORT.md` §3 记录全流程 |
 | 2026-09-19 | M1 | L2 | R-08 可配浏览器：`channel=msedge` 能 launch 且断言一致 | ✅ 达标 | chromium→`153.0.8010.12` / msedge→`153.0.4234.32`，`set_content`+`inner_text` 均命中；复用 `chromium-1243` **零下载** |
-| 2026-09-19 | M0 | L2 | R-01 本地 runbook：`ci_local_run.py` scheduler 跑通且 `verdict==PASS` | 🔁 未达标 | 环境已就绪（前 3 项为其前置）；**尚未执行真站 run** —— 需授权，见 §7 |
-| 2026-09-19 | M0 | L2 | R-03 诊断打包 `--collect-diagnostics` | ⏳ 待验 | 依赖上一条产生 FAIL |
+| 2026-09-19 | M0 | L2 | R-01 本地 runbook：`ci_local_run.py` scheduler 跑通且 `verdict==PASS` | ✅ 达标 | run `local-1789822612`：章 `1217304750` **PASS 10/10**、435.4s、`SERVER_VERIFIED`、`banner 26→27`；证据 `evidence/chapter_1217304750.json` |
+| 2026-09-19 | M0 | L2 | R-01 续：`--max-chapters 2` 连续 3 次只前进不重复 | ⏳ 待验 | 单次 PASS 不等于稳定；M0 完整达标仍需 3/3 |
+| 2026-09-19 | M0 | L2 | R-03 诊断打包 `--collect-diagnostics` | ⏳ 待验 | 本轮无失败，未触发打包路径 |
 | 2026-09-19 | M3 | L4 | R-20 同构引擎上云（1.63.0 在 GHA 生效） | ⏳ 待验 | `run.yml` pin 已改并推送；需一次云端 scheduler run 闭合 |
 
 > 记录规则：追加不覆盖；结果不可复现时降级为「待验」而非删除。
+
+### 4.1 已结案的判定争议（isPassed 假阴性）
+
+run 35265696173（09-17）报 `failure_stage=ISPASSED_FALSE`、`isPassed_body=null`。
+本地同引擎复现后定论：**服务端当时已判通过，是测量手段失效**。
+
+- 真实响应体序列：6× `isPassed:false` → 2× `isPassed:true`（`ml_probes` 首次落盘）
+- 独立佐证：`1217304745` 在本次 run 的实时 reconcile 中被服务器报为已完成，
+  registry 现记 `COMPLETED / verified=UI`（09-19 12:57）
+- 根因：判定用「对 multimedia/log 的 URL 二次 GET」取 body，而非读首次真实响应；
+  该上报端点重复 GET 不返回 isPassed（且属红线禁止的重放）
+- 修复：`read_event_body` 读首次真实响应并缓存，二次 GET 降级为 `XUE_DIAG_REFETCH=1` 显式诊断
+
 
 ---
 
