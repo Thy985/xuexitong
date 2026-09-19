@@ -146,6 +146,39 @@ def has_is_passed_marker(body: "str|None") -> bool:
     return any(p in body for p in _IS_PASSED_PATTERNS)
 
 
+def ml_probe_records(events: list) -> list:
+    """探测记录落盘用：保留 url/时刻/状态/响应体（含读体失败痕迹），不再只存一个 count。"""
+    return [{"url": ev.get("url"), "t": ev.get("t"), "status": ev.get("status"),
+             "body": (ev.get("body") or "")[:300], "body_err": ev.get("body_err")}
+            for ev in events]
+
+
+def read_event_body(ev: dict) -> "str|None":
+    """读**首次真实响应**的 body，只读一次并缓存。
+
+    Playwright 的 Response.text() 在响应已被回收时抛错；旧实现把异常静默吞成 None，
+    正是 isPassed_body 恒 null、分不清"没学成/没测到"的成因 → 失败痕迹写进 body_err。
+    """
+    if ev.get("_read"):
+        return ev.get("body")
+    resp = ev.get("resp")
+    if resp is None:
+        ev["_read"] = True
+        return None
+    try:
+        ev["body"] = resp.text()
+    except Exception as e:
+        ev["body"] = None
+        ev["body_err"] = f"ERR:{e}"
+    ev["_read"] = True
+    return ev.get("body")
+
+
+def refetch_requested(env: dict) -> bool:
+    """二次 GET 上报端点属红线，仅在显式开诊断（XUE_DIAG_REFETCH=1）时允许。"""
+    return (env.get("XUE_DIAG_REFETCH") or "").strip() == "1"
+
+
 # ── 视频状态获取（与 e1_2_ch16_v2.py 完全一致）───────────────────
 def get_video_state(page) -> dict:
     """Playwright 原生遍历所有 frames（含跨域/nested iframe）读视频状态。
@@ -389,8 +422,11 @@ def run_test(args, params: "CourseParams | None" = None):
         ))
 
         ml_events = []
+        # 存下 Response 对象本身：稍后在轮询循环里读**首次真实响应体**。
+        # 旧实现只记 url/status，判定改用对该 URL 二次 GET —— 上报端点重复 GET 属红线
+        # 禁止的"重放"，且返回体不保证再含 isPassed（run 35265696173 即 isPassed_body=null）。
         page.on("response", lambda resp: ml_events.append({
-            "t": time.time(), "url": resp.url, "status": resp.status
+            "t": time.time(), "url": resp.url, "status": resp.status, "resp": resp
         }) if "/mooc-ans/multimedia/log" in resp.url and resp.status == 200 else None)
 
         # ── C. 登录（cookie 优先，无则密码登录）────────────────────
@@ -594,15 +630,19 @@ def run_test(args, params: "CourseParams | None" = None):
                     entry["jobid"] = q.get("jobid", [None])[0]
                 except Exception:
                     pass
-                try:
-                    body = page.evaluate(
-                        """async (u) => {
-                            try { const r = await fetch(u, {method:'GET'}); return await r.text(); }
-                            catch(e) { return 'ERR:'+e.message; }
-                        }""", ev["url"]
-                    )
-                except Exception:
-                    body = None
+                body = read_event_body(ev)
+                if not body and refetch_requested(os.environ):
+                    # 仅诊断模式：与首次真实响应并排对比，用于判定旧"二次 GET"路径是否假阴性
+                    try:
+                        body = page.evaluate(
+                            """async (u) => {
+                                try { const r = await fetch(u, {method:'GET'}); return await r.text(); }
+                                catch(e) { return 'ERR:'+e.message; }
+                            }""", ev["url"]
+                        )
+                        entry["refetch_body"] = (body or "")[:300]
+                    except Exception:
+                        body = None
                 entry["body"] = (body or "")[:300]
                 ml_parsed.append(entry)
                 if has_is_passed_marker(body):
@@ -611,9 +651,10 @@ def run_test(args, params: "CourseParams | None" = None):
                     obj_id = entry.get("objectId")
                     if obj_id:
                         passed_object_ids.add(obj_id)
-                    evidence["isPassed_body"] = body[:300]
-                    log(f"★ isPassed=true! body={body[:120]}")
+                    evidence["isPassed_body"] = entry["body"]
+                    log(f"★ isPassed=true! body={entry['body'][:120]}")
             evidence["ml_log_count"] = len(ml_parsed)
+            evidence["ml_probes"] = ml_probe_records(ml_events)
 
             if now - last_status >= STATUS_EVERY_S:
                 last_status = now
