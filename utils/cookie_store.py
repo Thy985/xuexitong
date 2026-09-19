@@ -90,20 +90,31 @@ def ensure_login(page, context, base_url: str, user: str, pw: str,
             context.add_cookies(cookies)
             page.goto(base_url, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(2000)
+            html = _page_html(page)
             if "passport2.chaoxing.com/login" not in page.url \
-                    and not _is_login_warning(page):
-                # cookie 有效，跳过登录（额外校验非"用户未登录")
-                return True
+                    and not is_unauthenticated(html):
+                # 会话有效。注意「暂无权限使用该后台」也算已登录 —— 旧判据把它
+                # 一并当作失效，于是清掉好 cookie 再重登一次，仍撞同一道门。
+                if not is_permission_gate(html):
+                    return True
+                if _enter_personal_space(page):
+                    page.goto(base_url, wait_until="domcontentloaded",
+                              timeout=30000)
+                    page.wait_for_timeout(2500)
+                    if not _is_login_warning(page):
+                        save_cookies(context)
+                        return True
             # cookie 过期，清除并重新登录
             clear_cookies()
         except Exception:
             pass
 
-    # ── 2. 密码登录（含滑块处理，先经 v1/manage 建权）────────────
-    # 冷会话/换账号：直接 go mooc2 stu 页会被「暂无权限使用该后台，点击这里进个人空间」
-    # 挡在门外（不 redirect 到 login）。因此密码登录前先 goto
-    # v1.chaoxing.com/manage?ws=1 —— 未登录会重定向到 passport 登录页
-    # （再去填 #phone/#pwd），已登录则放行继续。
+    # ── 2. 密码登录（含滑块处理）──────────────────────────────
+    # 冷会话下直接 goto mooc2 stu 页可能不 redirect 到 login，而是渲染
+    # 「暂无权限使用该后台，点击这里进个人空间」——那是**已登录**的权限门，
+    # 要的是点那个链接（见 is_permission_gate / _enter_personal_space），
+    # 不是再登一次。旧实现误把它当未登录并 goto 裸 login URL（丢 refer），
+    # 结果登录后无返回上下文、卡在登录页。
 
     def _fill_and_submit(pg):
         """在登录页填 #phone/#pwd 并点登录；找不到控件则返回 False。"""
@@ -144,21 +155,22 @@ def ensure_login(page, context, base_url: str, user: str, pw: str,
                     page.wait_for_timeout(800)
 
     try:
-        # ① 先 goto v1/manage 建权
-        page.goto("https://v1.chaoxing.com/manage?ws=1",
-                  wait_until="domcontentloaded", timeout=30000)
-        page.wait_for_timeout(1500)
+        # ① goto 目标页：未登录时它会带 refer 重定向到 passport 登录页，登录成功后
+        #    自动回到目标页。实测反例：裸 goto passport2/login（不带 refer）→ 登录后
+        #    没有返回上下文，卡在登录页，login_ok 恒 False。
+        page.goto(base_url, wait_until="domcontentloaded", timeout=30000)
+        page.wait_for_timeout(2000)
 
-        # ② 若被未登录/权限门拦着 → 去 passport 登录
-        if _is_login_warning(page):
-            if "passport2.chaoxing.com/login" not in page.url:
-                page.goto("https://passport2.chaoxing.com/login",
-                          wait_until="domcontentloaded", timeout=30000)
-                page.wait_for_timeout(1500)
+        # ② 停在登录页才填表提交（权限门不是"未登录"，不再触发重登）
+        if "passport2.chaoxing.com/login" in page.url:
             _fill_and_submit(page)
             _wait_login_done()
 
-        # ③ 建权后跳回真实目标页（mooc2 stu），确认能穿权限门
+        # ③ 已登录但落在 manage 权限门 → 点「点击这里进个人空间」建立空间上下文
+        if is_permission_gate(_page_html(page)):
+            _enter_personal_space(page)
+
+        # ④ 跳回真实目标页（mooc2 stu），确认能穿权限门
         page.goto(base_url, wait_until="domcontentloaded", timeout=30000)
         page.wait_for_timeout(2500)
     except Exception:
@@ -172,6 +184,51 @@ def ensure_login(page, context, base_url: str, user: str, pw: str,
         save_cookies(context)
 
     return login_ok
+
+
+def is_permission_gate(html: "str|None") -> bool:
+    """「已登录但被 manage 权限门挡住」——需点『进个人空间』，**不是**未登录。
+
+    实测：登录后 v1.chaoxing.com/manage 渲染
+    「<姓名> 您暂无权限使用该后台，点击这里进个人空间」，链接 href=i.chaoxing.com。
+    """
+    if not html:
+        return False
+    return "暂无权限使用该后台" in html or "点击这里进个人空间" in html
+
+
+def is_unauthenticated(html: "str|None") -> bool:
+    """真·未登录（页面显式说"用户未登录"）。与 is_permission_gate 互斥。"""
+    return bool(html) and "用户未登录" in html
+
+
+# 权限门页上那个链接的实测特征（href 优先，文案兜底）。
+PERSONAL_SPACE_SELECTORS = [
+    "a[href='https://i.chaoxing.com']",
+    "a:has-text('点击这里进个人空间')",
+    "a:has-text('个人空间')",
+]
+
+
+def _page_html(page) -> str:
+    try:
+        return page.content() if not page.is_closed() else ""
+    except Exception:
+        return ""
+
+
+def _enter_personal_space(page) -> bool:
+    """点权限门上的「点击这里进个人空间」，为会话建立个人空间上下文。"""
+    for sel in PERSONAL_SPACE_SELECTORS:
+        try:
+            loc = page.locator(sel)
+            if loc.count() > 0:
+                loc.first.click(timeout=5000)
+                page.wait_for_timeout(2500)
+                return True
+        except Exception:
+            continue
+    return False
 
 
 def _is_login_warning(page) -> bool:
