@@ -608,13 +608,16 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
             continue
         chapters_attempted.append(next_task)
         # 自适应看门狗：长视频按实际时长展开 per-chapter 预算（避免 838s 视频被
-        # 900s 静态墙钟在 play ~46% 时误杀成 TIMEOUT）。取不到时长则回 base。
+        # 900s 静态墙钟在 play ~46% 时误杀成 TIMEOUT）。取不到时长则回 base，
+        # 但**降级必须打日志** —— 静默回退曾让 846s 视频在 34% 处被砍且无线索。
+        dur, dur_err = _probe_video_duration_s(course_url, run_cid)
+        watch_s, watch_reason = video_watch_budget(chapter_max_s, dur, dur_err)
+        if watch_reason.startswith("fallback"):
+            print(f"[scheduler] ⚠️ 看门狗降级 chapter={run_cid} {watch_reason}",
+                  flush=True)
         one = _run_one_chapter(course_url, run_cid, task_id=next_task,
                                trigger=trigger, run_id=run_id,
-                               video_index=run_vidx,
-                               max_s=_adaptive_video_watch_s(
-                                   chapter_max_s,
-                                   _probe_video_duration_s(course_url, run_cid)))
+                               video_index=run_vidx, max_s=watch_s)
         passed = one["passed"]
         verdict = one["verdict"]
         rt_ev = one["runtime_evidence"]
@@ -788,11 +791,29 @@ def _adaptive_video_watch_s(base_max_s: int,
     return max(base, min(est, ceil))
 
 
-def _probe_video_duration_s(course_url: str, chapter_id: str) -> Optional[float]:
+def video_watch_budget(base_max_s: int,
+                       video_duration_s: Optional[float],
+                       probe_error: Optional[str] = None) -> tuple[int, str]:
+    """定 per-chapter 看门狗预算，并**显式给出依据**。
+
+    探测失败仍回退 base（不让时长探测成为新故障点），但降级必须可见可归因：
+    静默回退曾让 846s 视频只拿到 900s 预算、播到 34% 被 killpg 砍成 TIMEOUT，
+    而日志里一行线索都没有。
+    """
+    budget = _adaptive_video_watch_s(base_max_s, video_duration_s)
+    if video_duration_s and video_duration_s > 0:
+        return budget, f"ok: video={video_duration_s:.0f}s -> budget={budget}s"
+    return budget, (f"fallback: 时长探测失败({probe_error or '探测未返回时长'}) "
+                    f"-> 静态 {budget}s；长视频有被误杀成 TIMEOUT 的风险")
+
+
+def _probe_video_duration_s(course_url: str,
+                            chapter_id: str) -> "tuple[Optional[float], Optional[str]]":
     """尽力而为读取章节视频总时长（秒），供自适应看门狗用。
 
-    复用一个 headed（Xvfb）页面走到章节 video iframe 读 `video#x5_api.duration`。
-    任何失败都返回 None（调用方回退 base），绝不让时长探测成为新故障点。
+    返回 `(时长, 失败原因)`。**失败不再静默**：调用方拿原因去记日志/证据，
+    否则"自适应看门狗没生效"这种降级在日志里完全看不出来（曾把 846s 视频
+    按静态 900s 预算砍成 TIMEOUT）。探测本身仍绝不成为新故障点。
     环境显式给 `XUE_VIDEO_DURATION_S` 时直接采用，免多余开浏览器。
     """
     import os as _os2
@@ -800,11 +821,11 @@ def _probe_video_duration_s(course_url: str, chapter_id: str) -> Optional[float]
     if ev:
         try:
             v = float(ev)
-            return v if v > 0 else None
         except ValueError:
-            return None
+            return None, f"XUE_VIDEO_DURATION_S 非数字: {ev!r}"
+        return (v, None) if v > 0 else (None, "XUE_VIDEO_DURATION_S <= 0")
     if not chapter_id:
-        return None
+        return None, "无 chapter_id"
     try:
         from resolvers.course_resolver import _parse_url_params
         from app.e2_headed_gha import get_video_state, build_base_url
@@ -833,9 +854,12 @@ def _probe_video_duration_s(course_url: str, chapter_id: str) -> Optional[float]
             st = get_video_state(page)
             browser.close()
             d = (st or {}).get("duration")
-            return float(d) if d and d > 0 else None
-    except Exception:
-        return None
+            if d and d > 0:
+                return float(d), None
+            return None, (f"页面未读到 video.duration（st={st or '无'}）"
+                          "—— 可能没进播放器/无视频/登录未通过")
+    except Exception as e:
+        return None, f"{type(e).__name__}: {e}"
 
 
 def _split_video_target(task_or_cid) -> tuple[str, int]:
