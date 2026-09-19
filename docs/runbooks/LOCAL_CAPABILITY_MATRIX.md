@@ -8,6 +8,9 @@
 
 ## 1. 能力矩阵
 
+> ⚠️ 下表为 **2026-09-10 snapshot**（playwright 1.62.0 / chromium-1234 时代），保留作历史证据。
+> **1.63.0 之后的复测见 §1.1**。
+
 | 能力 | 结果 | 实测证据 | 备注 |
 |---|---|---|---|
 | 本地 Python 可导入 playwright | ✅ | `pip show playwright 1.62.0` | |
@@ -29,6 +32,23 @@
 | 离线 pytest（不装浏览器） | ✅ | `python -m pytest tests/` → 149 pass + 1 skip | 只 import playwright 模块，不 launch |
 | CI `test.yml`（push/PR 自动跑） | ✅（新增） | `.github/workflows/test.yml` 跑 unit/integration/regression | 堵 TFS-6「CI 从不跑 pytest」 |
 | 离线 DOM/state/网络 fixture | ✅（新增第一批） | `tests/fixtures/`（dom/state/net/） | 脱敏快照，供 P0-03 等回归
+
+---
+
+## 1.1 复测（2026-09-19，playwright 1.63.0 + 项目 `.venv`）
+
+> 本机环境把 `browser-automation` 升为标准能力（Company 侧统一装了 chromium-1243 + Edge），
+> 项目随之从 1.62.0 升到 1.63.0（含 4 个 workflow 的 pin）。以下为当轮实测。
+
+| 能力 | 结果 | 实测证据 | 备注 |
+|---|---|---|---|
+| 隔离环境 | ✅ | `uv venv --python 3.12 .venv` → CPython 3.12.13 | `uv venv` **不含 pip**，装包用 `VIRTUAL_ENV=.venv uv pip install` |
+| venv 内导入 playwright | ✅ | `.venv/Scripts/python.exe` → `playwright==1.63.0` | 系统 python 无此包，必须走 venv |
+| 复用环境已有浏览器（零下载） | ✅ | `executable_path` → `...\ms-playwright\chromium-1243\chrome-win64\chrome.exe` | **未执行 `playwright install`** |
+| `channel=chromium` 启动 + DOM 断言 | ✅ | version `153.0.8010.12`，`set_content`→`inner_text` 命中 | 默认入口，与 GHA 同构 |
+| `channel=msedge` 启动 + DOM 断言 | ✅ | version `153.0.4234.32`（R-08 可配浏览器） | 经 `utils/browser_factory` 或显式 channel |
+| L1 pytest（1.63.0 下） | ✅ | `tests/unit + integration + regression` → **209 passed, 1 skipped** (202.97s) | 与升版前基线一致，无回归 |
+| GHA 引擎版本一致性 | ⏳ 待验 | `run.yml` 已改 `playwright==1.63.0` | 需一次云端 scheduler run PASS 才闭合 |
 
 ---
 
