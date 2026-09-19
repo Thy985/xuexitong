@@ -179,6 +179,53 @@ def refetch_requested(env: dict) -> bool:
     return (env.get("XUE_DIAG_REFETCH") or "").strip() == "1"
 
 
+# ── R-04 自动续播 ─────────────────────────────────────────────
+MAX_RESUME_ATTEMPTS = 12
+RESUME_COOLDOWN_S = 20
+
+
+def should_auto_resume(st: "dict|None", now: float,
+                       last_resume_at: "float|None", resume_count: int,
+                       ended_seen: bool) -> bool:
+    """视频停在 paused 时是否该调 video.play() 续播（R-04）。
+
+    只调用页面自己的 play()，让它继续**自然播放**；不碰 multimedia/log、
+    不改 playingTime/_t/enc —— 那是红线。
+    冷却与总次数上限是为了防跑飞：缓冲中的视频被反复 play() 只会打断加载。
+    """
+    if ended_seen or not st or not st.get("found"):
+        return False
+    if st.get("ended") or not st.get("paused"):
+        return False
+    if resume_count >= MAX_RESUME_ATTEMPTS:
+        return False
+    if last_resume_at is not None and (now - last_resume_at) < RESUME_COOLDOWN_S:
+        return False
+    return True
+
+
+def resume_paused_video(page) -> bool:
+    """在含 <video> 的那一帧上调用 play()（帧遍历方式与 get_video_state 一致）。"""
+    try:
+        frames = page.frames
+    except Exception:
+        return False
+    for fr in frames:
+        try:
+            ok = fr.evaluate("""() => {
+                const v = document.querySelector(
+                    'video#video_html5_api, video[id*="video_html5"], video');
+                if (!v || !v.paused) return false;
+                v.play();
+                return !v.paused;
+            }""")
+        except Exception:
+            continue
+        if ok:
+            return True
+    return False
+
+
 # ── 视频状态获取（与 e1_2_ch16_v2.py 完全一致）───────────────────
 def get_video_state(page) -> dict:
     """Playwright 原生遍历所有 frames（含跨域/nested iframe）读视频状态。
@@ -554,6 +601,9 @@ def run_test(args, params: "CourseParams | None" = None):
         #   - 为绝对值 now+k → 正在宽限窗口内（ended 已见、尚未观察到下一段 src）
         next_video_deadline = None
         passed_object_ids = set()
+        # R-04 自动续播计数（进 evidence，供验收与事后归因）
+        recovered_count = 0
+        last_resume_at = None
         # Options B：本次 run 目标章内视频段（1-based）。0 = 自然连播整章；
         # N>0 = 推进到第 N 段视频并只把该段判完成（逐段 dispatch）。
         target_vi = int(getattr(params, "video_index", 0) or 0)
@@ -573,6 +623,21 @@ def run_test(args, params: "CourseParams | None" = None):
                 break
 
             st = get_video_state(page)
+            # R-04 自动续播：引擎一直在读 video.paused 却从不处理它 —— 实测整章
+            # 卡在起播几秒处（1217304751 停 ct=8/595、1217304753 停 ct=9/1045）。
+            # 只调页面自己的 play()，仍属"真实浏览器自然播放"，不碰上报链路。
+            if should_auto_resume(st, now, last_resume_at, recovered_count,
+                                  ended_seen):
+                if resume_paused_video(page):
+                    recovered_count += 1
+                    log(f"★ R-04 auto-resume #{recovered_count} "
+                        f"(ct={(st.get('currentTime') or 0):.0f}s paused=True)")
+                else:
+                    log(f"⚠️ R-04 resume 未生效 "
+                        f"(ct={(st.get('currentTime') or 0):.0f}s)")
+                last_resume_at = now   # 成败都记冷却，避免每轮空转重试
+                evidence["recovered_count"] = recovered_count
+
             if st and st.get("found"):
                 ct = st.get("currentTime") or 0
                 v_src = st.get("src") or ""
