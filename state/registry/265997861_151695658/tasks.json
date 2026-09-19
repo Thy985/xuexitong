@@ -455,56 +455,6 @@
     "rollback_count": 1,
     "last_rollback_at_utc": ""
   },
-  "1217304708:other": {
-    "task_id": "1217304708:other",
-    "chapter_id": "1217304708",
-    "title": "数据通信的基础知识",
-    "task_type": "other",
-    "status": "PENDING",
-    "priority": 0,
-    "attempt_count": 0,
-    "attempts": 0,
-    "consecutive_failures": 0,
-    "max_attempts": 3,
-    "lease": {
-      "run_id": null,
-      "started_at_utc": null,
-      "expires_at_utc": null
-    },
-    "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
-    },
-    "completion_evidence": {
-      "type": "NONE",
-      "source": "",
-      "run_id": "",
-      "observed_at_utc": "2026-09-11T19:00:51.559106+00:00",
-      "detail": "",
-      "passed_object_ids": []
-    },
-    "failure": {
-      "stage": "",
-      "run_id": "",
-      "detail": "",
-      "consecutive_failures": 0,
-      "occurred_at_utc": "2026-09-11T19:00:51.559109+00:00"
-    },
-    "created_at_utc": "2026-09-11T19:00:51.559112+00:00",
-    "updated_at_utc": "2026-09-11T19:00:51.559112+00:00",
-    "last_run_id": null,
-    "last_run_at_utc": null,
-    "last_started_at": null,
-    "last_finished_at": null,
-    "last_success_at_utc": null,
-    "last_failure_at_utc": null,
-    "_ch_idx": 11,
-    "_cell_idx": 11,
-    "rollback_count": 0,
-    "last_rollback_at_utc": ""
-  },
   "1217304710": {
     "task_id": "1217304710",
     "chapter_id": "1217304710",
@@ -2338,11 +2288,11 @@
     "chapter_id": "1217304745",
     "title": "课后习题",
     "task_type": "video",
-    "status": "FAILED",
-    "priority": 55,
-    "attempt_count": 1,
-    "attempts": 1,
-    "consecutive_failures": 1,
+    "status": "COMPLETED",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
     "max_attempts": 3,
     "lease": {
       "run_id": null,
@@ -2350,34 +2300,34 @@
       "expires_at_utc": null
     },
     "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
+      "level": "UI",
+      "verified_at_utc": "2026-09-19T12:57:15.661565+00:00",
+      "run_id": "",
+      "source_detail": "server DOM completed marker"
     },
     "completion_evidence": {
-      "type": "NONE",
-      "source": "",
+      "type": "UI",
+      "source": "server DOM completed marker",
       "run_id": "",
-      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
-      "detail": "",
+      "observed_at_utc": "2026-09-19T12:57:15.661565+00:00",
+      "detail": "server DOM completed marker",
       "passed_object_ids": []
     },
     "failure": {
-      "stage": "ISPASSED_FALSE",
-      "run_id": "35265696173",
-      "detail": "FAIL(headed GHA) — 8/10 checks passed, isPassed_seen=False, max_ct=984s",
-      "consecutive_failures": 1,
-      "occurred_at_utc": "2026-09-17T19:47:42.406269+00:00"
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-19T12:57:15.661565+00:00"
     },
-    "created_at_utc": "2026-09-04T11:32:26.160703+00:00",
-    "updated_at_utc": "2026-09-17T19:47:42.406269+00:00",
-    "last_run_id": "35265696173",
-    "last_run_at_utc": "2026-09-17T19:47:42.406269+00:00",
-    "last_started_at": "2026-09-17T19:47:42.406269+00:00",
-    "last_finished_at": "2026-09-17T19:47:42.406269+00:00",
+    "created_at_utc": "2026-09-19T12:57:15.661565+00:00",
+    "updated_at_utc": "2026-09-19T12:57:15.661565+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
     "last_success_at_utc": null,
-    "last_failure_at_utc": "2026-09-17T19:47:42.406269+00:00",
+    "last_failure_at_utc": null,
     "_ch_idx": 43,
     "_cell_idx": 43,
     "rollback_count": 0,
@@ -2387,8 +2337,8 @@
     "task_id": "1217304749",
     "chapter_id": "1217304749",
     "title": "运输层协议概述",
-    "task_type": "video",
-    "status": "DISCOVERED",
+    "task_type": "other",
+    "status": "PENDING",
     "priority": 55,
     "attempt_count": 0,
     "attempts": 0,
@@ -2488,10 +2438,10 @@
     "chapter_id": "1217304750",
     "title": "UDP和TCP概述",
     "task_type": "video",
-    "status": "DISCOVERED",
+    "status": "COMPLETED",
     "priority": 55,
-    "attempt_count": 0,
-    "attempts": 0,
+    "attempt_count": 1,
+    "attempts": 1,
     "consecutive_failures": 0,
     "max_attempts": 3,
     "lease": {
@@ -2500,33 +2450,35 @@
       "expires_at_utc": null
     },
     "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
+      "level": "SERVER_VERIFIED",
+      "verified_at_utc": "2026-09-19T13:04:53.166266+00:00",
+      "run_id": "local",
+      "source_detail": "passed_object_ids=1"
     },
     "completion_evidence": {
-      "type": "NONE",
-      "source": "",
-      "run_id": "",
-      "observed_at_utc": "2026-09-06T01:52:26.625482+00:00",
-      "detail": "",
-      "passed_object_ids": []
+      "type": "SERVER_VERIFIED",
+      "source": "isPassed",
+      "run_id": "local",
+      "observed_at_utc": "2026-09-19T13:04:53.166266+00:00",
+      "detail": "passed_object_ids=1",
+      "passed_object_ids": [
+        "96bf782cc04a753ee2efe6785431f8b2"
+      ]
     },
     "failure": {
       "stage": "",
       "run_id": "",
       "detail": "",
       "consecutive_failures": 0,
-      "occurred_at_utc": "2026-09-06T01:52:26.625482+00:00"
+      "occurred_at_utc": "2026-09-19T13:04:53.166266+00:00"
     },
     "created_at_utc": "2026-09-04T11:32:26.160716+00:00",
-    "updated_at_utc": "2026-09-04T11:32:26.160716+00:00",
-    "last_run_id": null,
-    "last_run_at_utc": null,
-    "last_started_at": null,
-    "last_finished_at": null,
-    "last_success_at_utc": null,
+    "updated_at_utc": "2026-09-19T13:04:53.166266+00:00",
+    "last_run_id": "local",
+    "last_run_at_utc": "2026-09-19T13:04:53.166266+00:00",
+    "last_started_at": "2026-09-19T13:04:53.166266+00:00",
+    "last_finished_at": "2026-09-19T13:04:53.166266+00:00",
+    "last_success_at_utc": "2026-09-19T13:04:53.166266+00:00",
     "last_failure_at_utc": null,
     "_ch_idx": 48,
     "_cell_idx": 48,

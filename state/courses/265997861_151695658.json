@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "status": "BLOCKED",
-  "run_count": 91,
-  "success_count": 63,
+  "status": "ACTIVE",
+  "run_count": 92,
+  "success_count": 64,
   "failure_count": 28,
   "course_identity": {
     "course_id": "265997861",
@@ -13,24 +13,16 @@
     "resolved_at_utc": "2026-09-03T13:36:56.394188+00:00"
   },
   "progress": {
-    "completed": 20,
+    "completed": 21,
     "total": 4,
-    "last_completed_task": "1217304742",
-    "active_task": "1217304745"
+    "last_completed_task": "1217304750",
+    "active_task": null
   },
-  "last_run": "2026-09-17T19:47:42.410024+00:00",
-  "last_success": "2026-09-16T19:37:59.045632+00:00",
+  "last_run": "2026-09-19T13:04:53.177220+00:00",
+  "last_success": "2026-09-19T13:04:53.177220+00:00",
   "last_failure": "2026-09-17T19:47:42.410024+00:00",
-  "last_completed_task": "1217304742",
-  "active_task": "1217304745",
+  "last_completed_task": "1217304750",
   "history": [
-    {
-      "run_at_utc": "2026-09-05T14:36:57.387458+00:00",
-      "timing_s": 355.7,
-      "passed": true,
-      "verdict": "PASS",
-      "chapter_id": "1217304704"
-    },
     {
       "run_at_utc": "2026-09-06T04:14:04.094483+00:00",
       "timing_s": 627.8,
@@ -373,20 +365,27 @@
       "passed": false,
       "verdict": "DEGRADED",
       "chapter_id": "1217304745"
+    },
+    {
+      "run_at_utc": "2026-09-19T13:04:53.177220+00:00",
+      "timing_s": 434.7,
+      "passed": true,
+      "verdict": "PASS",
+      "chapter_id": "1217304750"
     }
   ],
   "scheduler": {
-    "last_scheduled_at": "2026-09-17T19:47:42.470246+00:00",
-    "last_started_at": "2026-09-17T19:47:42.470246+00:00",
-    "last_finished_at": "2026-09-17T19:47:42.470539+00:00",
-    "last_result": "FAILED",
-    "last_run_id": "35265696173",
-    "last_trigger": "schedule",
-    "consecutive_failures": 1,
-    "execution_id": "35265696173",
-    "attempt": 80,
-    "blocked_since": "2026-09-18T18:54:45.143032+00:00",
-    "blocked_hits": 1,
+    "last_scheduled_at": "2026-09-19T13:04:53.317835+00:00",
+    "last_started_at": "2026-09-19T13:04:53.317835+00:00",
+    "last_finished_at": "2026-09-19T13:04:53.330390+00:00",
+    "last_result": "SUCCESS",
+    "last_run_id": "local-1789822612",
+    "last_trigger": "manual",
+    "consecutive_failures": 0,
+    "execution_id": "local-1789822612",
+    "attempt": 81,
+    "blocked_since": null,
+    "blocked_hits": 0,
     "blocked_retry_interval": 0
   }
 }
