@@ -99,28 +99,37 @@ def ensure_login(page, context, base_url: str, user: str, pw: str,
         except Exception:
             pass
 
-    # ── 2. 密码登录（含滑块处理）──────────────────────────────
-    page.goto(base_url, wait_until="domcontentloaded", timeout=30000)
-    page.wait_for_timeout(3000)
-    try:
-        page.wait_for_selector("#phone", timeout=12000)
-        page.locator("#phone").first.fill(user)
-        page.locator("#pwd").first.fill(pw)
+    # ── 2. 密码登录（含滑块处理，先经 v1/manage 建权）────────────
+    # 冷会话/换账号：直接 go mooc2 stu 页会被「暂无权限使用该后台，点击这里进个人空间」
+    # 挡在门外（不 redirect 到 login）。因此密码登录前先 goto
+    # v1.chaoxing.com/manage?ws=1 —— 未登录会重定向到 passport 登录页
+    # （再去填 #phone/#pwd），已登录则放行继续。
+
+    def _fill_and_submit(pg):
+        """在登录页填 #phone/#pwd 并点登录；找不到控件则返回 False。"""
+        try:
+            pg.wait_for_selector("#phone", timeout=12000)
+            pg.locator("#phone").first.fill(user)
+            pg.locator("#pwd").first.fill(pw)
+        except Exception:
+            return False
         for sel in ["button:has-text('登录')", "a.loginbtn", ".loginbtn", "#login"]:
             try:
-                loc = page.locator(sel)
+                loc = pg.locator(sel)
                 if loc.count() > 0:
                     loc.first.click(force=True, timeout=3000)
-                    break
+                    return True
             except Exception:
-                pass
+                continue
+        return False
 
-        # 循环等待登录结果；期间若出现滑块验证码则尝试解决
+    def _wait_login_done():
+        """等待登录完成；期间若出现滑块验证码则尝试解决。"""
         deadline = time.monotonic() + login_timeout_s
         while time.monotonic() < deadline:
             page.wait_for_timeout(1000)
             if "passport2.chaoxing.com/login" not in page.url:
-                break
+                return
             if captcha_mode != "skip" and detect_slider(page):
                 if captcha_mode in ("auto", "auto_then_manual"):
                     res = solve_slider(page, attempts=captcha_attempts,
@@ -133,6 +142,25 @@ def ensure_login(page, context, base_url: str, user: str, pw: str,
                 if res == "manual_needed":
                     wait_manual(page, timeout_s=60.0)
                     page.wait_for_timeout(800)
+
+    try:
+        # ① 先 goto v1/manage 建权
+        page.goto("https://v1.chaoxing.com/manage?ws=1",
+                  wait_until="domcontentloaded", timeout=30000)
+        page.wait_for_timeout(1500)
+
+        # ② 若被未登录/权限门拦着 → 去 passport 登录
+        if _is_login_warning(page):
+            if "passport2.chaoxing.com/login" not in page.url:
+                page.goto("https://passport2.chaoxing.com/login",
+                          wait_until="domcontentloaded", timeout=30000)
+                page.wait_for_timeout(1500)
+            _fill_and_submit(page)
+            _wait_login_done()
+
+        # ③ 建权后跳回真实目标页（mooc2 stu），确认能穿权限门
+        page.goto(base_url, wait_until="domcontentloaded", timeout=30000)
+        page.wait_for_timeout(2500)
     except Exception:
         pass
 
@@ -147,15 +175,20 @@ def ensure_login(page, context, base_url: str, user: str, pw: str,
 
 
 def _is_login_warning(page) -> bool:
-    """判断课程页是否其实是「用户未登录」错误页（非已登录视图）。
+    """判断课程页是否其实是「未登录/无权限」错误页（非已登录视图）。
 
-    ensure_login 旧判据只看 URL 是否在 login 页，这会把『失效会话渲染
-    “用户未登录”却没重定向到 login 页』误判为已登录。此处补 DOM 校验。
+    ensure_login 旧判据只看 URL 是否在 login 页，会把『失效会话渲染
+    “用户未登录”却没重定向到 login 页』（以及冷会话下直接被
+    「暂无权限使用该后台，点击这里进个人空间」挡在权限门外、而非 redirect
+    到 login 页）误判为已登录。此处补 DOM 校验，两类「非已登录」都算 False。
     """
     try:
         if page.is_closed():
             return False
         html = page.content()
-        return "用户未登录" in html
+        for bad in ("用户未登录", "暂无权限", "没有权限"):
+            if bad in html:
+                return True
+        return False
     except Exception:
         return False
