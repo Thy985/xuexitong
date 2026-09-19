@@ -9,6 +9,7 @@
 | `REGRESSION_MATRIX.md` | 事故 → 失效模式 → 回归测试 → 验证级别 → CI 门禁 → Agent 规则矩阵 |
 | `CI_GATES_CANDIDATES.md` | CI 门禁候选、频率映射 |
 | `AGENT_RULE_CANDIDATES.md` | Agent 规则候选 R-0..R-10 |
+| `ACCEPTANCE.md` | 四层验收体系（L1 pytest → L4 上云）+ 里程碑验收矩阵 + 验收留痕表 |
 
 运行/验证手册（Playwright runbook、能力矩阵、滑块处理）见 `docs/runbooks/`；
 E2E 基线 + 真实证据见 `docs/evidence/`。
