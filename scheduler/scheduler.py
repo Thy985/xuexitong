@@ -24,6 +24,10 @@ from enum import Enum
 from pathlib import Path
 from typing import Literal, Optional
 
+from utils.stdio_utf8 import ensure_utf8_stdio
+
+ensure_utf8_stdio()
+
 # 类型定义
 SchedulerResult = Literal["SUCCESS", "NOOP", "BLOCKED", "FAILED"]
 SchedulerDecision = Literal["RUN", "NOOP", "BLOCKED", "ERROR"]
@@ -765,6 +769,39 @@ def _try_sync_progress(course_key: str) -> None:
         print(f"[scheduler] progress sync skipped: {_sync_err}", file=sys.stderr)
 
 
+def head_chapter_id(head: Optional[dict],
+                    registry: dict,
+                    tasks: list) -> str:
+    """队列首项对应的章号（纯数字串），取不到则 ""。
+
+    队首 item 自带 chapter_id；只有它为空时才回退查 registry / discovery 列表，
+    且回退必须取 `.chapter_id` —— `str(existing[tid])` 会得到整条 TaskRecord repr，
+    那个 repr 曾被当作 knowledge_id 传给 live 复核（见测试文件说明）。
+    """
+    tid = str((head or {}).get("task_id", "") or "")
+    for cand in (
+        (head or {}).get("chapter_id"),
+        getattr(registry.get(tid), "chapter_id", None),
+        next((getattr(t, "chapter_id", "") for t in tasks
+              if getattr(t, "task_id", "") == tid), ""),
+    ):
+        cid = str(cand or "")
+        if cid.isalnum():        # repr/对象串含括号空格，章号只会是字母数字
+            return cid
+    return ""
+
+
+def points_prove_no_video(job_points: Optional[list]) -> bool:
+    """True 仅当"真读到了该章的点、且点里没有任何 video"。
+
+    空点集代表没测到（探测失败/传错章号），不是测到了 0 个视频。把前者当后者会
+    把真实视频章判成非视频并从队列里剔除。
+    """
+    if not job_points:
+        return False
+    return not any((p or {}).get("type") == "video" for p in job_points)
+
+
 def _adaptive_video_watch_s(base_max_s: int,
                             video_duration_s: Optional[float] = None,
                             ceiling_s: int = 2400) -> int:
@@ -826,6 +863,10 @@ def _probe_video_duration_s(course_url: str,
         return (v, None) if v > 0 else (None, "XUE_VIDEO_DURATION_S <= 0")
     if not chapter_id:
         return None, "无 chapter_id"
+    if not (_os2.environ.get("CX_USER") and _os2.environ.get("CX_PASS")):
+        # 探测要登录才读得到时长；没凭据还照样起 headed 浏览器，结果是桌面弹一个
+        # 停在 passport2 登录页的窗口、几十秒后自己消失（测试里就会这么炸）。
+        return None, "缺少 CX_USER/CX_PASS 凭据，跳过时长探测"
     try:
         from resolvers.course_resolver import _parse_url_params
         from app.e2_headed_gha import get_video_state, build_base_url
@@ -1166,9 +1207,7 @@ def _run_tdvp_probe(course_url: str, course_key: str,
         #     并让「当前未完成的视频」不被提前当作完成（4708 双视频只播 1 个的问题）。
         if queue.items:
             head = queue.items[0]
-            head_cid = str((existing.get(head.get("task_id", "")) or
-                            next((t.chapter_id for t in tasks
-                                  if t.task_id == head.get("task_id")), "")) or "")
+            head_cid = head_chapter_id(head, existing, tasks)
             if head_cid:
                 from tvdp.tdvp import chapter_video_summary, build_live_pending
                 verify = None
@@ -1180,6 +1219,7 @@ def _run_tdvp_probe(course_url: str, course_key: str,
                         "video_total": tv,
                         "video_finished": tf,
                         "live_pending": build_live_pending(_combined_points),
+                        "points": _combined_points,
                     }
                 if verify is None:
                     verify = live_verify_chapter(
@@ -1226,7 +1266,13 @@ def _run_tdvp_probe(course_url: str, course_key: str,
                     # 该"目标章"实际没有任何视频点（纯文本/知识扩展章，如 4705）：
                     # 不应把它当作 video 运行——把它从 video READY 排除，避免白白
                     # 播一个不存在的视频而 DEGRADED/BLOCKED。
-                    if total_v == 0:
+                    # 但只有"真读到了点"才允许这么判：video_total=0 既可能是该章确实
+                    # 无视频，也可能是复核根本没测到（探测失败/章号传错）。把后者当前者
+                    # 会把真实视频章静默降级成 other/PENDING —— 账本失真，不可逆。
+                    if total_v == 0 and not points_prove_no_video(verify.get("points")):
+                        print(f"[scheduler] E6.2 复核未取到 chapter={head_cid} 的点级，"
+                              f"跳过「无视频」降级（video_total=0 不可信）", flush=True)
+                    if total_v == 0 and points_prove_no_video(verify.get("points")):
                         head_tid = head.get("task_id", "")
                         rec = existing2.get(head_tid)
                         if rec is not None and (getattr(rec, "task_type", "video") or "video") == "video":
