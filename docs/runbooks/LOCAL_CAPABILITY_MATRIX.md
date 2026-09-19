@@ -48,7 +48,7 @@
 | `channel=chromium` 启动 + DOM 断言 | ✅ | version `153.0.8010.12`，`set_content`→`inner_text` 命中 | 默认入口，与 GHA 同构 |
 | `channel=msedge` 启动 + DOM 断言 | ✅ | version `153.0.4234.32`（R-08 可配浏览器） | 经 `utils/browser_factory` 或显式 channel |
 | L1 pytest（1.63.0 下） | ✅ | `tests/unit + integration + regression` → **209 passed, 1 skipped** (202.97s) | 与升版前基线一致，无回归 |
-| GHA 引擎版本一致性 | ⏳ 待验 | `run.yml` 已改 `playwright==1.63.0` | 需一次云端 scheduler run PASS 才闭合 |
+| GHA 引擎版本一致性 | ✅（test.yml） | run 35440057875 → `Successfully installed playwright-1.63.0`，**210 passed in 72s** | `run.yml` 的浏览器 launch 待下次 scheduler run 闭合 |
 
 ---
 
