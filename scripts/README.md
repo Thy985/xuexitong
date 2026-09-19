@@ -8,7 +8,8 @@
 | `diag_login.py` | 登录链路诊断：判断真实登录是被“滑块验证码”还是“账号/密码未认证”阻挡。 |
 | `local-pw_probe.py` | 只读（mooc1 入口）登录 + 课程目录探测，不播放/不写 state。 |
 | `mooc2_probe.py` | **推荐**：用 mooc2 正确入口做只读登录 + 课程目录 E2E 验证（该入口可真实登录）；证据写到 `docs/evidence/mooc2_evidence/`。 |
+| `ci_local_run.py` | **M0 本地验收入口**：包装 `scheduler.run_scheduler`（与 GHA 同一引擎）本地跑 scheduler，产出可复现 evidence；`--repeat N` 连续稳定验证、`--collect-diagnostics` 失败打包。见 `docs/runbooks/LOCAL_FIRST_SETUP.md`。 |
 
 约定：
-- 这些脚本不代表生产运行入口（生产入口见 `app/run.py`），多为本地验证/诊断/证据采集用途。
+- 这些脚本不代表生产运行入口（生产入口见 `app/run.py`），但 `ci_local_run.py` 是**本地验收（ACCEPTANCE L2）的权威入口**，复用生产 scheduler 引擎。
 - 涉及真实凭证的脚本只读 `.env`，不硬编码密码，运行产物写到本地（不进 `state/`）。

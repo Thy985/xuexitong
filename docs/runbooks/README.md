@@ -2,6 +2,7 @@
 
 | 文件 | 内容 |
 |---|---|
+| `LOCAL_FIRST_SETUP.md` | **M0 本地起步 & 验收**：一键装环境 + 配凭据 + `ci_local_run.py` 跑通 scheduler（L2 验收入口） |
 | `LOCAL_PLAYWRIGHT_RUNBOOK.md` | 本地 Playwright 运行手册：环境、启动、登录/会话、**正确课程入口（mooc2）**、滑块处理 |
 | `LOCAL_CAPABILITY_MATRIX.md` | 本地能力矩阵（✅/⚠️/❌ 逐项实测） |
 | `CAPTCHA_HANDLER_NOTES.md` | 滑块验证码处理：`utils/captcha_slider.py` 设计与用法 |
