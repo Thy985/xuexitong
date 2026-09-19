@@ -615,8 +615,9 @@ def fetch_course_detail_and_verify(
         display = os.environ.get("DISPLAY", ":99")
 
         with sync_playwright() as pwc:
+            from utils.browser_factory import launch_kwargs  # 可配 XUE_BROWSER_CHANNEL/EXE
             browser = pwc.chromium.launch(
-                headless=False, channel="chromium",
+                headless=False, **launch_kwargs(),
                 args=[f"--display={display}", "--no-sandbox",
                       "--disable-dev-shm-usage", "--disable-gpu"],
             )
@@ -689,8 +690,9 @@ def resolve_click_probe_chapter_id(course_url: str, ch_idx: int, cell_idx: int) 
         display = os.environ.get("DISPLAY", ":99")
 
         with sync_playwright() as pwc:
+            from utils.browser_factory import launch_kwargs  # 可配 XUE_BROWSER_CHANNEL/EXE
             browser = pwc.chromium.launch(
-                headless=False, channel="chromium",
+                headless=False, **launch_kwargs(),
                 args=[f"--display={display}", "--no-sandbox",
                       "--disable-dev-shm-usage", "--disable-gpu"],
             )
@@ -775,8 +777,9 @@ def fetch_page_html(course_url: str, cx_user: Optional[str] = None,
         display = os.environ.get("DISPLAY", ":99")
 
         with sync_playwright() as pwc:
+            from utils.browser_factory import launch_kwargs  # 可配 XUE_BROWSER_CHANNEL/EXE
             browser = pwc.chromium.launch(
-                headless=False, channel="chromium",
+                headless=False, **launch_kwargs(),
                 args=[f"--display={display}", "--no-sandbox",
                       "--disable-dev-shm-usage", "--disable-gpu"],
             )
@@ -1027,8 +1030,9 @@ def live_verify_chapter(
         sys.path.insert(0, str(Path(__file__).parent.parent / "e2"))
         from utils.cookie_store import ensure_login
         with sync_playwright() as p:
+            from utils.browser_factory import launch_kwargs  # 可配 XUE_BROWSER_CHANNEL/EXE
             b = p.chromium.launch(
-                headless=False, channel="chromium",
+                headless=False, **launch_kwargs(),
                 args=["--no-sandbox", "--disable-gpu"],
             )
             pg = b.new_page()

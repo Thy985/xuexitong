@@ -818,8 +818,9 @@ def _probe_video_duration_s(course_url: str, chapter_id: str) -> Optional[float]
         pw = _os3.environ.get("CX_PASS")
         display = _os3.environ.get("DISPLAY", ":99")
         with sync_playwright() as pwc:
+            from utils.browser_factory import launch_kwargs
             browser = pwc.chromium.launch(
-                headless=False, channel="chromium",
+                headless=False, **launch_kwargs(),
                 args=[f"--display={display}", "--no-sandbox",
                       "--disable-dev-shm-usage", "--disable-gpu"],
             )

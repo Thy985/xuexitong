@@ -52,6 +52,13 @@ from urllib.parse import urlparse, parse_qs
 
 from playwright.sync_api import sync_playwright
 
+# 使仓库根可导入 —— 本模块既被 app/ 内部 import，也可能作为独立脚本 `python app/e2_headed_gha.py`
+# 运行；从 app/ 独立跑时 repo root 不在 sys.path，需显式挂上才能 `import utils.*`。
+_REPO = Path(__file__).resolve().parent.parent
+for _p in (_REPO, _REPO / "e2"):
+    if str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
+
 
 # ── 课程配置（演示默认值；可由 URL / env / CLI 覆盖 → 通用 fork MVP）────
 # 默认指向演示课程 1.6 章节，保持 E2/E3 证据工作流向后兼容。
@@ -329,9 +336,10 @@ def run_test(args, params: "CourseParams | None" = None):
     log(f"DISPLAY={display}")
 
     with sync_playwright() as p:
+        from utils.browser_factory import launch_kwargs
         browser = p.chromium.launch(
             headless=False,
-            channel="chromium",
+            **launch_kwargs(),  # XUE_BROWSER_CHANNEL/XUE_BROWSER_EXE 可配类型，默认 chromium
             args=[
                 f"--display={display}",
                 "--no-sandbox",
