@@ -41,6 +41,18 @@ for _p in (_REPO, _REPO / "resolvers", _REPO / "state", _REPO / "e2"):
     if _ps not in sys.path:
         sys.path.insert(0, _ps)
 
+from utils.env_file import load_env_file  # noqa: E402
+
+
+def ensure_credentials(root: Path, env: dict) -> list:
+    """凭据前置检查：先补本地 `.env`（真实环境变量优先），返回仍缺失的键。
+
+    原先只查 env 不读 .env，与 LOCAL_FIRST_SETUP.md「凭据写 .env」矛盾 →
+    本地带 .env 也直接 exit 2，M0 入口跑不起来。
+    """
+    load_env_file(root, env)
+    return [k for k in ("CX_USER", "CX_PASS") if not env.get(k)]
+
 
 # ────────────────────────────────────────────────
 # 单一引擎：scheduler 直接 import；run/init/switch 走子进程
@@ -242,9 +254,9 @@ def main() -> int:
 
     # credentials 校验（run/scheduler 需要）
     if args.action in ("run", "scheduler"):
-        missing = [k for k in ("CX_USER", "CX_PASS") if not os.environ.get(k)]
+        missing = ensure_credentials(_REPO, os.environ)
         if missing:
-            print(f"[ci_local] 缺少环境变量: {missing}（export 或写入本地 .env，勿入仓库）",
+            print(f"[ci_local] 缺少凭据: {missing}（export 或写入本地 .env，勿入仓库）",
                   flush=True)
             return 2
 
