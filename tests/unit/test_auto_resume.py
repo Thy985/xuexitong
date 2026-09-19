@@ -53,6 +53,31 @@ class TestEndOfVideoIsNotDisturbed:
                                   ended_seen=False) is False
 
 
+class TestNotYetStartedIsNotResumeMaterial:
+    """R-04 是"续播"，不是"起播"。
+
+    误触发实录（章 1217304754，13:52:26）：引擎对一段刚出现、`ct=0` 的视频调了
+    play()，同日志同一秒就打出 `chapter complete ... max_ct=0/474`。对还没起播的
+    视频推 play() 不属 R-04 职责，且会把"页面尚未开始播"伪装成"我们已尽力续播"。
+    """
+
+    def test_paused_at_zero_is_not_resumed(self):
+        assert should_auto_resume(_st(currentTime=0.0), now=1000.0,
+                                  last_resume_at=None, resume_count=0,
+                                  ended_seen=False) is False
+
+    def test_paused_after_real_progress_is_resumed(self):
+        assert should_auto_resume(_st(currentTime=8.0), now=1000.0,
+                                  last_resume_at=None, resume_count=0,
+                                  ended_seen=False) is True
+
+    def test_missing_current_time_is_treated_as_not_started(self):
+        st = _st()
+        st.pop("currentTime")
+        assert should_auto_resume(st, now=1000.0, last_resume_at=None,
+                                  resume_count=0, ended_seen=False) is False
+
+
 class TestBoundedSoItCannotRunAway:
     def test_cooldown_between_attempts(self):
         assert should_auto_resume(_st(), now=1000.0, last_resume_at=995.0,

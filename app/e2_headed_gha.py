@@ -197,6 +197,10 @@ def should_auto_resume(st: "dict|None", now: float,
         return False
     if st.get("ended") or not st.get("paused"):
         return False
+    if (st.get("currentTime") or 0) <= 0:
+        # R-04 只管"续播"，不管"起播"。对 ct=0 的未起播视频调 play() 既越了职责，
+        # 又会把"页面还没开始播"掩盖成"我们已尽力续播"（章 1217304754 即误触发过）。
+        return False
     if resume_count >= MAX_RESUME_ATTEMPTS:
         return False
     if last_resume_at is not None and (now - last_resume_at) < RESUME_COOLDOWN_S:
