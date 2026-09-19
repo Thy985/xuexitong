@@ -15,12 +15,14 @@
 L4  上云回归（GHA cron 真跑）            —— 只验收 Step「上云」
 L3  真站冒烟（真账号/真课程）             —— 本地，Playwright 起浏览器连真站
 L2  功能/稳定性验证（本地，含真浏览器但可离线/可控）  —— Xvfb 有头 / headless=False
-L1  纯逻辑测试（单元/集成/回归）         —— pytest，CI 已跑（现 209 passed + 1 skip）
+L1  纯逻辑测试（单元/集成/回归）         —— pytest，CI 已跑（现 296 passed + 1 skip）
 ```
 
 ### L1 · 纯逻辑测试（CI，pytest）
 - **跑法**：`.github/workflows/test.yml`（push/PR 自动）→ `pytest tests/unit tests/integration tests/regression`。
-- **判据**：全部通过；`--maxfail=5` 内不爆炸（不允许零星断言失败仍绿）。基线：2026-09-15 实测 **209 passed, 1 skipped**（共 210 collected）。
+- **判据**：全部通过；`--maxfail=5` 内不爆炸（不允许零星断言失败仍绿）。基线：2026-09-20 实测 **296 passed, 1 skipped**（共 297 collected，68s）。
+  > 09-15 基线为 209+1/72s；增量主要来自本轮三起缺陷的回归用例。
+  > **耗时也是判据**：同一套用例从 239s 降到 68s，差额正是"测试偷偷起真浏览器"被堵住的时间（见 §4.4）。
 - **证据**：`pytest.log`（失败时自动上传 artifact）。
 - **门禁**：任何 PR/M0~M3 改动必须保持 L1 全绿。**此层失败 = 阻断。**
 
@@ -95,6 +97,11 @@ L1  纯逻辑测试（单元/集成/回归）         —— pytest，CI 已跑�
 | 2026-09-19 | M0 | L2 | R-01 续：`--max-chapters 2` 连续 3 次只前进不重复 | ⏳ 待验 | 单次 PASS 不等于稳定；M0 完整达标仍需 3/3 |
 | 2026-09-19 | M0 | L2 | R-03 诊断打包 `--collect-diagnostics` | ⏳ 待验 | 本轮无失败，未触发打包路径 |
 | 2026-09-19 | M3 | L4 | R-20 同构引擎上云（1.63.0 在 GHA 生效） | ⏳ 待验 | `run.yml` pin 已改并推送；需一次云端 scheduler run 闭合 |
+| 2026-09-20 | M0 | L2 | R-03 诊断打包 `--collect-diagnostics` | ✅ 达标 | 6 个包真实落盘：`evidence/diag/diag_20260919_{221712,221730,221751,222837,222914,222951}.zip`（各 ~14KB，含 registry dump+日志）。**注意**：触发它们的是两次失败实验，不是"故意造失败" |
+| 2026-09-20 | M0 | L2 | R-01 续：`--max-chapters 2` 连续 3 次只前进不重复 | ❌ 未达标（两轮均作废，非结论） | 第 1 轮 `l2_stability_20260919.log` 被并发重型 pytest 污染（同一套测试 387s→139s，2.8×）；第 2 轮 `l2_stability_clean2` 三次全 `SCHEDULER_CRASH`（`UnicodeEncodeError: 'gbk' …'\u26a0'`，见 §4.3） |
+| 2026-09-20 | 缺陷 | L2/L4 | **P0：`head_cid` 取到 TaskRecord repr → 每次 run 静默误降一章** | ✅ 已修 + 账本已回填 | `9cdcb3b`/`cbf57b9`/`003762b`；真源核对 22 章全部确有视频点（`evidence/ledger_video_points_20260920_064452.json`）；详见 §4.2 |
+| 2026-09-20 | M1 | L2 | R-04 自动续播（`video.paused` → `play()`，带 `ct>0` 只管续播不管起播） | 🔁 代码达标，真站未验 | `f1e72b3`+`00c98dc`；12 个单测覆盖判据。**尚无一次真站 run 观测到它触发**（两轮 L2 都因上表原因作废） |
+| 2026-09-20 | 加固 | L1 | 测试隔离：单测不得起真浏览器 / 不得带真账号 | ✅ 达标 | `tests/conftest.py` 会话级剥 `CX_USER/CX_PASS`；`_probe_video_duration_s` 缺凭据不起浏览器；跑测试期间 chrome 进程数实测 0 |
 
 > 记录规则：追加不覆盖；结果不可复现时降级为「待验」而非删除。
 
@@ -109,6 +116,65 @@ run 35265696173（09-17）报 `failure_stage=ISPASSED_FALSE`、`isPassed_body=nu
 - 根因：判定用「对 multimedia/log 的 URL 二次 GET」取 body，而非读首次真实响应；
   该上报端点重复 GET 不返回 isPassed（且属红线禁止的重放）
 - 修复：`read_event_body` 读首次真实响应并缓存，二次 GET 降级为 `XUE_DIAG_REFETCH=1` 显式诊断
+
+### 4.2 已结案的判定争议（第二例：把"没测到"当成"测到 0"）
+
+**症状**（日志直读，非推测）：`[scheduler] DIAG E6.2 head=TaskRecord(task_id='1217304754', chapter_id='1217304754', …`
+—— 目标章位置打出的不是章号，是整条 dataclass repr。
+
+**机制链**：`head_cid = str(existing.get(task_id) or next(...))`，而 `existing` 是 `{task_id: TaskRecord}`，
+`.get()` 命中的是**对象**，`str()` 即 repr → `live_verify_chapter()` 拿 repr 当 `knowledge_id` 去查一个不存在
+的章 → `video_total=0` → 命中"该章实际没有视频点"分支 → 把真实视频章写成 `task_type=other / status=PENDING`
+并**从 video 队列剔除**。每次 scheduler run 掉一章，本地与 GHA 走同一条路径。
+
+**存续时间**：`56c6e115`（2026-09-06）起，且已在 origin/main —— 即两周的 nightly 每次都在削账。
+
+**真源核对**（`scripts/diag_video_points_ledger.py`，一次登录逐章读 job 点，只读不播放）：
+22 章**全部**确有视频点（1~3 个），`keep_other=0`、`unknown=0` —— 无一例外，降级 100% 是缺陷所致。
+分类可信度另经抽样验证：marker 含 `ans-job-video` 类名，是类名驱动而非 `播放` 文本启发式。
+
+| 账本项 | 修复前 | 修复后（合并 nightly） |
+|---|---|---|
+| `task_type=video` 记录 | 33 | **55** |
+| 其中 COMPLETED | 21 | 31 |
+| **未完成视频记录** | 12 | **24** |
+| 残留误降的纯章号记录 | 22（+nightly 1） | 0 |
+
+> 结论：**"done=21/27" 一直是真的，被低估的一直是剩余量。** 此前所有"快学完了"的判断都建立在一份
+> 每 run 静默缩一章的账上。`status` 不手工挑：取"该记录最后一次仍是 video"的历史提交值
+> （`UNKNOWN` 是 `task_registry.py:34` 的合法状态，照实回填 3 章，不臆造）。
+
+**下游一并发现**：`chapter_points.json` 的 8 个键全是 TaskRecord repr —— 即代码注释里的"洞2 点级快照校准"
+自写下以来**从未被查到过**（`merge_done_with_points` 按章号取，永远 miss），已清空待重填。
+
+**判据加固**：`points_prove_no_video()` 把"没读到点"（探测失败/章号错）与"读到点且点里无视频"分开，
+前者只打日志、**不动账**。修 `head_cid` 只止住继续损坏；这条判据保证下一次测量失误不再直接改写账本。
+
+### 4.3 M0/L2 三次稳定性验证为何仍无结论
+
+两轮都已作废，且都是**实验缺陷**而非结论：
+
+| 轮次 | 证据 | 作废原因 |
+|---|---|---|
+| 第 1 轮 `l2_stability_20260919.log` | 21:04–21:52 五章日志 | 与两个并发全量 pytest 同时跑；同一套测试 387s→139s（2.8×）证明机器不干净 |
+| 第 2 轮 `l2_stability_clean2_20260919.log` | 三次 `SCHEDULER_CRASH` | 父进程 stdout 按 gbk 建流，看门狗降级日志里的 `⚠️` 抛 `UnicodeEncodeError` —— **崩溃点正是上一轮为"降级不再静默"新加的那行**；`app/run.py` 早有 UTF-8 加固，父进程没有 |
+
+重跑前置现已具备：`head_cid` 修复（不再一边跑一边掉章）、看门狗降级带原因、R-04 带 `ct>0` 约束、
+stdout 编码加固。**尚未验证的部分**：R-04 在真站是否触发、以及"只前进不重复"是否成立。
+
+### 4.4 本轮记过的三次测量误判（都差点变成结论）
+
+1. **`curl` 返 000 / schannel `CRYPT_E_REVOCATION_OFFLINE` ≠ 站点不可达。** 分层只读探测：DNS→`45.113.20.48`、
+   TCP 443→0.09s、TLS→TLSv1.3、HTTP→404（站点在应答）、目标 URL→200 后跳 `passport2`。Windows 控制台
+   工具链的证书校验路径与 Chromium 不同，不能拿前者读数断后者。（同时撤回一条我未经证据提出的"风控"猜测。）
+2. **`max_ct=0` ≠ "整章没播就判完成"。** 完成日志前明明有 `ct=473/474 (100%) isPassed=True`；0 是章内多视频
+   切换时把 `max_ct` 清零的**显示**缺陷。当时我把它说成"危险的假完成判据"，属夸大，已更正。
+3. **L1 全绿 ≠ 测试干净。** 走 `run_scheduler` 的用例会真起 headed 浏览器；本机 shell 有 `CX_USER` 而无
+   `CX_PASS`，于是桌面反复弹出停在 passport2 的半填登录窗（用户名已填、密码框空）。新增判据：
+   **跑测试期间 chrome 进程数应为 0**；同一套用例耗时从 239s 掉到 68s 即其副作用被消除的证据。
+
+> 三条的共同点：用一次性的、来自错误工具链的读数，替代了分层只读探测。以后凡"某某不通/某某假完成"，
+> 先给分层探测表，再给结论。
 
 
 ---
@@ -138,20 +204,20 @@ run 35265696173（09-17）报 `failure_stage=ISPASSED_FALSE`、`isPassed_body=nu
 | 验收项 | 需要的动作 | 副作用 |
 |---|---|---|
 | M0 / R-01（L2） | `ci_local_run.py --action scheduler --trigger manual` | 对**真实课程**播放一个任务点（约 10–15 min），改服务端完成态并写 `state/`；`manual` 触发会**绕过 BLOCKED cooldown** |
-| M0 / R-03（L2） | 故意造一次失败以验 `--collect-diagnostics` | 同上，且会在 registry 记一次失败 |
+| **M0 / L2 三次稳定性验证** | `ci_local_run.py --action scheduler --trigger manual --max-chapters 2 --repeat 3 --collect-diagnostics` | 真站连学 2–6 章（约 20–45 min），改服务端完成态 + 写 `state/` 并产生一次 `chore(state)` 提交；期间本机不得并发重型任务（见 §4.3 第 1 轮作废原因） |
+| M0 / R-03（L2） | 故意造一次失败以验 `--collect-diagnostics` | 同上，且会在 registry 记一次失败。**已顺带达标**（§4 表 09-20 行），无需专门造失败 |
 | M3 / R-20（L4） | `workflow_dispatch` 跑一次 `run.yml` | 云端真实学习 + `state/` 回写提交 |
 | L4 一致性 diff | 启动 WSL2 Ubuntu 跑 Xvfb | Company 级服务，需 `D:\Company\requests\REQ-*` |
 
-**当前挂起的具体问题（阻塞 M0/L2 通过）**：
-`isPassed_seen` 判定的测量方式失效嫌疑 —— 引擎已用 `page.on("response")` 监到真实
-`/mooc-ans/multimedia/log` 响应（`app/e2_headed_gha.py:391-394`），但只存 `url/t/status`、
-**未存 body**；判定时改为对该 URL **二次 GET**（`:598-603`）。上报端点重复 GET 既属项目红线
-禁止的「重放」，返回体也不保证再给 `isPassed`。run 35265696173 中 `isPassed_body=null`，
-且结束时截图（`tmp/diag_at_end_*.png`）显示侧栏该节 `4.17 课后习题` 为**绿勾（已完成）**。
-> ⚠️ 该截图是**单次结束态**，无法区分"本轮学的"还是"此前某次已学成"（09-17 之前该章可能已被
-> 09-12~16 的 run 覆盖过）。因此这是**假阴性的强线索，不是定论** —— 定论需下面两步：
-> ①改为捕获首次真实响应体；②同一次 run 内并排记录「真实响应 vs 二次 GET」两者，直接对比。
-修复方向：在 response 监听处捕获**首次真实响应体**（不得重复请求）。
+**当前真正阻塞 M0/L2 的问题**（原挂起的 `isPassed_seen` 测量嫌疑已于 §4.1 结案，此处不再重复）：
+
+1. **M0 判据未闭合**：`--max-chapters 2` 连续 3 次"只前进不重复不卡死"尚无一次有效实验
+   （两轮作废，原因见 §4.3）。重跑前置已具备，缺的是一次授权。
+2. **R-04 真站未验**：自动续播有 12 个单测，但没有一次真站 run 观测到它触发。
+3. **账本刚被重估**：§4.2 使未完成视频从 12 条变成 24 条。任何"还剩多少 / 何时学完"的
+   既有结论都必须按新账重说一遍，旧结论不再引用。
+4. **待查**：`1217304758`（标题「扩展阅读」）在 registry 里是 `video / COMPLETED / UI`
+   —— 阅读类任务被建成 video 记录，与 §4.2 是不同源头，尚未定位。
 
 ---
 
