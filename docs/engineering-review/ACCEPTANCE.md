@@ -85,9 +85,17 @@ L1  纯逻辑测试（单元/集成/回归）         —— pytest，CI 已跑�
 
 ## 4. 验收记录表（滚动追加）
 
-| 日期 | 里程碑 | L 层 | 验收项 | 结果 | 证据文件 |
+| 日期 | 里程碑 | L 层 | 验收项 | 结果 | 证据文件 / 实测 |
 |---|---|---|---|---|---|
-| — | — | — | 尚未开始 | — | — |
+| 2026-09-15 | L1 基线 | L1 | `pytest tests/unit integration regression` 全绿 | ✅ 达标 | 本地 209 passed + 1 skipped；CI run 35440057875 → **210 passed in 72s** |
+| 2026-09-19 | M0 | L1 | 升 playwright 1.62.0→1.63.0 后 L1 无回归 | ✅ 达标 | 同上（本地/CI 双测）；`cfb2875` |
+| 2026-09-19 | M0 | L1 | R-02 环境可复现（新机器按 `LOCAL_FIRST_SETUP.md` 可 run） | ✅ 达标 | `uv venv` + `uv pip install` 一次成功；`PROJECT-PASSPORT.md` §3 记录全流程 |
+| 2026-09-19 | M1 | L2 | R-08 可配浏览器：`channel=msedge` 能 launch 且断言一致 | ✅ 达标 | chromium→`153.0.8010.12` / msedge→`153.0.4234.32`，`set_content`+`inner_text` 均命中；复用 `chromium-1243` **零下载** |
+| 2026-09-19 | M0 | L2 | R-01 本地 runbook：`ci_local_run.py` scheduler 跑通且 `verdict==PASS` | 🔁 未达标 | 环境已就绪（前 3 项为其前置）；**尚未执行真站 run** —— 需授权，见 §7 |
+| 2026-09-19 | M0 | L2 | R-03 诊断打包 `--collect-diagnostics` | ⏳ 待验 | 依赖上一条产生 FAIL |
+| 2026-09-19 | M3 | L4 | R-20 同构引擎上云（1.63.0 在 GHA 生效） | ⏳ 待验 | `run.yml` pin 已改并推送；需一次云端 scheduler run 闭合 |
+
+> 记录规则：追加不覆盖；结果不可复现时降级为「待验」而非删除。
 
 ---
 
@@ -106,6 +114,30 @@ L1  纯逻辑测试（单元/集成/回归）         —— pytest，CI 已跑�
 - 验收项逐步沉淀 → `docs/engineering-review/REGRESSION_MATRIX.md`。
 - CI 门禁候选 → `docs/engineering-review/CI_GATES_CANDIDATES.md`。
 - 真站冒烟 runbook → `docs/runbooks/`。
+
+---
+
+## 7. 待授权项（Agent 不自行执行的验收动作）
+
+> 这些步骤本身没有技术障碍，但**副作用超出本仓库**，按 `PROJECT-PASSPORT.md` §4 必须先取得授权。
+
+| 验收项 | 需要的动作 | 副作用 |
+|---|---|---|
+| M0 / R-01（L2） | `ci_local_run.py --action scheduler --trigger manual` | 对**真实课程**播放一个任务点（约 10–15 min），改服务端完成态并写 `state/`；`manual` 触发会**绕过 BLOCKED cooldown** |
+| M0 / R-03（L2） | 故意造一次失败以验 `--collect-diagnostics` | 同上，且会在 registry 记一次失败 |
+| M3 / R-20（L4） | `workflow_dispatch` 跑一次 `run.yml` | 云端真实学习 + `state/` 回写提交 |
+| L4 一致性 diff | 启动 WSL2 Ubuntu 跑 Xvfb | Company 级服务，需 `D:\Company\requests\REQ-*` |
+
+**当前挂起的具体问题（阻塞 M0/L2 通过）**：
+`isPassed_seen` 判定的测量方式失效嫌疑 —— 引擎已用 `page.on("response")` 监到真实
+`/mooc-ans/multimedia/log` 响应（`app/e2_headed_gha.py:391-394`），但只存 `url/t/status`、
+**未存 body**；判定时改为对该 URL **二次 GET**（`:598-603`）。上报端点重复 GET 既属项目红线
+禁止的「重放」，返回体也不保证再给 `isPassed`。run 35265696173 中 `isPassed_body=null`，
+且结束时截图（`tmp/diag_at_end_*.png`）显示侧栏该节 `4.17 课后习题` 为**绿勾（已完成）**。
+> ⚠️ 该截图是**单次结束态**，无法区分"本轮学的"还是"此前某次已学成"（09-17 之前该章可能已被
+> 09-12~16 的 run 覆盖过）。因此这是**假阴性的强线索，不是定论** —— 定论需下面两步：
+> ①改为捕获首次真实响应体；②同一次 run 内并排记录「真实响应 vs 二次 GET」两者，直接对比。
+修复方向：在 response 监听处捕获**首次真实响应体**（不得重复请求）。
 
 ---
 
