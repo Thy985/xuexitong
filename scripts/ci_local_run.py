@@ -55,8 +55,25 @@ def ensure_credentials(root: Path, env: dict) -> list:
 
 
 # ────────────────────────────────────────────────
-# 单一引擎：scheduler 直接 import；run/init/switch 走子进程
+# 验收口径
 # ────────────────────────────────────────────────
+def counts_as_pass(summary: dict) -> bool:
+    """验收口径：只有真 PASS，或"确实无事可做"的干净 NOOP，才算通过。
+
+    scheduler 已诚实交回 `passed=False` 时（如 TDVP 目录探查空导致没选到章），
+    不得被 `decision==NOOP` 洗成绿 —— ACCEPTANCE「凡看起来能跑都不算通过」要拦的正是这个。
+    判定原先散在 main() 两处且互不一致，现收敛于此。
+    """
+    if summary.get("failure_stage"):
+        return False
+    if summary.get("passed") is False:
+        return False
+    verdict = summary.get("verdict")
+    if verdict == "PASS":
+        return True
+    return verdict in (None, "") and summary.get("decision") == "NOOP"
+
+
 def _annotate_probe_empty(summary: dict) -> dict:
     """当 scheduler 返回"探针为空/没有任务"时，区分『真无任务』与『浏览器缺失』。
 
@@ -89,6 +106,9 @@ def _annotate_probe_empty(summary: dict) -> dict:
     return summary
 
 
+# ────────────────────────────────────────────────
+# 单一引擎：scheduler 直接 import；run/init/switch 走子进程
+# ────────────────────────────────────────────────
 def _run_scheduler(args, run_id: str) -> dict:
     from scheduler import run_scheduler
 
@@ -272,13 +292,8 @@ def main() -> int:
         log_dir = _REPO / "evidence" / "_logs"
         _append_record(log_dir / "ci_local_runs.jsonl", summary)
 
-        # 诊断打包：遇到「明确失败」即触发——失败的定义是 verdict 非 PASS/NOOP，
-        # 或表面上 NOOP 但带了 failure_stage（如 BROWSER_MISSING 环境故障）
-        v = summary.get("verdict")
-        stage = summary.get("failure_stage")
-        clean_noop = (summary.get("decision") == "NOOP") and not stage
-        failed = (v not in ("PASS", "NOOP", None)) or stage
-        if args.collect_diagnostics and failed and not clean_noop:
+        # 诊断打包：凡不满足验收口径者都算失败（含"表面 NOOP 实为探针空"）
+        if args.collect_diagnostics and not counts_as_pass(summary):
             _collect_diagnostics(_REPO / "evidence" / "diag", summary)
         all_summaries.append(summary)
 
@@ -290,10 +305,7 @@ def main() -> int:
                 "verdict": s.get("verdict"), "passed_count": s.get("passed_count"),
                 "failure_stage": s.get("failure_stage"), "error": bool(s.get("error"))}
         print(f"  {json.dumps(line, ensure_ascii=False)}", flush=True)
-        # 与 collect 触发语义一致：干净 NOOP(decision==NOOP 且无 failure_stage) 不算失败，
-        # 其余（含 NOOP 但带 failure_stage 的环境故障）一律视为失败。
-        clean_noop = (s.get("decision") == "NOOP") and not s.get("failure_stage")
-        if not clean_noop and s.get("verdict") not in ("PASS", None):
+        if not counts_as_pass(s):
             ok = False
     print(f"[ci_local] {len(all_summaries)} 次完成: "
           f"{'全部通过' if ok else '存在失败 → 见 evidence/_logs / diag包'}.", flush=True)
