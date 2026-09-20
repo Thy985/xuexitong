@@ -342,16 +342,59 @@ def pick_conflict_chapters(
     return [c for c in chapter_ids if c in conflicted]
 
 
+def has_unfinished_video_sibling(existing: dict, rec) -> bool:
+    """同章是否另有**未完成**的 video 记录 —— 即章内剩余视频工作另有承载者。
+
+    章级快照只能说"这章还有视频点没做完"，说不出是哪一个。而 registry 是一条一点
+    （`<cid>` = 第 1 点，`<cid>:videoN` = 第 N 点）。把章级结论套在已完成的点上，
+    就会重播第 1 点、而 `:videoN` 永远轮不到（1217304708 实况）。
+    BLOCKED 的兄弟点也算承载者：活在那儿但被冻住，重播已完成的点同样不解决问题。
+    """
+    my_tid = getattr(rec, "task_id", "")
+    cid = getattr(rec, "chapter_id", "")
+    for other in existing.values():
+        if other is rec or getattr(other, "task_id", "") == my_tid:
+            continue
+        if getattr(other, "chapter_id", "") != cid:
+            continue
+        if (getattr(other, "task_type", "") or "video") != "video":
+            continue
+        if getattr(other, "status", "") == "COMPLETED":
+            continue
+        return True
+    return False
+
+
+def point_is_server_verified(t) -> bool:
+    """该**点**自身带服务端确认（`SERVER_VERIFIED` + 非空 `passed_object_ids`）。
+
+    为什么单独一个判据：`job_remaining` 是**整章**的粗读数（含达标测试/PPT 这些引擎
+    永远做不了的点），而这条是**该点**的细真源 —— 粗读数不得推翻细读数。它不依赖
+    点级快照缓存，所以缓存被清/未预热时同样成立（否则保护会随缓存冷热而漂移）。
+    """
+    ver = getattr(t, "verification", None)
+    ce = getattr(t, "completion_evidence", None)
+    return (getattr(ver, "level", "") == "SERVER_VERIFIED"
+            and bool(getattr(ce, "passed_object_ids", None)))
+
+
 def stale_completed_by_catalog(
     existing: dict[str, TaskRecord],
     chapters_raw: list[dict],
+    points_map: Optional[dict] = None,
 ) -> list[str]:
     """目录层校准：凡是 raw 目录显示「仍有待完成任务点」(job_remaining>0) 的章，
     其 COMPLETED video task 一律降级为 STALE（真实还有未完成点 ⇒ 完成态可疑）。
 
     只返回被降级任务的 task_id；调用方负责 mark_stale + save_registry。
     这是不依赖逐章浏览器复核的库一级校准（L1），成本仅为目录解析。
+
+    但目录的 `job_remaining` 计的是**整章所有任务点**，含达标测试/PPT —— 引擎永远
+    做不了它们。所以两种情况下不再降级：该点已有服务端确认（细真源覆盖粗读数，
+    且不依赖快照缓存），或点级快照显示该章视频点已全部 finished。否则该章会被
+    无限降级重排（第 3 轮 M0 里 9 章 COMPLETED→UNKNOWN 的来路）。
     """
+    from app.registry.task_registry import chapter_done_from_snapshot
     pending_cids = {
         str(c.get("chapter_id") or "")
         for c in (chapters_raw or [])
@@ -361,8 +404,13 @@ def stale_completed_by_catalog(
     for tid, t in existing.items():
         if t.status != "COMPLETED":
             continue
-        if t.chapter_id in pending_cids:
-            downgraded.append(tid)
+        if t.chapter_id not in pending_cids:
+            continue
+        if point_is_server_verified(t):
+            continue          # 点级服务端确认 > 章级计数，且不依赖快照缓存
+        if chapter_done_from_snapshot(t.chapter_id, points_map or {}) is True:
+            continue          # 视频点已尽，剩下的是引擎做不了的点
+        downgraded.append(tid)
     return downgraded
 
 
@@ -376,6 +424,10 @@ def stale_completed_by_points(
     与 stale_completed_by_catalog 互补：catalog 用 job_remaining 计数，
     这里用点级快照（video_total / video_finished）——更精确。
 
+    快照是**章级**的，记录是**点级**的：若该章另有未完成的视频兄弟记录（`:videoN`），
+    未完成量由它扛，不许把已完成的第 1 点降级重播。兄弟记录不存在时才降级 ——
+    这正是 4708「双视频只播 1 个」当年需要的保护。
+
     返回需要降级的任务 task_id；调用方负责 mark_stale + save。
     """
     from app.registry.task_registry import chapter_done_from_snapshot
@@ -386,6 +438,8 @@ def stale_completed_by_points(
         cid = t.chapter_id
         done_state = chapter_done_from_snapshot(cid, points_map or {})
         if done_state is False:                # 有未 finish 的视频点
+            if has_unfinished_video_sibling(existing, t):
+                continue
             downgraded.append(tid)
     return downgraded
 

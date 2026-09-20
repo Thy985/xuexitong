@@ -1201,8 +1201,9 @@ def _run_tdvp_probe(course_url: str, course_key: str,
         from app.registry.reconcile import (stale_completed_by_catalog,
                                   stale_completed_by_points)
         from app.registry.task_registry import load_chapter_points
-        stale1 = stale_completed_by_catalog(existing, chapters_raw)
-        stale2 = stale_completed_by_points(existing, load_chapter_points(course_key))
+        _pts = load_chapter_points(course_key)
+        stale1 = stale_completed_by_catalog(existing, chapters_raw, points_map=_pts)
+        stale2 = stale_completed_by_points(existing, _pts)
         stale_ids = list(dict.fromkeys(stale1 + stale2))
         if stale_ids:
             from app.registry.task_registry import TaskRecord
