@@ -1170,7 +1170,13 @@ def _run_tdvp_probe(course_url: str, course_key: str,
                 dom_status.setdefault(cid, ch.get("status", "unknown"))
 
         # 2. 构建 discovery 任务 → Reconcile canonical registry
-        tasks = build_tasks_from_discovery(chapters_raw)
+        #    已知点级快照的章要按**真实视频点数量**拆条：否则一章永远只有 1 条记录，
+        #    第 2、3 个视频点在账上不存在，章级快照说"还有点没做完"时只能反复重播第 1 点。
+        from app.registry.task_registry import (load_chapter_points,
+                                               video_counts_from_points)
+        tasks = build_tasks_from_discovery(
+            chapters_raw,
+            video_counts=video_counts_from_points(load_chapter_points(course_key)))
         reg_before = load_registry(course_key)
         existing, report = reconcile_registry(course_key, reg_before, tasks, dom_status)
         save_registry(course_key, existing)

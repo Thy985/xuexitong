@@ -502,6 +502,23 @@ def chapter_done_from_snapshot(cid: str, points: dict) -> Optional[bool]:
     return fin >= total
 
 
+def video_counts_from_points(points_map: dict) -> dict:
+    """点级快照 → discovery 需要的 `{chapter_id: video_total}`。
+
+    只收"确实有视频、数量已知"的章。读不到或无视频的章**不进** counts：传 0 等于
+    宣布该章没有视频点，会被下游当成非视频章处理 —— 那正是 §4.2 那类误降的来路。
+    """
+    out = {}
+    for cid, snap in (points_map or {}).items():
+        snap = snap or {}
+        if not snap.get("has_video"):
+            continue
+        total = int(snap.get("video_total") or 0)
+        if total > 0:
+            out[str(cid)] = total
+    return out
+
+
 def merge_done_with_points(done_ids: set, cid_set: set, points: dict) -> set:
     """把 done = registry衍生的集合，与点级快照做校准：
       - 有完视频点未完的快照 ⇒ 即使 registry 标 done，也要踢掉（不 skip）。
