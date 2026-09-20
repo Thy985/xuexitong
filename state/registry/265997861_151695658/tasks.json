@@ -408,11 +408,11 @@
     "chapter_id": "1217304708",
     "title": "数据通信的基础知识",
     "task_type": "video",
-    "status": "FAILED",
+    "status": "COMPLETED",
     "priority": 55,
-    "attempt_count": 4,
-    "attempts": 4,
-    "consecutive_failures": 2,
+    "attempt_count": 5,
+    "attempts": 5,
+    "consecutive_failures": 0,
     "max_attempts": 3,
     "lease": {
       "run_id": null,
@@ -421,34 +421,34 @@
     },
     "verification": {
       "level": "SERVER_VERIFIED",
-      "verified_at_utc": "2026-09-19T23:08:17.043329+00:00",
+      "verified_at_utc": "2026-09-20T05:56:51.623398+00:00",
       "run_id": "local",
       "source_detail": "passed_object_ids=1"
     },
     "completion_evidence": {
-      "type": "CONFLICT",
+      "type": "SERVER_VERIFIED",
       "source": "isPassed",
       "run_id": "local",
-      "observed_at_utc": "2026-09-19T23:08:33.143420+00:00",
-      "detail": "chapter has unfinished points",
+      "observed_at_utc": "2026-09-20T05:56:51.623398+00:00",
+      "detail": "passed_object_ids=1",
       "passed_object_ids": [
         "19da22cc8a80cda55eaf04e2d758bf80"
       ]
     },
     "failure": {
-      "stage": "UNKNOWN",
-      "run_id": "local",
-      "detail": "PARTIAL(headed GHA) — isPassed=true + nextUnit triggered but 1 checks failed",
-      "consecutive_failures": 2,
-      "occurred_at_utc": "2026-09-19T23:20:32.014380+00:00"
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-20T05:56:51.623398+00:00"
     },
     "created_at_utc": "2026-09-04T11:32:26.160540+00:00",
-    "updated_at_utc": "2026-09-19T23:20:32.014380+00:00",
+    "updated_at_utc": "2026-09-20T05:56:51.623398+00:00",
     "last_run_id": "local",
-    "last_run_at_utc": "2026-09-19T23:20:32.014380+00:00",
-    "last_started_at": "2026-09-19T23:08:17.043329+00:00",
-    "last_finished_at": "2026-09-19T23:20:32.014380+00:00",
-    "last_success_at_utc": "2026-09-19T23:08:17.043329+00:00",
+    "last_run_at_utc": "2026-09-20T05:56:51.623398+00:00",
+    "last_started_at": "2026-09-20T05:56:51.623398+00:00",
+    "last_finished_at": "2026-09-20T05:56:51.623398+00:00",
+    "last_success_at_utc": "2026-09-20T05:56:51.623398+00:00",
     "last_failure_at_utc": "2026-09-19T23:20:32.014380+00:00",
     "_ch_idx": 11,
     "_cell_idx": 11,
@@ -1016,10 +1016,10 @@
     "chapter_id": "1217304722",
     "title": "扩展的以太网",
     "task_type": "video",
-    "status": "UNKNOWN",
-    "priority": 55,
-    "attempt_count": 1,
-    "attempts": 1,
+    "status": "COMPLETED",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
     "consecutive_failures": 0,
     "max_attempts": 3,
     "lease": {
@@ -1028,40 +1028,38 @@
       "expires_at_utc": null
     },
     "verification": {
-      "level": "SERVER_VERIFIED",
-      "verified_at_utc": "2026-09-11T12:39:35.296237+00:00",
-      "run_id": "34599172497",
-      "source_detail": "passed_object_ids=1"
+      "level": "UI",
+      "verified_at_utc": "2026-09-20T06:06:13.947489+00:00",
+      "run_id": "",
+      "source_detail": "server DOM completed marker"
     },
     "completion_evidence": {
-      "type": "CONFLICT",
-      "source": "isPassed",
-      "run_id": "34599172497",
-      "observed_at_utc": "2026-09-11T19:00:51.563565+00:00",
-      "detail": "chapter has unfinished points",
-      "passed_object_ids": [
-        "3be91a6385cf1a09c11098c3b64d7caa"
-      ]
+      "type": "UI",
+      "source": "server DOM completed marker",
+      "run_id": "",
+      "observed_at_utc": "2026-09-20T06:06:13.947489+00:00",
+      "detail": "server DOM completed marker",
+      "passed_object_ids": []
     },
     "failure": {
       "stage": "",
       "run_id": "",
       "detail": "",
       "consecutive_failures": 0,
-      "occurred_at_utc": "2026-09-11T12:39:35.296243+00:00"
+      "occurred_at_utc": "2026-09-20T06:06:13.947489+00:00"
     },
-    "created_at_utc": "2026-09-04T11:32:26.160585+00:00",
-    "updated_at_utc": "2026-09-19T23:00:21.173846+00:00",
-    "last_run_id": "34599172497",
-    "last_run_at_utc": "2026-09-11T12:39:35.296237+00:00",
-    "last_started_at": "2026-09-11T12:39:35.296237+00:00",
-    "last_finished_at": "2026-09-11T12:39:35.296237+00:00",
-    "last_success_at_utc": "2026-09-11T12:39:35.296237+00:00",
+    "created_at_utc": "2026-09-20T06:06:13.947489+00:00",
+    "updated_at_utc": "2026-09-20T06:06:13.947489+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
     "last_failure_at_utc": null,
     "_ch_idx": 21,
     "_cell_idx": 21,
-    "rollback_count": 1,
-    "last_rollback_at_utc": "2026-09-19T23:00:21.173846+00:00"
+    "rollback_count": 0,
+    "last_rollback_at_utc": ""
   },
   "1217304724": {
     "task_id": "1217304724",
@@ -1318,10 +1316,10 @@
     "chapter_id": "1217304730",
     "title": "分类的IP地址",
     "task_type": "video",
-    "status": "UNKNOWN",
+    "status": "COMPLETED",
     "priority": 55,
-    "attempt_count": 1,
-    "attempts": 1,
+    "attempt_count": 2,
+    "attempts": 2,
     "consecutive_failures": 0,
     "max_attempts": 3,
     "lease": {
@@ -1331,16 +1329,16 @@
     },
     "verification": {
       "level": "SERVER_VERIFIED",
-      "verified_at_utc": "2026-09-11T12:49:32.344220+00:00",
-      "run_id": "34599172497",
+      "verified_at_utc": "2026-09-20T06:15:55.854421+00:00",
+      "run_id": "local",
       "source_detail": "passed_object_ids=1"
     },
     "completion_evidence": {
-      "type": "CONFLICT",
+      "type": "SERVER_VERIFIED",
       "source": "isPassed",
-      "run_id": "34599172497",
-      "observed_at_utc": "2026-09-11T12:53:54.375782+00:00",
-      "detail": "chapter has unfinished points",
+      "run_id": "local",
+      "observed_at_utc": "2026-09-20T06:15:55.854421+00:00",
+      "detail": "passed_object_ids=1",
       "passed_object_ids": [
         "2b3ec8e64db810f0960b59f21af46514"
       ]
@@ -1350,15 +1348,15 @@
       "run_id": "",
       "detail": "",
       "consecutive_failures": 0,
-      "occurred_at_utc": "2026-09-11T12:49:32.344227+00:00"
+      "occurred_at_utc": "2026-09-20T06:15:55.854421+00:00"
     },
     "created_at_utc": "2026-09-04T11:32:26.160614+00:00",
-    "updated_at_utc": "2026-09-19T23:00:21.173846+00:00",
-    "last_run_id": "34599172497",
-    "last_run_at_utc": "2026-09-11T12:49:32.344220+00:00",
-    "last_started_at": "2026-09-11T12:49:32.344220+00:00",
-    "last_finished_at": "2026-09-11T12:49:32.344220+00:00",
-    "last_success_at_utc": "2026-09-11T12:49:32.344220+00:00",
+    "updated_at_utc": "2026-09-20T06:15:55.854421+00:00",
+    "last_run_id": "local",
+    "last_run_at_utc": "2026-09-20T06:15:55.854421+00:00",
+    "last_started_at": "2026-09-20T06:15:55.854421+00:00",
+    "last_finished_at": "2026-09-20T06:15:55.854421+00:00",
+    "last_success_at_utc": "2026-09-20T06:15:55.854421+00:00",
     "last_failure_at_utc": null,
     "_ch_idx": 28,
     "_cell_idx": 28,
@@ -1422,111 +1420,7 @@
     "chapter_id": "1217304732",
     "title": "无分类编址CIDR",
     "task_type": "video",
-    "status": "UNKNOWN",
-    "priority": 55,
-    "attempt_count": 1,
-    "attempts": 1,
-    "consecutive_failures": 0,
-    "max_attempts": 3,
-    "lease": {
-      "run_id": null,
-      "started_at_utc": null,
-      "expires_at_utc": null
-    },
-    "verification": {
-      "level": "SERVER_VERIFIED",
-      "verified_at_utc": "2026-09-11T13:10:40.043021+00:00",
-      "run_id": "34601190420",
-      "source_detail": "passed_object_ids=1"
-    },
-    "completion_evidence": {
-      "type": "CONFLICT",
-      "source": "isPassed",
-      "run_id": "34601190420",
-      "observed_at_utc": "2026-09-11T14:17:54.483584+00:00",
-      "detail": "chapter has unfinished points",
-      "passed_object_ids": [
-        "fa8227f3261b1ae7167938c510f33fd0"
-      ]
-    },
-    "failure": {
-      "stage": "",
-      "run_id": "",
-      "detail": "",
-      "consecutive_failures": 0,
-      "occurred_at_utc": "2026-09-11T13:10:40.043031+00:00"
-    },
-    "created_at_utc": "2026-09-04T11:32:26.160626+00:00",
-    "updated_at_utc": "2026-09-19T23:00:21.173846+00:00",
-    "last_run_id": "34601190420",
-    "last_run_at_utc": "2026-09-11T13:10:40.043021+00:00",
-    "last_started_at": "2026-09-11T13:10:40.043021+00:00",
-    "last_finished_at": "2026-09-11T13:10:40.043021+00:00",
-    "last_success_at_utc": "2026-09-11T13:10:40.043021+00:00",
-    "last_failure_at_utc": null,
-    "_ch_idx": 30,
-    "_cell_idx": 30,
-    "rollback_count": 1,
-    "last_rollback_at_utc": "2026-09-19T23:00:21.173846+00:00"
-  },
-  "1217304733": {
-    "task_id": "1217304733",
-    "chapter_id": "1217304733",
-    "title": "IP数据报的格式",
-    "task_type": "video",
-    "status": "UNKNOWN",
-    "priority": 55,
-    "attempt_count": 1,
-    "attempts": 1,
-    "consecutive_failures": 0,
-    "max_attempts": 3,
-    "lease": {
-      "run_id": null,
-      "started_at_utc": null,
-      "expires_at_utc": null
-    },
-    "verification": {
-      "level": "SERVER_VERIFIED",
-      "verified_at_utc": "2026-09-11T14:24:13.625023+00:00",
-      "run_id": "34609161262",
-      "source_detail": "passed_object_ids=1"
-    },
-    "completion_evidence": {
-      "type": "CONFLICT",
-      "source": "isPassed",
-      "run_id": "34609161262",
-      "observed_at_utc": "2026-09-11T19:00:51.563582+00:00",
-      "detail": "chapter has unfinished points",
-      "passed_object_ids": [
-        "d343e2e1dbf7f33004aa7c4252d839a9"
-      ]
-    },
-    "failure": {
-      "stage": "",
-      "run_id": "",
-      "detail": "",
-      "consecutive_failures": 0,
-      "occurred_at_utc": "2026-09-11T14:24:13.625033+00:00"
-    },
-    "created_at_utc": "2026-09-04T11:32:26.160632+00:00",
-    "updated_at_utc": "2026-09-11T19:01:03.930378+00:00",
-    "last_run_id": "34609161262",
-    "last_run_at_utc": "2026-09-11T14:24:13.625023+00:00",
-    "last_started_at": "2026-09-11T14:24:13.625023+00:00",
-    "last_finished_at": "2026-09-11T14:24:13.625023+00:00",
-    "last_success_at_utc": "2026-09-11T14:24:13.625023+00:00",
-    "last_failure_at_utc": null,
-    "_ch_idx": 31,
-    "_cell_idx": 31,
-    "rollback_count": 1,
-    "last_rollback_at_utc": ""
-  },
-  "1217304734": {
-    "task_id": "1217304734",
-    "chapter_id": "1217304734",
-    "title": "IP数据报的分片与重组",
-    "task_type": "video",
-    "status": "UNKNOWN",
+    "status": "COMPLETED",
     "priority": 55,
     "attempt_count": 2,
     "attempts": 2,
@@ -1539,16 +1433,120 @@
     },
     "verification": {
       "level": "SERVER_VERIFIED",
-      "verified_at_utc": "2026-09-12T10:54:04.997688+00:00",
-      "run_id": "34689363739",
+      "verified_at_utc": "2026-09-20T06:24:46.082882+00:00",
+      "run_id": "local",
       "source_detail": "passed_object_ids=1"
     },
     "completion_evidence": {
-      "type": "CONFLICT",
+      "type": "SERVER_VERIFIED",
       "source": "isPassed",
-      "run_id": "34689363739",
-      "observed_at_utc": "2026-09-12T11:11:10.984045+00:00",
-      "detail": "chapter has unfinished points",
+      "run_id": "local",
+      "observed_at_utc": "2026-09-20T06:24:46.082882+00:00",
+      "detail": "passed_object_ids=1",
+      "passed_object_ids": [
+        "fa8227f3261b1ae7167938c510f33fd0"
+      ]
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-20T06:24:46.082882+00:00"
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160626+00:00",
+    "updated_at_utc": "2026-09-20T06:24:46.082882+00:00",
+    "last_run_id": "local",
+    "last_run_at_utc": "2026-09-20T06:24:46.082882+00:00",
+    "last_started_at": "2026-09-20T06:24:46.082882+00:00",
+    "last_finished_at": "2026-09-20T06:24:46.082882+00:00",
+    "last_success_at_utc": "2026-09-20T06:24:46.082882+00:00",
+    "last_failure_at_utc": null,
+    "_ch_idx": 30,
+    "_cell_idx": 30,
+    "rollback_count": 1,
+    "last_rollback_at_utc": "2026-09-19T23:00:21.173846+00:00"
+  },
+  "1217304733": {
+    "task_id": "1217304733",
+    "chapter_id": "1217304733",
+    "title": "IP数据报的格式",
+    "task_type": "video",
+    "status": "COMPLETED",
+    "priority": 55,
+    "attempt_count": 2,
+    "attempts": 2,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "SERVER_VERIFIED",
+      "verified_at_utc": "2026-09-20T06:31:37.059278+00:00",
+      "run_id": "local",
+      "source_detail": "passed_object_ids=1"
+    },
+    "completion_evidence": {
+      "type": "SERVER_VERIFIED",
+      "source": "isPassed",
+      "run_id": "local",
+      "observed_at_utc": "2026-09-20T06:31:37.059278+00:00",
+      "detail": "passed_object_ids=1",
+      "passed_object_ids": [
+        "d343e2e1dbf7f33004aa7c4252d839a9"
+      ]
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-20T06:31:37.059278+00:00"
+    },
+    "created_at_utc": "2026-09-04T11:32:26.160632+00:00",
+    "updated_at_utc": "2026-09-20T06:31:37.059278+00:00",
+    "last_run_id": "local",
+    "last_run_at_utc": "2026-09-20T06:31:37.059278+00:00",
+    "last_started_at": "2026-09-20T06:31:37.059278+00:00",
+    "last_finished_at": "2026-09-20T06:31:37.059278+00:00",
+    "last_success_at_utc": "2026-09-20T06:31:37.059278+00:00",
+    "last_failure_at_utc": null,
+    "_ch_idx": 31,
+    "_cell_idx": 31,
+    "rollback_count": 1,
+    "last_rollback_at_utc": ""
+  },
+  "1217304734": {
+    "task_id": "1217304734",
+    "chapter_id": "1217304734",
+    "title": "IP数据报的分片与重组",
+    "task_type": "video",
+    "status": "COMPLETED",
+    "priority": 55,
+    "attempt_count": 3,
+    "attempts": 3,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "SERVER_VERIFIED",
+      "verified_at_utc": "2026-09-20T06:37:52.786685+00:00",
+      "run_id": "local",
+      "source_detail": "passed_object_ids=1"
+    },
+    "completion_evidence": {
+      "type": "SERVER_VERIFIED",
+      "source": "isPassed",
+      "run_id": "local",
+      "observed_at_utc": "2026-09-20T06:37:52.786685+00:00",
+      "detail": "passed_object_ids=1",
       "passed_object_ids": [
         "6bfa3a7f25eafa7b988fc57f4e5adf36"
       ]
@@ -1558,15 +1556,15 @@
       "run_id": "",
       "detail": "",
       "consecutive_failures": 0,
-      "occurred_at_utc": "2026-09-12T10:54:04.997698+00:00"
+      "occurred_at_utc": "2026-09-20T06:37:52.786685+00:00"
     },
     "created_at_utc": "2026-09-04T11:32:26.160640+00:00",
-    "updated_at_utc": "2026-09-19T23:00:21.173846+00:00",
-    "last_run_id": "34689363739",
-    "last_run_at_utc": "2026-09-12T10:54:04.997688+00:00",
-    "last_started_at": "2026-09-12T10:54:04.997688+00:00",
-    "last_finished_at": "2026-09-12T10:54:04.997688+00:00",
-    "last_success_at_utc": "2026-09-12T10:54:04.997688+00:00",
+    "updated_at_utc": "2026-09-20T06:37:52.786685+00:00",
+    "last_run_id": "local",
+    "last_run_at_utc": "2026-09-20T06:37:52.786685+00:00",
+    "last_started_at": "2026-09-20T06:37:52.786685+00:00",
+    "last_finished_at": "2026-09-20T06:37:52.786685+00:00",
+    "last_success_at_utc": "2026-09-20T06:37:52.786685+00:00",
     "last_failure_at_utc": null,
     "_ch_idx": 32,
     "_cell_idx": 32,
@@ -1829,56 +1827,6 @@
     "rollback_count": 2,
     "last_rollback_at_utc": "2026-09-19T23:00:21.173846+00:00"
   },
-  "1217304738:other": {
-    "task_id": "1217304738:other",
-    "chapter_id": "1217304738",
-    "title": "IPV6",
-    "task_type": "other",
-    "status": "PENDING",
-    "priority": 0,
-    "attempt_count": 0,
-    "attempts": 0,
-    "consecutive_failures": 0,
-    "max_attempts": 3,
-    "lease": {
-      "run_id": null,
-      "started_at_utc": null,
-      "expires_at_utc": null
-    },
-    "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
-    },
-    "completion_evidence": {
-      "type": "NONE",
-      "source": "",
-      "run_id": "",
-      "observed_at_utc": "2026-09-06T01:52:26.626481+00:00",
-      "detail": "",
-      "passed_object_ids": []
-    },
-    "failure": {
-      "stage": "",
-      "run_id": "",
-      "detail": "",
-      "consecutive_failures": 0,
-      "occurred_at_utc": "2026-09-06T01:52:26.626481+00:00"
-    },
-    "created_at_utc": "2026-09-06T01:52:26.626481+00:00",
-    "updated_at_utc": "2026-09-06T01:52:26.626481+00:00",
-    "last_run_id": null,
-    "last_run_at_utc": null,
-    "last_started_at": null,
-    "last_finished_at": null,
-    "last_success_at_utc": null,
-    "last_failure_at_utc": null,
-    "_ch_idx": 36,
-    "_cell_idx": 36,
-    "rollback_count": 0,
-    "last_rollback_at_utc": ""
-  },
   "1217304739": {
     "task_id": "1217304739",
     "chapter_id": "1217304739",
@@ -2082,56 +2030,6 @@
     "_cell_idx": 39,
     "rollback_count": 2,
     "last_rollback_at_utc": "2026-09-19T23:00:21.173846+00:00"
-  },
-  "1217304741:other": {
-    "task_id": "1217304741:other",
-    "chapter_id": "1217304741",
-    "title": "OSPF协议",
-    "task_type": "other",
-    "status": "PENDING",
-    "priority": 0,
-    "attempt_count": 0,
-    "attempts": 0,
-    "consecutive_failures": 0,
-    "max_attempts": 3,
-    "lease": {
-      "run_id": null,
-      "started_at_utc": null,
-      "expires_at_utc": null
-    },
-    "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
-    },
-    "completion_evidence": {
-      "type": "NONE",
-      "source": "",
-      "run_id": "",
-      "observed_at_utc": "2026-09-06T01:52:26.626481+00:00",
-      "detail": "",
-      "passed_object_ids": []
-    },
-    "failure": {
-      "stage": "",
-      "run_id": "",
-      "detail": "",
-      "consecutive_failures": 0,
-      "occurred_at_utc": "2026-09-06T01:52:26.626481+00:00"
-    },
-    "created_at_utc": "2026-09-06T01:52:26.626481+00:00",
-    "updated_at_utc": "2026-09-06T01:52:26.626481+00:00",
-    "last_run_id": null,
-    "last_run_at_utc": null,
-    "last_started_at": null,
-    "last_finished_at": null,
-    "last_success_at_utc": null,
-    "last_failure_at_utc": null,
-    "_ch_idx": 39,
-    "_cell_idx": 39,
-    "rollback_count": 0,
-    "last_rollback_at_utc": ""
   },
   "1217304742": {
     "task_id": "1217304742",
@@ -2487,56 +2385,6 @@
     "rollback_count": 2,
     "last_rollback_at_utc": "2026-09-19T23:00:21.173846+00:00"
   },
-  "1217304750:other": {
-    "task_id": "1217304750:other",
-    "chapter_id": "1217304750",
-    "title": "UDP和TCP概述",
-    "task_type": "other",
-    "status": "PENDING",
-    "priority": 0,
-    "attempt_count": 0,
-    "attempts": 0,
-    "consecutive_failures": 0,
-    "max_attempts": 3,
-    "lease": {
-      "run_id": null,
-      "started_at_utc": null,
-      "expires_at_utc": null
-    },
-    "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
-    },
-    "completion_evidence": {
-      "type": "NONE",
-      "source": "",
-      "run_id": "",
-      "observed_at_utc": "2026-09-06T01:52:26.627509+00:00",
-      "detail": "",
-      "passed_object_ids": []
-    },
-    "failure": {
-      "stage": "",
-      "run_id": "",
-      "detail": "",
-      "consecutive_failures": 0,
-      "occurred_at_utc": "2026-09-06T01:52:26.627509+00:00"
-    },
-    "created_at_utc": "2026-09-06T01:52:26.627509+00:00",
-    "updated_at_utc": "2026-09-06T01:52:26.627509+00:00",
-    "last_run_id": null,
-    "last_run_at_utc": null,
-    "last_started_at": null,
-    "last_finished_at": null,
-    "last_success_at_utc": null,
-    "last_failure_at_utc": null,
-    "_ch_idx": 48,
-    "_cell_idx": 48,
-    "rollback_count": 0,
-    "last_rollback_at_utc": ""
-  },
   "1217304751": {
     "task_id": "1217304751",
     "chapter_id": "1217304751",
@@ -2588,56 +2436,6 @@
     "_cell_idx": 49,
     "rollback_count": 1,
     "last_rollback_at_utc": "2026-09-19T23:00:21.201726+00:00"
-  },
-  "1217304751:other": {
-    "task_id": "1217304751:other",
-    "chapter_id": "1217304751",
-    "title": "TCP报文段的格式",
-    "task_type": "other",
-    "status": "PENDING",
-    "priority": 0,
-    "attempt_count": 0,
-    "attempts": 0,
-    "consecutive_failures": 0,
-    "max_attempts": 3,
-    "lease": {
-      "run_id": null,
-      "started_at_utc": null,
-      "expires_at_utc": null
-    },
-    "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
-    },
-    "completion_evidence": {
-      "type": "NONE",
-      "source": "",
-      "run_id": "",
-      "observed_at_utc": "2026-09-06T01:52:26.627509+00:00",
-      "detail": "",
-      "passed_object_ids": []
-    },
-    "failure": {
-      "stage": "",
-      "run_id": "",
-      "detail": "",
-      "consecutive_failures": 0,
-      "occurred_at_utc": "2026-09-06T01:52:26.627509+00:00"
-    },
-    "created_at_utc": "2026-09-06T01:52:26.627509+00:00",
-    "updated_at_utc": "2026-09-06T01:52:26.627509+00:00",
-    "last_run_id": null,
-    "last_run_at_utc": null,
-    "last_started_at": null,
-    "last_finished_at": null,
-    "last_success_at_utc": null,
-    "last_failure_at_utc": null,
-    "_ch_idx": 49,
-    "_cell_idx": 49,
-    "rollback_count": 0,
-    "last_rollback_at_utc": ""
   },
   "1217304752": {
     "task_id": "1217304752",
@@ -3765,7 +3563,7 @@
       "type": "NONE",
       "source": "",
       "run_id": "",
-      "observed_at_utc": "2026-09-19T23:19:53.230957+00:00",
+      "observed_at_utc": "2026-09-20T06:25:02.082394+00:00",
       "detail": "",
       "passed_object_ids": []
     },
@@ -3774,10 +3572,10 @@
       "run_id": "",
       "detail": "",
       "consecutive_failures": 0,
-      "occurred_at_utc": "2026-09-19T23:19:53.230957+00:00"
+      "occurred_at_utc": "2026-09-20T06:25:02.082394+00:00"
     },
-    "created_at_utc": "2026-09-19T23:19:53.230957+00:00",
-    "updated_at_utc": "2026-09-19T23:19:53.230957+00:00",
+    "created_at_utc": "2026-09-20T06:25:02.082394+00:00",
+    "updated_at_utc": "2026-09-20T06:25:02.082394+00:00",
     "last_run_id": null,
     "last_run_at_utc": null,
     "last_started_at": null,
@@ -3786,6 +3584,206 @@
     "last_failure_at_utc": null,
     "_ch_idx": 11,
     "_cell_idx": 11,
+    "rollback_count": 0,
+    "last_rollback_at_utc": ""
+  },
+  "1217304738:other": {
+    "task_id": "1217304738:other",
+    "chapter_id": "1217304738",
+    "title": "IPV6",
+    "task_type": "video",
+    "status": "UNKNOWN",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-20T06:31:52.349858+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-20T06:32:04.857263+00:00"
+    },
+    "created_at_utc": "2026-09-20T06:32:04.857263+00:00",
+    "updated_at_utc": "2026-09-20T06:32:04.857263+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 36,
+    "_cell_idx": 36,
+    "rollback_count": 0,
+    "last_rollback_at_utc": ""
+  },
+  "1217304741:other": {
+    "task_id": "1217304741:other",
+    "chapter_id": "1217304741",
+    "title": "OSPF协议",
+    "task_type": "video",
+    "status": "UNKNOWN",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-20T06:31:52.349858+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-20T06:32:04.857263+00:00"
+    },
+    "created_at_utc": "2026-09-20T06:32:04.857263+00:00",
+    "updated_at_utc": "2026-09-20T06:32:04.857263+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 39,
+    "_cell_idx": 39,
+    "rollback_count": 0,
+    "last_rollback_at_utc": ""
+  },
+  "1217304750:other": {
+    "task_id": "1217304750:other",
+    "chapter_id": "1217304750",
+    "title": "UDP和TCP概述",
+    "task_type": "video",
+    "status": "UNKNOWN",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.627509+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-20T06:32:04.857263+00:00"
+    },
+    "created_at_utc": "2026-09-20T06:32:04.857263+00:00",
+    "updated_at_utc": "2026-09-20T06:32:04.857263+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 48,
+    "_cell_idx": 48,
+    "rollback_count": 0,
+    "last_rollback_at_utc": ""
+  },
+  "1217304751:other": {
+    "task_id": "1217304751:other",
+    "chapter_id": "1217304751",
+    "title": "TCP报文段的格式",
+    "task_type": "video",
+    "status": "UNKNOWN",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-09-06T01:52:26.627509+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-20T06:32:04.857263+00:00"
+    },
+    "created_at_utc": "2026-09-20T06:32:04.857263+00:00",
+    "updated_at_utc": "2026-09-20T06:32:04.857263+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 49,
+    "_cell_idx": 49,
     "rollback_count": 0,
     "last_rollback_at_utc": ""
   }
