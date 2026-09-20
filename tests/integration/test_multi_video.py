@@ -205,3 +205,40 @@ def test_verified_point_without_carrier_is_still_queued(tmp_registry):
     ids = {i["task_id"] for i in reconcile_queue("k1", reg,
             done_chapter_ids_from_registry(reg)).items}
     assert cid in ids
+
+
+def test_refine_rebuild_does_not_swallow_sibling_points(tmp_registry):
+    """第 4 轮 M0 run1 的实测缺陷：点级兄弟记录在 E6.2 live refine 里被吃掉。
+
+    `scheduler.py` 的 refine 只带**当前这一章**的 video_counts 重建 discovery，于是其它
+    多视频章只产出 `<cid>` 一条；而 `<cid>:video2` / `<cid>:other` 的 title 与 `<cid>`
+    相同 → `reconcile_registry` 的 by_title 迁移分支把它当成"task_id 格式迁移"命中，
+    最后 `result.pop(旧 id)`。真站日志：`reconcile → 82 tasks` 之后
+    `E6.2 after live refine ... tasks=74` —— 少的正是刚建出来的 8 条点级记录。
+    承载者一消失，"服务端已确认的点不再回队"的护栏当场失效。
+    """
+    from app.registry.task_registry import reconcile_queue, done_chapter_ids_from_registry
+    from app.registry.reconcile import reconcile_registry
+    from tvdp.tdvp import build_tasks_from_discovery
+
+    cid, cid2 = "1217304708", "1217304730"
+    chapters = [{"chapter_id": cid, "title": "数据通信的基础知识", "status": "pending",
+                 "job_remaining": 1, "chapter_index": 11, "cell_index": 11},
+                {"chapter_id": cid2, "title": "分类的IP地址", "status": "pending",
+                 "job_remaining": 1, "chapter_index": 13, "cell_index": 13}]
+    # 全量 discovery：两章各有 2 个视频点 → 4 条记录
+    full = build_tasks_from_discovery(chapters, video_counts={cid: 2, cid2: 2})
+    reg, _ = reconcile_registry("k1", {}, full, {cid: "pending", cid2: "pending"})
+    assert {cid, f"{cid}:video2", cid2, f"{cid2}:video2"} <= set(reg)
+    for t in (reg[cid], reg[cid2]):
+        t.mark_completed(run_id="r", source="isPassed", passed_object_ids=[f"obj-{t.chapter_id}"])
+
+    # refine：只有 head 章（cid2）带新读数 → 其它章退化成单条 `<cid>`
+    refined = build_tasks_from_discovery(chapters, video_counts={cid2: 2})
+    after, _ = reconcile_registry("k1", reg, refined,
+                                  {cid: "pending", cid2: "pending"})
+    assert f"{cid}:video2" in after, "非 refine 章的兄弟点被 by_title 迁移吃掉了"
+    ids = {i["task_id"] for i in reconcile_queue("k1", after,
+            done_chapter_ids_from_registry(after)).items}
+    assert cid not in ids                  # 点 1 已确认 + :video2 承载 → 不重投
+    assert f"{cid}:video2" in ids

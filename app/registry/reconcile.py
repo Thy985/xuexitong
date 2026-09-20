@@ -163,8 +163,12 @@ def reconcile_registry(
             # 保留给统一主循环
             upgraded[old_tid] = old_rec
             continue
-        # 旧 task_id 不在最新 discovery：可能发生了 task_id 格式迁移
-        matched = by_title.get(old_rec.title)
+        # 旧 task_id 不在最新 discovery：可能发生了 task_id 格式迁移。
+        # 但点级记录（`<cid>:videoN` / `<cid>:other`）不是任何 id 的旧格式 —— 它与
+        # `<cid>` 同 title，一旦走 by_title 匹配就会被当成"格式迁移"合并掉，整章的
+        # 兄弟点账目随之消失（第 4 轮 M0 run1：`tasks=82 → 74`，少的是 8 条点级记录），
+        # 而"已确认的点不再重投"的护栏正因缺少兄弟点而失效。
+        matched = None if ":" in old_tid else by_title.get(old_rec.title)
         if matched and getattr(matched, "task_id", None):
             was_blocked = getattr(old_rec, "status", "") == "BLOCKED"
             migrated = TaskRecord(
