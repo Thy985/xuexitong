@@ -354,6 +354,26 @@ def _kill_proc_tree(pid: int) -> None:
             pass
 
 
+def _archive_existing(path) -> "Optional[str]":
+    """已有同名产物先改名留档，绝不就地覆盖。
+
+    产物按 task_id 命名，所以**同一章被重投时上一轮证据会被抹掉**：第 3 轮 M0 里
+    run1 的 708 播了 465s，run3 重投后那份日志只剩最后 5 个采样，我先前据 run1
+    日志下的结论因此不可复现 —— 与"证据可复现"直接冲突。
+    """
+    p = Path(path)
+    if not p.exists():
+        return None
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    archived = p.with_name(f"{p.stem}.{stamp}{p.suffix}")
+    n = 1
+    while archived.exists():
+        archived = p.with_name(f"{p.stem}.{stamp}-{n}{p.suffix}")
+        n += 1
+    p.rename(archived)
+    return str(archived)
+
+
 def _run_one_chapter(course_url: str, chapter_id: str, task_id: str = "",
                      trigger: TriggerType = "manual", run_id: str = "",
                      video_index: int = 0, max_s: int = 900) -> dict:
@@ -389,6 +409,11 @@ def _run_one_chapter(course_url: str, chapter_id: str, task_id: str = "",
         Path(stdout_path).parent.mkdir(parents=True, exist_ok=True)
     except Exception:
         pass
+    # 重投同一章时先归档上一轮产物 —— 就地覆盖等于销毁自己的证据
+    for _prev in (evidence_path, stdout_path):
+        _arch = _archive_existing(_prev)
+        if _arch:
+            print(f"[scheduler] 上一轮产物归档: {_arch}", flush=True)
 
     # 章视角对齐：用任务自己的 chapter_id 重建课程 URL，避免沿用 state 里
     # 旧章 raw_url 的 chapterId 锚点（否则 page 落到的章节视图与任务不对齐）。
@@ -441,7 +466,7 @@ def _run_one_chapter(course_url: str, chapter_id: str, task_id: str = "",
     failure_stage = None
     try:
         if Path(evidence_path).exists():
-            with open(evidence_path) as f:
+            with open(evidence_path, encoding="utf-8") as f:
                 r = json_mod.load(f)
             res = r.get("result", {})
             if res.get("verdict", ""):
@@ -450,8 +475,16 @@ def _run_one_chapter(course_url: str, chapter_id: str, task_id: str = "",
             runtime_evidence = r.get("evidence") or {}
             failure_stage = runtime_evidence.get("failure_stage") \
                 if isinstance(runtime_evidence, dict) else None
-    except Exception:
-        pass
+    except Exception as e:
+        # 必须出声：D5 的归因丢失能活过三轮验证，就是因为这里静默吞掉了读取异常。
+        print(f"[scheduler] {Path(evidence_path).name} 产物读取失败，"
+              f"本轮 verdict 退回退出码结论: {type(e).__name__}: {e}", flush=True)
+
+    # 非 PASS 却没有失败段 → 显式说明"运行期没交回归因"，别留 null 让汇总
+    # 看起来像已经归因过（run2/run3 的 708 就是这样：FAIL + failure_stage=null）。
+    # TIMEOUT 除外：它本身就是精确的失败段。
+    if verdict not in ("PASS", "TIMEOUT", "") and not failure_stage:
+        failure_stage = "UNREPORTED_BY_RUNTIME"
 
     print(f"[scheduler] chapter {chapter_id}: verdict={verdict} "
           f"timing_s={round(timed,1)} exit_code={exit_code} "

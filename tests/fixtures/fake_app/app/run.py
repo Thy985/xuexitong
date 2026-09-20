@@ -10,6 +10,9 @@ This fake `app` package is injected onto PYTHONPATH *before* the real one so
   FAKE_RUN_BEHAVIOR=stuck  -> sleep forever (watchdog must kill + exit 124)
                       exit0 -> exit 0 (watchdog PASS path)
                       exit1 -> exit 1 (watchdog FAIL path)
+                   evidence -> 写一份真实形状的 --output 产物后按 verdict 退出
+                               （配 FAKE_RUN_VERDICT / FAKE_RUN_STAGE / FAKE_RUN_TITLE；
+                                FAKE_RUN_CORRUPT=1 写一份截断产物）
   FAKE_RUN_DELAY_S         -> optional npop/emprec delay before acting
 
 No real site is touched; no credentials are used.
@@ -30,6 +33,45 @@ def _delay():
         return 0.0
 
 
+def _arg(name, default=""):
+    argv = sys.argv[1:]
+    for i, a in enumerate(argv):
+        if a == name and i + 1 < len(argv):
+            return argv[i + 1]
+    return default
+
+
+def _write_evidence():
+    """behavior=evidence：按 FAKE_RUN_VERDICT/FAKE_RUN_STAGE 写一份真实形状的产物。
+
+    用来验父进程是否原样传递子进程自述的 verdict / failure_stage，
+    以及重投同一章时会不会抹掉上一轮产物。
+    """
+    import json
+    import os
+    from pathlib import Path
+
+    verdict = os.environ.get("FAKE_RUN_VERDICT", "PASS")
+    stage = os.environ.get("FAKE_RUN_STAGE", "")
+    title = os.environ.get("FAKE_RUN_TITLE", "")
+    out = _arg("--output")
+    payload = {
+        "result": {"verdict": verdict, "exit_code": 0 if verdict == "PASS" else 1,
+                   "timing_s": 1.0, "passed_count": 10 if verdict == "PASS" else 9},
+        "evidence": {"verdict": verdict, "failure_stage": stage or None},
+    }
+    if title:
+        # 真站产物里有章标题、页面文案、console 行 —— 全是非 ASCII。
+        payload["evidence"]["nextunit_title"] = title
+    if out:
+        p = Path(out)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        body = "{" if os.environ.get("FAKE_RUN_CORRUPT") else \
+            json.dumps(payload, ensure_ascii=False)
+        p.write_text(body, encoding="utf-8")
+    sys.exit(0 if verdict == "PASS" else 1)
+
+
 def main():
     b = _behavior()
     delay = _delay()
@@ -39,6 +81,8 @@ def main():
         # emulates the "subprocess never exits" failure mode of run 34311891898.
         while True:
             time.sleep(1)
+    elif b == "evidence":
+        _write_evidence()
     elif b == "exit1":
         print("fake app.run FAIL", flush=True)
         sys.exit(1)
