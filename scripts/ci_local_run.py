@@ -42,6 +42,12 @@ for _p in (_REPO, _REPO / "resolvers", _REPO / "state", _REPO / "e2"):
         sys.path.insert(0, _ps)
 
 from utils.env_file import load_env_file  # noqa: E402
+from utils.stdio_utf8 import ensure_utf8_stdio  # noqa: E402
+
+# 进程入口负责把自己的输出流定成 UTF-8（库模块不该在 import 时改共享流）。
+# 不放这里的话，Windows 下重定向到文件的日志按 gbk 建流，任何 emoji 都会抛
+# UnicodeEncodeError；放晚了则同一份日志前后编码不一致。
+ensure_utf8_stdio()
 
 
 def ensure_credentials(root: Path, env: dict) -> list:

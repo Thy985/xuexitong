@@ -6,15 +6,11 @@ error = "UnicodeEncodeError: 'gbk' codec can't encode character '\\u26a0'"，
 父进程没有 —— 两个进程的日志编码不对称。
 """
 
-import ast
 import io
-from pathlib import Path
 
 import pytest
 
 from utils.stdio_utf8 import ensure_utf8_stdio
-
-SCHEDULER_PY = Path(__file__).resolve().parents[2] / "scheduler" / "scheduler.py"
 
 
 def _gbk_stream():
@@ -70,20 +66,3 @@ def test_watchdog_fallback_reason_prints_on_gbk_stream():
     ensure_utf8_stdio([stream])
     print(f"[scheduler] ⚠️ 看门狗降级 chapter=754 {reason}", file=stream, flush=True)
     stream.flush()
-
-
-def test_scheduler_module_hardens_stdio_at_import():
-    """加固必须挂在模块导入路径上，否则又会出现"子进程有、父进程没有"的不对称。"""
-    tree = ast.parse(SCHEDULER_PY.read_text(encoding="utf-8"))
-    calls = [
-        node.value
-        for node in tree.body
-        if isinstance(node, ast.Expr) and isinstance(node.value, ast.Call)
-    ]
-    names = {
-        getattr(c.func, "id", None) or getattr(c.func, "attr", None) for c in calls
-    }
-    assert "ensure_utf8_stdio" in names, (
-        "scheduler.py 模块级需调用 ensure_utf8_stdio()，"
-        "否则父进程 print 会在 Windows gbk 输出流上抛 UnicodeEncodeError"
-    )

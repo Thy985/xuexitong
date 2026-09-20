@@ -24,9 +24,9 @@ from enum import Enum
 from pathlib import Path
 from typing import Literal, Optional
 
-from utils.stdio_utf8 import ensure_utf8_stdio
-
-ensure_utf8_stdio()
+# 注意：stdio 编码加固**不放这里**。库模块在 import 时改 sys.stdout，会让
+# "谁先打印谁就留在旧编码里"—— 第 3 轮 M0 的父日志因此混编（首行 gbk、其后 utf-8）。
+# 加固属于进程入口职责：见 scripts/ci_local_run.py 与 app/run.py。
 
 # 类型定义
 SchedulerResult = Literal["SUCCESS", "NOOP", "BLOCKED", "FAILED"]
@@ -802,6 +802,42 @@ def points_prove_no_video(job_points: Optional[list]) -> bool:
     return not any((p or {}).get("type") == "video" for p in job_points)
 
 
+PROBE_MAX_POLLS = 60          # 轮询硬上限：时钟不前进时也不许死循环
+
+
+def poll_video_duration(read_state, *, deadline_s: float = 25.0,
+                        sleep_s: float = 1.0, clock=None,
+                        sleeper=None) -> "tuple[Optional[float], Optional[str]]":
+    """轮询 `read_state()` 直到读到正数时长或预算用尽，返回 `(时长, 失败原因)`。
+
+    Why 轮询：`_probe_video_duration_s` 原先固定 `wait_for_timeout(4000)` 后只取一次
+    `duration`，真站 4/4 次拿到 `readyState=0 / duration=None`（metadata 还没到）——
+    自适应看门狗因此**从未生效**，一直在用静态预算。
+
+    `clock` / `sleeper` 可注入，是为了让这段逻辑能被单测覆盖（不靠真等 25s）。
+    探测本身绝不成为新故障点：`read_state` 抛异常时转成原因返回。
+    """
+    import time as _t
+    now = clock or _t.time
+    nap = sleeper or _t.sleep
+    start = now()
+    last = None
+    polls = 0
+    while True:
+        polls += 1
+        try:
+            last = read_state()
+        except Exception as e:
+            return None, f"探测读取异常: {type(e).__name__}: {e}"
+        d = last.get("duration") if isinstance(last, dict) else None
+        if d and d > 0:
+            return float(d), None
+        if now() - start >= deadline_s or polls >= PROBE_MAX_POLLS:
+            return None, (f"{deadline_s:.0f}s 内未读到 video.duration"
+                          f"（最后 st={last}）—— 可能没进播放器/无视频/登录未通过")
+        nap(sleep_s)
+
+
 def _adaptive_video_watch_s(base_max_s: int,
                             video_duration_s: Optional[float] = None,
                             ceiling_s: int = 2400) -> int:
@@ -891,14 +927,10 @@ def _probe_video_duration_s(course_url: str,
             from utils.cookie_store import ensure_login
             ensure_login(page, ctx, base, user, pw)
             page.goto(base, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(4000)
-            st = get_video_state(page)
+            dur, dur_err = poll_video_duration(lambda: get_video_state(page),
+                                               deadline_s=25.0, sleep_s=1.0)
             browser.close()
-            d = (st or {}).get("duration")
-            if d and d > 0:
-                return float(d), None
-            return None, (f"页面未读到 video.duration（st={st or '无'}）"
-                          "—— 可能没进播放器/无视频/登录未通过")
+            return dur, dur_err
     except Exception as e:
         return None, f"{type(e).__name__}: {e}"
 

@@ -38,17 +38,15 @@ if str(_E2) not in sys.path:
     sys.path.insert(0, str(_E2))
 
 # E5 模块路径（确保 CI 和本地都能导入）
-for _p in [_SELF / "resolvers", _SELF / "state", _SELF / "e2"]:
+for _p in [_SELF, _SELF / "resolvers", _SELF / "state", _SELF / "e2"]:
     _ps = str(_p)
     if _ps not in sys.path:
         sys.path.insert(0, _ps)
 
-# UTF-8 输出鲁棒性
-for _s in (sys.stdout, sys.stderr):
-    try:
-        _s.reconfigure(encoding="utf-8", errors="replace")
-    except Exception:
-        pass
+# UTF-8 输出鲁棒性（与 scripts/ci_local_run.py 同一实现：加固属于进程入口职责）
+from utils.stdio_utf8 import ensure_utf8_stdio  # noqa: E402
+
+ensure_utf8_stdio()
 
 from app.e2_headed_gha import parse_course_url, run_test, DEMO_CHAPTER  # noqa: E402
 from resolvers.course_resolver import resolve_course, detect_course_change  # noqa: E402
