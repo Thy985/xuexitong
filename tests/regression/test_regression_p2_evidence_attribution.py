@@ -158,3 +158,27 @@ def test_unreadable_evidence_is_announced_not_swallowed(fake_child, capsys):
     assert "chapter_1217304708.json" in out, out
     assert "产物读取失败" in out, out
     assert "JSONDecodeError" in out, out
+
+
+def test_point_level_task_id_writes_a_regular_file(fake_child):
+    """D10：`<cid>:video2` 的产物必须是**常规文件**。
+
+    Windows 把 `chapter_x:video2.json` 解析成 `chapter_x` 的 NTFS 备用数据流 ——
+    真站 `dir /r` 实测留下 0 字节空壳 `chapter_1217304708` 与
+    `chapter_1217304708:video2.json:$DATA`，于是 `_archive_existing()` 归档的是空壳、
+    D3 对点级任务整体失效。Linux 上 `:` 合法，所以只有本地会这样。
+    """
+    os.environ["FAKE_RUN_BEHAVIOR"] = "evidence"
+    os.environ["FAKE_RUN_VERDICT"] = "DEGRADED"
+    os.environ["FAKE_RUN_STAGE"] = "VIDEO_NOT_COMPLETED"
+    one = _run_one_chapter("http://x?courseId=1&clazzid=2&cpi=3", TASK,
+                           task_id=f"{TASK}:video2", max_s=30)
+    assert one["verdict"] == "DEGRADED", one
+    names = [p.name for p in Path("evidence").glob("chapter_*")]
+    assert f"chapter_{TASK}_video2.json" in names, names
+    assert f"chapter_{TASK}_video2.scheduler.stdout.log" in names, names
+    shell = Path(f"evidence/chapter_{TASK}")
+    assert not shell.exists(), f"点级产物又落进备用数据流了（留下空壳 {shell}）"
+    body = json.loads((Path("evidence") / f"chapter_{TASK}_video2.json")
+                      .read_text(encoding="utf-8"))
+    assert body["result"]["verdict"] == "DEGRADED"

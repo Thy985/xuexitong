@@ -374,6 +374,17 @@ def _archive_existing(path) -> "Optional[str]":
     return str(archived)
 
 
+def artifact_slug(task_id: str) -> str:
+    """产物文件名里代表 task_id 的那一段。
+
+    点级 task_id 形如 `1217304708:video2`，而 Windows 把 `name:stream` 解释成
+    **NTFS 备用数据流**：`./evidence/chapter_1217304708:video2.json` 不报错，内容
+    被写进同章 `<cid>` 那个 0 字节空壳的隐藏流里（`dir /r` 才看得见），归档因此
+    归档空壳。Linux runner 上 `:` 是合法字符 —— 路径正常，属又一处本地/云不对称。
+    """
+    return (task_id or "").replace(":", "_")
+
+
 def _run_one_chapter(course_url: str, chapter_id: str, task_id: str = "",
                      trigger: TriggerType = "manual", run_id: str = "",
                      video_index: int = 0, max_s: int = 900) -> dict:
@@ -403,8 +414,9 @@ def _run_one_chapter(course_url: str, chapter_id: str, task_id: str = "",
     import json as json_mod
     import subprocess as sp
 
-    evidence_path = f"./evidence/chapter_{task_id or chapter_id}.json"
-    stdout_path = f"./evidence/chapter_{task_id or chapter_id}.scheduler.stdout.log"
+    _slug = artifact_slug(task_id or chapter_id)
+    evidence_path = f"./evidence/chapter_{_slug}.json"
+    stdout_path = f"./evidence/chapter_{_slug}.scheduler.stdout.log"
     try:
         Path(stdout_path).parent.mkdir(parents=True, exist_ok=True)
     except Exception:
