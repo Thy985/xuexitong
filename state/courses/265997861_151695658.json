@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "status": "ACTIVE",
-  "run_count": 93,
-  "success_count": 65,
-  "failure_count": 28,
+  "status": "BLOCKED",
+  "run_count": 97,
+  "success_count": 67,
+  "failure_count": 30,
   "course_identity": {
     "course_id": "265997861",
     "clazz_id": "151695658",
@@ -13,44 +13,17 @@
     "resolved_at_utc": "2026-09-03T13:36:56.394188+00:00"
   },
   "progress": {
-    "completed": 22,
+    "completed": 23,
     "total": 4,
-    "last_completed_task": "1217304751",
-    "active_task": null
+    "last_completed_task": "1217304714",
+    "active_task": "1217304708"
   },
-  "last_run": "2026-09-19T18:38:31.754069+00:00",
-  "last_success": "2026-09-19T18:38:31.754069+00:00",
-  "last_failure": "2026-09-17T19:47:42.410024+00:00",
-  "last_completed_task": "1217304751",
+  "last_run": "2026-09-19T23:20:32.026225+00:00",
+  "last_success": "2026-09-19T23:18:44.773227+00:00",
+  "last_failure": "2026-09-19T23:20:32.026225+00:00",
+  "last_completed_task": "1217304714",
+  "active_task": "1217304708",
   "history": [
-    {
-      "run_at_utc": "2026-09-06T04:25:59.495435+00:00",
-      "timing_s": 461.2,
-      "passed": true,
-      "verdict": "PASS",
-      "chapter_id": "1217304708"
-    },
-    {
-      "run_at_utc": "2026-09-06T04:36:45.642083+00:00",
-      "timing_s": 523.7,
-      "passed": true,
-      "verdict": "PASS",
-      "chapter_id": "1217304712"
-    },
-    {
-      "run_at_utc": "2026-09-06T05:55:13.204493+00:00",
-      "timing_s": 588.9,
-      "passed": true,
-      "verdict": "PASS",
-      "chapter_id": "1217304714"
-    },
-    {
-      "run_at_utc": "2026-09-06T06:54:33.055480+00:00",
-      "timing_s": 709.7,
-      "passed": true,
-      "verdict": "PASS",
-      "chapter_id": "1217304717"
-    },
     {
       "run_at_utc": "2026-09-06T12:18:30.353221+00:00",
       "timing_s": 201.0,
@@ -372,18 +345,46 @@
       "passed": true,
       "verdict": "PASS",
       "chapter_id": "1217304751"
+    },
+    {
+      "run_at_utc": "2026-09-19T23:08:17.056410+00:00",
+      "timing_s": 464.5,
+      "passed": true,
+      "verdict": "PASS",
+      "chapter_id": "1217304708"
+    },
+    {
+      "run_at_utc": "2026-09-19T23:18:44.773227+00:00",
+      "timing_s": 587.8,
+      "passed": true,
+      "verdict": "PASS",
+      "chapter_id": "1217304714"
+    },
+    {
+      "run_at_utc": "2026-09-19T23:19:36.764283+00:00",
+      "timing_s": 23.6,
+      "passed": false,
+      "verdict": "DEGRADED",
+      "chapter_id": "1217304708"
+    },
+    {
+      "run_at_utc": "2026-09-19T23:20:32.026225+00:00",
+      "timing_s": 27.5,
+      "passed": false,
+      "verdict": "DEGRADED",
+      "chapter_id": "1217304708"
     }
   ],
   "scheduler": {
-    "last_scheduled_at": "2026-09-19T18:38:31.842924+00:00",
-    "last_started_at": "2026-09-19T18:38:31.842924+00:00",
-    "last_finished_at": "2026-09-19T18:38:31.843239+00:00",
-    "last_result": "SUCCESS",
-    "last_run_id": "35461205467",
-    "last_trigger": "schedule",
-    "consecutive_failures": 0,
-    "execution_id": "35461205467",
-    "attempt": 82,
+    "last_scheduled_at": "2026-09-19T23:20:32.133456+00:00",
+    "last_started_at": "2026-09-19T23:20:32.133456+00:00",
+    "last_finished_at": "2026-09-19T23:20:32.144355+00:00",
+    "last_result": "FAILED",
+    "last_run_id": "local-1789859977",
+    "last_trigger": "manual",
+    "consecutive_failures": 2,
+    "execution_id": "local-1789859977",
+    "attempt": 85,
     "blocked_since": null,
     "blocked_hits": 0,
     "blocked_retry_interval": 0
