@@ -297,3 +297,36 @@ class TestSchemaGuard:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+
+# ── Tests: D11 累计失败数被当成"连续失败" ────────────────────────
+
+def test_success_clears_the_failure_streak(sample_state, state_tmp_dir):
+    """成功必须清账。`failure_count` 原先只增不减，而熔断判据写的是"连续失败多次"。
+
+    真站实测：D7 复验那一次 `failure_count: 31` / `run_count: 104`，中间夹着第 4 轮
+    6 次连续 PASS 也没把它拉回 0 —— 于是任何**一次**失败都立刻把整门课打成 BLOCKED，
+    nightly 从第二天起拒绝学习。
+    """
+    sample_state.failure_count = 31
+    update_state_after_run(sample_state, passed=True, timing_s=10.0,
+                           chapter_id="1217304722", verdict="PASS")
+    assert sample_state.failure_count == 0
+
+
+def test_a_single_failure_does_not_block_the_course(sample_state, state_tmp_dir):
+    """清零之后，一次失败不该触发 BLOCKED —— 那是"连续 3 次"的判据。"""
+    sample_state.failure_count = 31
+    update_state_after_run(sample_state, passed=True, timing_s=10.0,
+                           chapter_id="1217304722", verdict="PASS")
+    update_state_after_run(sample_state, passed=False, timing_s=25.5,
+                           chapter_id="1217304708", verdict="DEGRADED")
+    assert sample_state.status != "BLOCKED", sample_state.status
+
+
+def test_three_consecutive_failures_still_block(sample_state, state_tmp_dir):
+    """反向护栏：真正的连续 3 次失败仍要熔断，别把保护一起删掉。"""
+    for _ in range(3):
+        update_state_after_run(sample_state, passed=False, timing_s=25.5,
+                               chapter_id="1217304708", verdict="DEGRADED")
+    assert sample_state.status == "BLOCKED"

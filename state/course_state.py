@@ -397,6 +397,7 @@ def update_state_after_run(
 
     if passed:
         state.success_count += 1
+        state.failure_count = 0   # 判据写的是"连续失败"，成功不清零就永远是累计值
         state.last_success = now_utc
         state.last_completed_task = chapter_id
         state.active_task = None  # 任务完成，清除活跃任务
