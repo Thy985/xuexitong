@@ -371,11 +371,9 @@ def point_is_server_verified(t) -> bool:
     为什么单独一个判据：`job_remaining` 是**整章**的粗读数（含达标测试/PPT 这些引擎
     永远做不了的点），而这条是**该点**的细真源 —— 粗读数不得推翻细读数。它不依赖
     点级快照缓存，所以缓存被清/未预热时同样成立（否则保护会随缓存冷热而漂移）。
+    判据本体在 `TaskRecord.point_is_server_verified`。
     """
-    ver = getattr(t, "verification", None)
-    ce = getattr(t, "completion_evidence", None)
-    return (getattr(ver, "level", "") == "SERVER_VERIFIED"
-            and bool(getattr(ce, "passed_object_ids", None)))
+    return t.point_is_server_verified()
 
 
 def stale_completed_by_catalog(

@@ -158,3 +158,50 @@ def test_no_video_chapter_never_emits_video_task(tmp_registry):
     q = reconcile_queue("k1", reg, done_chapter_ids_from_registry(reg))
     ids = {i["task_id"] for i in q.items}
     assert cid not in ids           # 无视频章不入待播队列
+
+def _verified_then_failed(cid, title="数据通信的基础知识"):
+    """复刻 1217304708 在 `tasks.json` 里的真实形状：
+    点 1 被服务端确认（passed_object_ids 非空）→ 校准降级 CONFLICT → 后续 run 判 FAILED。"""
+    from app.registry.task_registry import TaskRecord
+    t = TaskRecord(cid, cid, title, task_type="video")
+    t.mark_completed(run_id="r-v1", source="isPassed", passed_object_ids=["obj-1"])
+    t.mark_stale(detail="chapter has unfinished points")
+    t.mark_failed(run_id="r-v2", detail="no video")
+    return t
+
+
+def test_server_verified_point_is_not_replayed_when_sibling_carries_the_work(tmp_registry):
+    """第 3 轮 M0 的"不重复 ❌"根因：`<cid>`（=第 1 点）服务端早已确认，
+    却因为后续 run 把它标成 FAILED、`cf<max`，以 priority 0 重投 —— 播的还是已完成的点，
+    而真正没学的 `:video2` 永远排在它后面。章内已有兄弟点承载剩余工作 → 该点不再入队。
+    """
+    from app.registry.task_registry import (TaskRecord, reconcile_queue,
+                                            done_chapter_ids_from_registry)
+    from app.registry.reconcile import point_is_server_verified
+
+    cid = "1217304708"
+    v1 = _verified_then_failed(cid)
+    assert v1.status == "FAILED" and point_is_server_verified(v1), "前提：点已确认、状态却可重试"
+    v2 = TaskRecord(f"{cid}:video2", cid, "数据通信的基础知识", task_type="video",
+                    status="DISCOVERED")
+    reg = {cid: v1, f"{cid}:video2": v2}
+    ids = {i["task_id"] for i in reconcile_queue("k1", reg,
+            done_chapter_ids_from_registry(reg)).items}
+    assert cid not in ids
+    assert f"{cid}:video2" in ids
+
+
+def test_verified_point_without_carrier_is_still_queued(tmp_registry):
+    """反面护栏：单视频章的点被服务端确认过、但快照说没完成（真源互相矛盾，如 1217304722）。
+    没有任何兄弟点能承载剩余工作 —— 此时不许"不再重投"，否则整章永久搁浅。"""
+    from app.registry.task_registry import reconcile_queue, done_chapter_ids_from_registry
+
+    cid = "1217304722"
+    t = _verified_then_failed(cid, title="扩展的以太网")
+    t.consecutive_failures = 0          # 未达熔断阈值，仍想重投
+    t.status = "UNKNOWN"
+    t.rollback_count = 1                # 回退章：现行策略本就要优先补齐
+    reg = {cid: t}
+    ids = {i["task_id"] for i in reconcile_queue("k1", reg,
+            done_chapter_ids_from_registry(reg)).items}
+    assert cid in ids

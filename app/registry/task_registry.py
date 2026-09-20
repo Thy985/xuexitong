@@ -284,6 +284,15 @@ class TaskRecord:
         self.updated_at_utc = now
         return self.status
 
+    def point_is_server_verified(self) -> bool:
+        """该**点**自身是否带服务端确认（isPassed 的具体对象 id）。
+
+        status 会随后续 run 翻脸（FAILED/UNKNOWN），这条不会 —— 多视频章里"第 1 点已过、
+        第 2 点没学到"时，靠它判断剩余工作该由兄弟点记录承载。
+        """
+        return (getattr(self.verification, "level", "") == "SERVER_VERIFIED"
+                and bool(getattr(self.completion_evidence, "passed_object_ids", None)))
+
     def mark_stale(self, detail: str = "") -> None:
         """E6.2 校准：实时状态覆盖历史完成。
 
@@ -629,6 +638,17 @@ def reconcile_queue(course_key: str, registry: dict[str, TaskRecord],
         if getattr(t, "status", "") == "BLOCKED"
     }
 
+    # 点级真源：一个已被服务端确认过的点**不再重投**——多视频章里剩余的学习量由它的
+    # 兄弟点记录（`<cid>:videoN`）承载，重投已过的第 1 点只会白耗一次投递（第 3 轮 M0
+    # 的"不重复 ❌"正是这个：`<cid>` 已 SERVER_VERIFIED，却被后续 run 标成 FAILED 后
+    # 以 priority 0 反复回队，`:video2` 永远排在它后面）。
+    # 章内若没有能承载的兄弟点（单视频章真源自相矛盾，如 1217304722），仍按原策略重试
+    # —— 宁可多重投一次，也不许把整章永久搁浅。
+    carried_chapters = {
+        (t.chapter_id or "") for t in registry.values()
+        if (t.task_type or "video") == "video" and not t.point_is_server_verified()
+    }
+
     def _lease_expired(t: TaskRecord) -> bool:
         exp = t.lease.expires_at_utc
         if not exp:
@@ -653,6 +673,8 @@ def reconcile_queue(course_key: str, registry: dict[str, TaskRecord],
             snap = (points_map or {}).get(t.chapter_id)
             if snap and not snap.get("has_video"):
                 continue
+        if (t.chapter_id or "") in carried_chapters and t.point_is_server_verified():
+            continue
         # 已完成（有证据）→ 跳过
         if t.status == "COMPLETED" and done_chapter_ids and t.chapter_id in done_chapter_ids:
             continue
