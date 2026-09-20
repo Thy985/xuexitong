@@ -15,15 +15,15 @@
 L4  上云回归（GHA cron 真跑）            —— 只验收 Step「上云」
 L3  真站冒烟（真账号/真课程）             —— 本地，Playwright 起浏览器连真站
 L2  功能/稳定性验证（本地，含真浏览器但可离线/可控）  —— Xvfb 有头 / headless=False
-L1  纯逻辑测试（单元/集成/回归）         —— pytest，CI 已跑（现 345 passed + 1 skip）
+L1  纯逻辑测试（单元/集成/回归）         —— pytest，CI 已跑（现 356 passed + 1 skip）
 ```
 
 ### L1 · 纯逻辑测试（CI，pytest）
 - **跑法**：`.github/workflows/test.yml`（push/PR 自动）→ `pytest tests/unit tests/integration tests/regression`。
-- **判据**：全部通过；`--maxfail=5` 内不爆炸（不允许零星断言失败仍绿）。基线：2026-09-20 实测 **345 passed, 1 skipped**（共 346 collected，69.1s）。
-  > 09-15 基线 209+1/72s → 09-20 上午 296+1/68s → D1~D7 七起缺陷各带回归后 345+1/69s。
+- **判据**：全部通过；`--maxfail=5` 内不爆炸（不允许零星断言失败仍绿）。基线：2026-09-20 实测 **356 passed, 1 skipped**（共 357 collected，69.7s）。
+  > 09-15 基线 209+1/72s → 09-20 上午 296+1/68s → D1~D7、D10、D11 九起缺陷各带回归后 356+1/69.7s。
   > **耗时也是判据**：同一套用例从 239s 降到 68s，差额正是"测试偷偷起真浏览器"被堵住的时间（见 §4.4）；
-  > 加 46 条用例耗时几乎没动（68→69s），说明新用例都在 fake 层。
+  > 之后又加了 60 条用例，耗时几乎没动（68→69.7s），说明新用例全在 fake 层。
 - **证据**：`pytest.log`（失败时自动上传 artifact）。
 - **门禁**：任何 PR/M0~M3 改动必须保持 L1 全绿。**此层失败 = 阻断。**
 
@@ -109,7 +109,10 @@ L1  纯逻辑测试（单元/集成/回归）         —— pytest，CI 已跑�
 | 2026-09-20 | 缺陷 | L2 | **D3：重投同一章就地覆盖上一轮产物** | ✅ 已修 | `_archive_existing()` 在 spawn 前把 `chapter_<task>.json` 与 `.scheduler.stdout.log` 按 UTC 时间戳归档（同秒冲突追加 `-n`）；回归见 `test_rerun_same_chapter_keeps_previous_evidence` |
 | 2026-09-20 | 缺陷 | L2 | **D5：父进程按本地码读子进程 UTF-8 产物 → 归因整段丢失** | ✅ 已修 | `open(evidence_path)` 无 `encoding` → Windows cp936 解 UTF-8 抛 `UnicodeDecodeError`，被 `except Exception: pass` 吞掉；一个缺陷同时造成 verdict 退回 FAIL、`failure_stage: null`、`passed_count: null` 三个症状。**又一处本地/云不对称**（Linux CI 永不出错）。详见 §4.5 第 3 条更正 |
 | 2026-09-20 | M0 | L2 | R-01 续：`--max-chapters 2` 连续 3 次只前进不重复不卡死（**第 4 轮**） | ✅ **首次达标** | `evidence/l2_stability_clean4_20260920.log`：6 次全 PASS，选章两两互异（708/722·730/732·733/734），`COMPLETED 23→29`；汇总第一次带上 `passed_count: 10`。详见 §4.6 |
-| 2026-09-20 | 缺陷 | L2 | **D7：E6.2 refine 的 by_title 迁移吃掉点级兄弟记录（82→74）** | ✅ 已修（真站待验） | `<cid>:videoN`/`:other` 与 `<cid>` 同 title → 被当成"task_id 格式迁移"合并 pop；护栏失效 → 第 4 轮 run1a 23s 空投已完成点。`test_refine_rebuild_does_not_swallow_sibling_points` |
+| 2026-09-20 | 缺陷 | L2 | **D7：E6.2 refine 的 by_title 迁移吃掉点级兄弟记录（82→74）** | ✅ 已修 + **真站已验** | `<cid>:videoN`/`:other` 与 `<cid>` 同 title → 被当成"task_id 格式迁移"合并 pop；护栏失效 → 第 4 轮 run1a 23s 空投已完成点。复验：`tasks=87→87`、`next_task=1217304708:video2`，第 2 点 `isPassed=true`；见 §4.7 |
+| 2026-09-20 | 缺陷 | L2 | **D10：点级 task_id 的 `:` 在 Windows 变成 NTFS 备用数据流** | ✅ 已修（L1 已证，真站待验） | `dir /r` 实证 0 字节空壳 `chapter_1217304708` + `:video2.json:$DATA`；`_archive_existing` 归档的是空壳 → D3 对点级任务失效。`artifact_slug()` 单一入口；产物已无损迁回。见 §4.7 |
+| 2026-09-20 | 缺陷 | L2 | **P1：章内切点未重新起播**（进 `:video2` 时复用点 1 已播完的 `<video>`） | 🔁 已定位，待修 | `DEGRADED 9/10`，唯一失败项 `7_currentTime_growing`，st `currentTime=655 / readyState=0 / duration=None`（655=点 1 片尾）；`9_isPassed_true` 却为 True ⇒ 真实播放层缺陷而非测量假阴性。见 §4.7 |
+| 2026-09-20 | 缺陷 | L2 | **D11：累计 `failure_count` 被当"连续失败"用 → 单次失败锁死整门课** | ✅ 已修（真站后果待解除） | `run_count 104 / failure_count 31`，成功从不清零；D7 复验那一次 DEGRADED 直接把课程打成 `BLOCKED`（`scheduler.py:214` 见之即拒调度）⇒ **明晚 nightly 会拒绝学习**。连续熔断本已由 `ss.consecutive_failures>=3` 承担。见 §4.7 |
 | 2026-09-20 | 修复验证 | L2 | head_cid / stdout 编码 / 降级不再静默 三项在真站生效 | ✅ 达标 | 同一份日志内：`E6.2 head=TaskRecord` **0 次**、`E6.2 head=<纯章号>` 4 次、`has no video` **0 次**、`⚠️ 看门狗降级` 4 次且不再崩 |
 
 > 记录规则：追加不覆盖；结果不可复现时降级为「待验」而非删除。
@@ -291,6 +294,56 @@ UNKNOWN 又可排队 → 再投 → 再打回。**"恢复 status"正在与校准
 3. D2 残留：第 2 次 run 起手 `stale=1 chapters re-queued: ['1217304722']`，刚完成的章仍会被打回一次；
    本轮因 refine 读到 `finished_video=1/1` 才没形成循环。
 
+### 4.7 D7 真站复验：成立；顺带炸出 D10（点级产物落进 NTFS 数据流）
+
+`evidence/d7_verify_20260920.log`（1 轮 × 2 章上限，`local-1789895257`）
+
+**D7 修好在真站成立**（判据在跑之前写死，未事后挑数据）：
+
+| 判据 | 第 3/4 轮 | 本轮 |
+|---|---|---|
+| refine 后任务数不缩水 | `reconcile → 82` → `tasks=74`（丢 8 条点级） | `reconcile → 87` → `tasks=87` ✅ |
+| 投的是未完成的点 | `next_task=1217304708`（已完成点 1） | `next_task=1217304708:video2` ✅ |
+| 不出现秒级空投 | run1a 23.1s 空投 | 无空投（26.1s 是真失败，见下） ✅ |
+
+而且 `9_isPassed_true: True` —— **`1217304708` 的第 2 个视频点第一次被服务端判通过**。
+
+**但整章 verdict 是 `DEGRADED`（9/10）**，唯一失败项 `7_currentTime_growing`，st 是
+`currentTime=655 / duration=None / readyState=0`，即 `ct=655`（=点 1 的片尾位置）。
+这与第 3 轮 708 的 24/28s 失败是**同一现象**：进入章内第 2 点时页面仍复用点 1 那个已播完的
+`<video>` 元素，没换源起播。定性为**真实播放层缺陷**（不是测量假阴性：服务端确实回过 isPassed）。
+→ 新立 **P1：章内切点未重新起播**。
+
+**D5 至此在失败路径上也验实**：汇总 `{"verdict":"DEGRADED","passed_count":9,"failure_stage":"UNKNOWN"}`
+完整穿到 `ci_local` 汇总；第 3 轮同一条路是 `FAIL`/`null`/`null`。`failure_stage=UNKNOWN`
+是**子进程自己没归类**（10 项里只差 `7_currentTime_growing` 却说不出段），下一步按检查项映射。
+
+**D10（Windows 独有第 4 例）**：产物路径直接拼 task_id，而点级 id 含 `:` →
+Windows 把 `chapter_1217304708:video2.json` 解释成 `chapter_1217304708` 的
+**NTFS 备用数据流**。`dir /r` 实测：
+
+```
+0        chapter_1217304708                 ← 0 字节空壳
+28,529   chapter_1217304708:video2.json:$DATA
+ 3,691   chapter_1217304708:video2.scheduler.stdout.log:$DATA
+```
+
+即**刚修好的点级记账引爆了它**：`_archive_existing()` 归档的是那个空壳，D3 对点级任务整体失效；
+Linux 上 `:` 合法，所以云端不会有这个形状。修法：`artifact_slug()` 把 `:` → `_`（单一路径入口，
+`--output` 是唯一出口，无别处按老名重建）。RED 真实复现：修前 `glob('chapter_*')` 只看得见
+`chapter_1217304708` 一个空壳。本轮 ADS 里的两份产物已**逐字节校验后**迁回
+`chapter_1217304708_video2.{json,scheduler.stdout.log}`，空壳删除。
+L1：`356 passed, 1 skipped`（357 collected，69.7s）。**D10 目前只有 L1 证据** —— 点级产物的归档链路
+要等下一次真站 run 才算验过。
+
+**D11（同一次 run 顺带暴露，影响明晚 nightly）**：`course_state.py` 的熔断判据写的是
+"连续失败多次"，读的却是**只增不减**的累计计数 `failure_count`（成功分支从不清零）。
+真站读数：`run_count: 104`、`failure_count: 31` —— 第 4 轮 6 次连续 PASS 也没把它拉回 0，
+于是这次 `:video2` 的**单次** DEGRADED 立刻把**整门课**打成 `BLOCKED`
+（`scheduler.py:214` 见课程 BLOCKED 即拒调度）。而真正的连续熔断在 `scheduler.py:219`
+已由 `ss.consecutive_failures >= 3` 独立实现 —— 这条老判据既名不副实又是重复保护。
+修法：成功即 `failure_count = 0`（回归三条：清零 / 单次失败不 BLOCKED / 真连续 3 次仍 BLOCKED）。
+
 
 ---
 
@@ -326,17 +379,20 @@ UNKNOWN 又可排队 → 再投 → 再打回。**"恢复 status"正在与校准
 
 **当前真正阻塞 M0/L2 的问题**（原挂起的 `isPassed_seen` 测量嫌疑已于 §4.1 结案，此处不再重复）：
 
-1. **M0 / R-01 三次稳定性：第 4 轮已达标**（§4.6）—— 但**只算"单次实验内 3 次不重复"**，
-   其中 1 次是 D7 造成的 23s 空投。D7 已修（L1 已证），**修后还没再跑过一次真站**，
-   所以 M0 严格判据仍是"1 次有效实验 + 1 个已修未验缺陷"，不宣布结案。
-2. **P0-01 自适应看门狗从未生效**：第 4 轮 6/6 仍回落静态 900s（探测窗口内播放器没挂 metadata）。
+1. **M0 / R-01 三次稳定性：第 4 轮已达标**（§4.6）—— 其中 1 次是 D7 造成的 23s 空投；
+   **D7 已复验通过**（§4.7：`tasks=87→87`、投到 `:video2`、无空投），所以 M0 判据本身闭合。
+   没宣布结案的真正原因改成下面第 2 条：多视频章的第 2 点仍学不完（P1）。
+2. **P1 章内切点未重新起播（§4.7）**：`:video2` 能投到、服务端也回 isPassed，但页面复用点 1
+   已播完的 `<video>`（`ct=655 / readyState=0`）→ `7_currentTime_growing` 失败 → 整章 DEGRADED。
+   **这是多视频章无法真正学完的当前卡点**，与 P0-01 的探测/看门狗是两回事。
+3. **P0-01 自适应看门狗从未生效**：第 4 轮 6/6 仍回落静态 900s（探测窗口内播放器没挂 metadata）。
    本轮最长 549.9s < 900s 属侥幸；>900s 内容的章会被误杀成 TIMEOUT。
-3. **R-04 真站未验**：自动续播有 12 个单测，但四轮真站里**没有一次观测到它触发**。
-4. **账本刚被重估**：§4.2 使未完成视频从 12 条变成 24 条。任何"还剩多少 / 何时学完"的
+4. **R-04 真站未验**：自动续播有 12 个单测，但四轮真站里**没有一次观测到它触发**。
+5. **账本刚被重估**：§4.2 使未完成视频从 12 条变成 24 条。任何"还剩多少 / 何时学完"的
    既有结论都必须按新账重说一遍，旧结论不再引用。
-5. **待查**：`1217304758`（标题「扩展阅读」）在 registry 里是 `video / COMPLETED / UI`
+6. **待查**：`1217304758`（标题「扩展阅读」）在 registry 里是 `video / COMPLETED / UI`
    —— 阅读类任务被建成 video 记录，与 §4.2 是不同源头，尚未定位。
-6. **待查**：`1217304722` 完成证据由 `SERVER_VERIFIED` 变弱为 `UI`、`1217304705`
+7. **待查**：`1217304722` 完成证据由 `SERVER_VERIFIED` 变弱为 `UI`、`1217304705`
    被 live refine 读出 `video_total=2`（与"无视频章"的旧认定冲突）—— 见 §4.6 末尾两条。
 
 ---
