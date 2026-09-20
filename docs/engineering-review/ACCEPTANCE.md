@@ -15,14 +15,15 @@
 L4  上云回归（GHA cron 真跑）            —— 只验收 Step「上云」
 L3  真站冒烟（真账号/真课程）             —— 本地，Playwright 起浏览器连真站
 L2  功能/稳定性验证（本地，含真浏览器但可离线/可控）  —— Xvfb 有头 / headless=False
-L1  纯逻辑测试（单元/集成/回归）         —— pytest，CI 已跑（现 296 passed + 1 skip）
+L1  纯逻辑测试（单元/集成/回归）         —— pytest，CI 已跑（现 342 passed + 1 skip）
 ```
 
 ### L1 · 纯逻辑测试（CI，pytest）
 - **跑法**：`.github/workflows/test.yml`（push/PR 自动）→ `pytest tests/unit tests/integration tests/regression`。
-- **判据**：全部通过；`--maxfail=5` 内不爆炸（不允许零星断言失败仍绿）。基线：2026-09-20 实测 **296 passed, 1 skipped**（共 297 collected，68s）。
-  > 09-15 基线为 209+1/72s；增量主要来自本轮三起缺陷的回归用例。
-  > **耗时也是判据**：同一套用例从 239s 降到 68s，差额正是"测试偷偷起真浏览器"被堵住的时间（见 §4.4）。
+- **判据**：全部通过；`--maxfail=5` 内不爆炸（不允许零星断言失败仍绿）。基线：2026-09-20 实测 **342 passed, 1 skipped**（共 343 collected，69.0s）。
+  > 09-15 基线 209+1/72s → 09-20 上午 296+1/68s → 本轮 D1~D6 六起缺陷各带回归用例后 342+1/69s。
+  > **耗时也是判据**：同一套用例从 239s 降到 68s，差额正是"测试偷偷起真浏览器"被堵住的时间（见 §4.4）；
+  > 加 46 条用例耗时几乎没动（68→69s），说明新用例都在 fake 层。
 - **证据**：`pytest.log`（失败时自动上传 artifact）。
 - **门禁**：任何 PR/M0~M3 改动必须保持 L1 全绿。**此层失败 = 阻断。**
 
@@ -103,8 +104,10 @@ L1  纯逻辑测试（单元/集成/回归）         —— pytest，CI 已跑�
 | 2026-09-20 | M1 | L2 | R-04 自动续播（`video.paused` → `play()`，带 `ct>0` 只管续播不管起播） | 🔁 代码达标，真站未验 | `f1e72b3`+`00c98dc`；12 个单测覆盖判据。**尚无一次真站 run 观测到它触发**（两轮 L2 都因上表原因作废） |
 | 2026-09-20 | 加固 | L1 | 测试隔离：单测不得起真浏览器 / 不得带真账号 | ✅ 达标 | `tests/conftest.py` 会话级剥 `CX_USER/CX_PASS`；`_probe_video_duration_s` 缺凭据不起浏览器；跑测试期间 chrome 进程数实测 0 |
 | 2026-09-20 | M0 | L2 | R-01 续：`--max-chapters 2` 连续 3 次只前进不重复（第 3 轮，机器干净） | ❌ 未达标（真实缺陷，非实验问题） | `evidence/l2_stability_clean3_20260920.log`：run1 `1789858799` 708 PASS 465.2s + 714 PASS 588.4s；run2 `1789859924` **又选 708** FAIL 24.3s；run3 `1789859977` **还是 708** FAIL 28.1s。详见 §4.5 |
-| 2026-09-20 | 缺陷 | L2 | **P0：多视频章只投第 1 点 + 校准把 COMPLETED 打回 UNKNOWN（账本震荡）** | 🔁 已定位，待修 | 9 章 `COMPLETED→UNKNOWN`（722/730/732/734/737/738/741/750/751，全 `SERVER_VERIFIED+CONFLICT`）；`1217304708:video2` 已建为 DISCOVERED 却永远轮不到；见 §4.5 |
-| 2026-09-20 | 缺陷 | L2 | **自适应看门狗从未生效**（时长探测 4/4 全失败） | 🔁 已定位，待修 | 4 条降级日志的 st 均为 `{'currentTime': 0, 'duration': None, 'paused': True, 'readyState': 0}` —— 探测没等 `loadedmetadata` 就取时长；714 是 838s 视频却仍按静态 900s 预算 |
+| 2026-09-20 | 缺陷 | L2 | **P0：多视频章只投第 1 点 + 校准把 COMPLETED 打回 UNKNOWN（账本震荡）** | ✅ 已修（L1 已证，真站待验） | 9 章 `COMPLETED→UNKNOWN`（722/730/732/734/737/738/741/750/751，全 `SERVER_VERIFIED+CONFLICT`）；`1217304708:video2` 已建为 DISCOVERED 却永远轮不到。`8075a0c`（降级校准不再用章级 job_remaining 推翻点级服务端确认）+ `2182a11`（主 reconcile 按点级快照拆条）；详见 §4.5 |
+| 2026-09-20 | 缺陷 | L2 | **自适应看门狗从未生效**（时长探测 4/4 全失败） | ✅ 已修（L1 已证，真站未验） | 4 条降级日志的 st 均为 `{'currentTime': 0, 'duration': None, 'paused': True, 'readyState': 0}` —— 探测没等 `loadedmetadata` 就取时长；`poll_video_duration` 改为轮询到 `duration>0`（25s / 60 次上限），缺凭据不再起浏览器 |
+| 2026-09-20 | 缺陷 | L2 | **D3：重投同一章就地覆盖上一轮产物** | ✅ 已修 | `_archive_existing()` 在 spawn 前把 `chapter_<task>.json` 与 `.scheduler.stdout.log` 按 UTC 时间戳归档（同秒冲突追加 `-n`）；回归见 `test_rerun_same_chapter_keeps_previous_evidence` |
+| 2026-09-20 | 缺陷 | L2 | **D5：父进程按本地码读子进程 UTF-8 产物 → 归因整段丢失** | ✅ 已修 | `open(evidence_path)` 无 `encoding` → Windows cp936 解 UTF-8 抛 `UnicodeDecodeError`，被 `except Exception: pass` 吞掉；一个缺陷同时造成 verdict 退回 FAIL、`failure_stage: null`、`passed_count: null` 三个症状。**又一处本地/云不对称**（Linux CI 永不出错）。详见 §4.5 第 3 条更正 |
 | 2026-09-20 | 修复验证 | L2 | head_cid / stdout 编码 / 降级不再静默 三项在真站生效 | ✅ 达标 | 同一份日志内：`E6.2 head=TaskRecord` **0 次**、`E6.2 head=<纯章号>` 4 次、`has no video` **0 次**、`⚠️ 看门狗降级` 4 次且不再崩 |
 
 > 记录规则：追加不覆盖；结果不可复现时降级为「待验」而非删除。
@@ -184,7 +187,7 @@ stdout 编码加固。**尚未验证的部分**：R-04 在真站是否触发、�
 > 三条的共同点：用一次性的、来自错误工具链的读数，替代了分层只读探测。以后凡"某某不通/某某假完成"，
 > 先给分层探测表，再给结论。
 
-### 4.5 第 3 轮 M0 稳定性验证：判定、根因与两处对本文档的更正
+### 4.5 第 3 轮 M0 稳定性验证：判定、根因与三处对本文档的更正
 
 **判据逐项**（`evidence/l2_stability_clean3_20260920.log`，机器干净、无并发重型任务）
 
@@ -206,7 +209,7 @@ stdout 编码加固。**尚未验证的部分**：R-04 在真站是否触发、�
 UNKNOWN 又可排队 → 再投 → 再打回。**"恢复 status"正在与校准路径互相抵消**，所以 §4.2 的回填
 只修了 `task_type` 这一半，`status` 那一半会被自动改回去。
 
-**两处更正（对我自己先前的说法）**
+**三处更正（对我自己先前的说法）**
 
 1. 我说过"run 1 白播了一个已完成的点"。该结论**证据已不可复现**：per-chapter 日志与 evidence JSON
    按 task_id 命名，run3 重投 708 时**覆盖**了 run1 的产物（现存文件只有 23:20:04–23:20:31、5 个 ct 采样，
@@ -216,15 +219,31 @@ UNKNOWN 又可排队 → 再投 → 再打回。**"恢复 status"正在与校准
    'readyState': 0}` —— 探测没等 `loadedmetadata` 就取 `duration`。即 **P0-01 的自适应看门狗至今从未生效**，
    一直在用静态 900s；714 是 838s 视频，本轮 588s 播完属侥幸，按 0.33× 速率就会被砍成 TIMEOUT。
    这条正是"降级不再静默"改完后才第一次看得见的。
+3. **我归因错了：不存在"父进程按 exit_code 重映射子进程 verdict"。** `HEAD` 里早就有
+   「`result.verdict` 非空则覆盖父进程结论」的代码，重映射从未发生。三个症状
+   （`FAIL` 而非 `DEGRADED`、`failure_stage: null`、`passed_count: null`）的**唯一根因是编码**：
+   `_run_one_chapter` 用 `open(evidence_path)`（无 `encoding`）读子进程写的 UTF-8 产物，
+   Windows 下按 cp936 解码抛 `UnicodeDecodeError`，又被 `except Exception: pass` 整段吞掉 ——
+   于是 `result`/`evidence` 两个分支一个都没执行，verdict 停在退出码推出的 `FAIL`。
+   这是**又一处本地/云不对称**：同一份代码在 Linux runner 上永远不报错，所以云端一直是对的。
+   证据（现存 4 份真实产物，按生产方式读）：
+   ```
+   无 encoding 读取 → UnicodeDecodeError: 'gbk' codec can't decode byte 0x82 in position 2432
+   带 utf-8 读取    → chapter_1217304708.json: DEGRADED | failure_stage=UNKNOWN
+   ```
+   即子进程**一直如实上报了** `DEGRADED + VIDEO_NOT_COMPLETED/UNKNOWN`，是父进程没读进去。
+   最小复现见 `test_non_ascii_evidence_reaches_the_parent`：只往产物里加一个中文字段，
+   `DEGRADED` 立刻变 `FAIL`（真站产物里的章标题、页面文案、console 行全是非 ASCII）。
 
-**另外两条归因缺陷**
+**已落地的修法**（本节三个缺陷）
 
-- 子进程 evidence 自报 `verdict=DEGRADED`（timing 27.5s），父进程汇总却记 `FAIL`（24.3/28.1s）——
-  底层语义被上层按 `exit_code` 重映射掉了，违反"E6.1 §11 不得用 scheduler 摘要覆盖底层 evidence"。
-- 三次汇总行 `failure_stage: null`、`passed_count: null` —— FAIL 却没有失败阶段，不可归因。
-- `ensure_utf8_stdio()` 挂在 `scheduler.scheduler` 的 import 上，导致父日志**混合编码**：
-  `ci_local 第` 一字节级统计 utf8=2 / gbk=1（第 1 行早于 import，按 gbk 写）。加固该放在**入口**，
-  不是库模块导入时。
+- `open(evidence_path, encoding="utf-8")` —— 一处改动同时消掉三个症状。
+- 读取失败不再静默：`except Exception as e:` 打 `[scheduler] chapter_x.json 产物读取失败 …`
+  并保留退出码结论。静默是它能活过三轮验证的原因。
+- 非 PASS 且无失败段 → 显式记 `failure_stage=UNREPORTED_BY_RUNTIME`，不再留 null 伪装成已归因。
+- 重投前 `_archive_existing()` 归档上一轮 `.json` 与 `.log`。
+- `ensure_utf8_stdio()` 从 `scheduler.scheduler` 的 import 移到**进程入口**（`app/run.py`、
+  `scripts/ci_local_run.py`），父日志混合编码（`utf8=2 / gbk=1`）随之消失。
 
 
 ---
@@ -262,7 +281,8 @@ UNKNOWN 又可排队 → 再投 → 再打回。**"恢复 status"正在与校准
 **当前真正阻塞 M0/L2 的问题**（原挂起的 `isPassed_seen` 测量嫌疑已于 §4.1 结案，此处不再重复）：
 
 1. **M0 判据未闭合**：`--max-chapters 2` 连续 3 次"只前进不重复不卡死"尚无一次有效实验
-   （两轮作废，原因见 §4.3）。重跑前置已具备，缺的是一次授权。
+   （两轮作废，原因见 §4.3）。**2026-09-20 晚：第 3 轮的四个缺陷（D1 点级投递 / D2 账本震荡 /
+   D3 证据覆盖 / D5 归因丢失）均已修且各有回归**，重跑前置已具备，缺的是一次授权。
 2. **R-04 真站未验**：自动续播有 12 个单测，但没有一次真站 run 观测到它触发。
 3. **账本刚被重估**：§4.2 使未完成视频从 12 条变成 24 条。任何"还剩多少 / 何时学完"的
    既有结论都必须按新账重说一遍，旧结论不再引用。
