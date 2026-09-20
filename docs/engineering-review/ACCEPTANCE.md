@@ -110,9 +110,9 @@ L1  纯逻辑测试（单元/集成/回归）         —— pytest，CI 已跑�
 | 2026-09-20 | 缺陷 | L2 | **D5：父进程按本地码读子进程 UTF-8 产物 → 归因整段丢失** | ✅ 已修 | `open(evidence_path)` 无 `encoding` → Windows cp936 解 UTF-8 抛 `UnicodeDecodeError`，被 `except Exception: pass` 吞掉；一个缺陷同时造成 verdict 退回 FAIL、`failure_stage: null`、`passed_count: null` 三个症状。**又一处本地/云不对称**（Linux CI 永不出错）。详见 §4.5 第 3 条更正 |
 | 2026-09-20 | M0 | L2 | R-01 续：`--max-chapters 2` 连续 3 次只前进不重复不卡死（**第 4 轮**） | ✅ **首次达标** | `evidence/l2_stability_clean4_20260920.log`：6 次全 PASS，选章两两互异（708/722·730/732·733/734），`COMPLETED 23→29`；汇总第一次带上 `passed_count: 10`。详见 §4.6 |
 | 2026-09-20 | 缺陷 | L2 | **D7：E6.2 refine 的 by_title 迁移吃掉点级兄弟记录（82→74）** | ✅ 已修 + **真站已验** | `<cid>:videoN`/`:other` 与 `<cid>` 同 title → 被当成"task_id 格式迁移"合并 pop；护栏失效 → 第 4 轮 run1a 23s 空投已完成点。复验：`tasks=87→87`、`next_task=1217304708:video2`，第 2 点 `isPassed=true`；见 §4.7 |
-| 2026-09-20 | 缺陷 | L2 | **D10：点级 task_id 的 `:` 在 Windows 变成 NTFS 备用数据流** | ✅ 已修（L1 已证，真站待验） | `dir /r` 实证 0 字节空壳 `chapter_1217304708` + `:video2.json:$DATA`；`_archive_existing` 归档的是空壳 → D3 对点级任务失效。`artifact_slug()` 单一入口；产物已无损迁回。见 §4.7 |
+| 2026-09-20 | 缺陷 | L2 | **D10：点级 task_id 的 `:` 在 Windows 变成 NTFS 备用数据流** | ✅ 已修 + **真站已验** | `dir /r` 实证 0 字节空壳 `chapter_1217304708` + `:video2.json:$DATA`；`_archive_existing` 归档的是空壳 → D3 对点级任务失效。`artifact_slug()` 单一入口；产物已无损迁回，复验见 §4.7 |
 | 2026-09-20 | 缺陷 | L2 | **P1：章内切点未重新起播**（进 `:video2` 时复用点 1 已播完的 `<video>`） | 🔁 已定位，待修 | `DEGRADED 9/10`，唯一失败项 `7_currentTime_growing`，st `currentTime=655 / readyState=0 / duration=None`（655=点 1 片尾）；`9_isPassed_true` 却为 True ⇒ 真实播放层缺陷而非测量假阴性。见 §4.7 |
-| 2026-09-20 | 缺陷 | L2 | **D11：累计 `failure_count` 被当"连续失败"用 → 单次失败锁死整门课** | ✅ 已修（真站后果待解除） | `run_count 104 / failure_count 31`，成功从不清零；D7 复验那一次 DEGRADED 直接把课程打成 `BLOCKED`（`scheduler.py:214` 见之即拒调度）⇒ **明晚 nightly 会拒绝学习**。连续熔断本已由 `ss.consecutive_failures>=3` 承担。见 §4.7 |
+| 2026-09-20 | 缺陷 | L2 | **D11：累计 `failure_count` 被当"连续失败"用 → 单次失败锁死整门课** | ✅ 已修 + 后果已由真实 PASS 解除 | `run_count 104 / failure_count 31`，成功从不清零；D7 复验那一次 DEGRADED 直接把课程打成 `BLOCKED`（`scheduler.py:214` 见之即拒调度）⇒ 明晚 nightly 会拒绝学习。课程层与调度层（`ss.consecutive_failures>=3`）层次不同，问题是这条锁**名不副实**。修后复验：`BLOCKED→ACTIVE`、`failure_count→0`。见 §4.7 |
 | 2026-09-20 | 修复验证 | L2 | head_cid / stdout 编码 / 降级不再静默 三项在真站生效 | ✅ 达标 | 同一份日志内：`E6.2 head=TaskRecord` **0 次**、`E6.2 head=<纯章号>` 4 次、`has no video` **0 次**、`⚠️ 看门狗降级` 4 次且不再崩 |
 
 > 记录规则：追加不覆盖；结果不可复现时降级为「待验」而非删除。
@@ -340,9 +340,31 @@ L1：`356 passed, 1 skipped`（357 collected，69.7s）。**D10 目前只有 L1 
 "连续失败多次"，读的却是**只增不减**的累计计数 `failure_count`（成功分支从不清零）。
 真站读数：`run_count: 104`、`failure_count: 31` —— 第 4 轮 6 次连续 PASS 也没把它拉回 0，
 于是这次 `:video2` 的**单次** DEGRADED 立刻把**整门课**打成 `BLOCKED`
-（`scheduler.py:214` 见课程 BLOCKED 即拒调度）。而真正的连续熔断在 `scheduler.py:219`
-已由 `ss.consecutive_failures >= 3` 独立实现 —— 这条老判据既名不副实又是重复保护。
-修法：成功即 `failure_count = 0`（回归三条：清零 / 单次失败不 BLOCKED / 真连续 3 次仍 BLOCKED）。
+（`scheduler.py:214` 见课程 BLOCKED 即拒调度）。
+**与 `scheduler.py:219` 的 `ss.consecutive_failures >= 3` 不是简单重复**：后者是**调度层**的
+连续失败计数（`app/run.py:331 → run_course` 才是**课程状态层**，按章记账），两者层次不同；
+真正的问题是这条课程层的锁**语义名不副实** —— 它记的是累计值，却行使"连续失败才锁"的职责，
+结果任何一次失败都会永久锁死整门课。修法：成功即 `failure_count = 0`
+（回归三条：清零 / 单次失败不 BLOCKED / 真连续 3 次仍 BLOCKED —— 护栏不删保护）。
+
+**D10 / D11 的真站复验**（`evidence/d10_d11_verify2_20260920.log`，1 轮 × 2 章，
+`XUE_SCHEDULER_FAILURE_BUDGET=2`：默认 1 会让 `:video2` 的必然失败直接 break 掉本轮，
+拿不到自愈所需的 PASS；该 env 只影响这一次本地 run，不动 nightly 行为）
+
+- 第一次尝试被**瞬时网络**打断：每次 `Page.goto` 都 `net::ERR_CONNECTION_CLOSED` → TDVP 走
+  `PROBE_EMPTY`，不臆测选章、**账本零污染**（`run_count` 仍 104、工作树干净）。事后 curl 与
+  Chromium 各 3/3 正常 ⇒ 归因环境而非代码；同日 `git push` 也撞上一次同类瞬时失败。
+- 重试：`next_task=1217304708:video2` → `DEGRADED 26.0s`（P1 未修，符合预期）→ 越过它 →
+  `1217304721 PASS 548.5s`（又一章真学完）。
+- **D10 + D3 同链成立**：点级产物以**常规文件**落盘并按时间戳归档 ——
+  `chapter_1217304708_video2.20260920T100338Z.json` 28,529 B（即从数据流里迁回的那份）与
+  当前 `chapter_1217304708_video2.json` 28,598 B 并存，不再互相抹掉。
+- **D7 第三次复现**：`reconcile → 87` → `E6.2 after live refine … tasks=87`。
+- **D11 由真实事件解除**：课程 `BLOCKED → ACTIVE`、`failure_count 31 → 0`、`success_count 74`
+  —— 不是手改账本，是一次真 PASS 的结果。
+- 新观测（记待办，未修）：ci_local 汇总 `{"verdict":"PASS","passed_count":9,"failure_stage":"UNKNOWN"}`
+  与 `exit=1` 口径不一致 —— `verdict` 取末章，退出码取聚合 `FAILED`。
+  "看起来 PASS 的汇总 + 失败退出码"是下一类归因歧义的种子。
 
 
 ---
