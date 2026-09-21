@@ -41,6 +41,7 @@
 
 import argparse
 import json
+import math
 import os
 import re
 import subprocess
@@ -251,35 +252,51 @@ VIDEO_OID_ENUM_JS = """() => {
 
 
 def nav_action_for_attempt(attempt: int) -> str:
-    """第 N 次章内导航的动作升级（纯函数）：先最保守的滚动，再加点。
+    """第 N 次章内导航的动作升级（纯函数）：先最保守的滚动，再快进当前点。
 
-    实证（4738 第二次 run）：3 次 scrollIntoView 全 ok=True 但绑定帧仍
-    dur=None —— 滚动不足以激活播放器。第 2 次起加"可信点击目标帧 <video>"，
-    等同用户按播放键（Playwright click 走真实输入管线）。
+    实证链（4738 两次 run + C/probe v4 探测）：
+     ① scrollIntoView 3 次全 ok=True 但绑定帧仍 dur=None —— 滚动不激活。
+     ② 点目标帧 .vjs-big-play-button（run 4）：起播成立，但页面串行化任务点，
+        轮外播放器每 ~2s 被状态机暂停、整章被切走 —— 目标点被打断。
+     ③ probe v4：页面**轮内**的已完成点可自由 seek（0.9×dur 无回钳）。
+    ⇒ 第 2 次起改为快进"当前"播放器（仅当该点服务端已 finished，见
+    should_fastforward_current 红线闸门），让它自然 ended、由页面自己推进到目标点。
     """
-    return "scroll" if attempt <= 0 else "scroll_click"
+    return "scroll" if attempt <= 0 else "fastforward_finished_current"
 
 
-def player_activation_selectors() -> tuple:
-    """目标播放器内起播控件的尝试顺序（纯函数，可测）。
+def fastforward_seek_position(duration):
+    """已完成点快进位置 = 90%（纯函数）。不拉 100%：留结尾给页面自己的
+    ended→推进状态机；dur 无效（None/NaN/≤0）返回 None。"""
+    try:
+        d = float(duration or 0)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(d) or d <= 0:
+        return None
+    return round(d * 0.9, 1)
 
-    C 探测（2026-09-21，4738 headless 静态）：cards 无"定位任务点"入口；
-    播放器是 video.js，每个点（含未激活的）都有**可见且 hit-test 可命中**的
-    `.vjs-big-play-button` —— 点它=用户按播放。上一版点击落空的根因：点了
-    `<video>` 本体，被 poster/大按钮层挡住，Playwright actionability 不过。
+
+def should_fastforward_current(current_oid, target_oid,
+                               current_finished) -> bool:
+    """红线闸门（纯函数）：只快进**服务端已判 finished** 且不是目标点自己的当前点。
+
+    拖未完成的进度 = 跳课，绝不允许；已完成点 seek 是站点授权范围内的用户级
+    操作（probe v4 实证无回钳、无惩罚），目的是让页面串行状态机走到目标点。
     """
-    return (".vjs-big-play-button", "video")
+    if not current_oid or not target_oid:
+        return False
+    if current_oid == target_oid:
+        return False
+    return current_finished is True
 
 
-def navigate_to_video_point(page, objectid: str, click: bool = False) -> bool:
-    """章内导航：把目标视频点附件滚进视口中心；click=True 时再真实点击
-    绑定帧的 <video>（用户级起播）。
+def navigate_to_video_point(page, objectid: str) -> bool:
+    """章内导航：把目标视频点附件滚进视口中心（第 1 次尝试的动作）。
 
-    真站实证（4738 e2e，用户目视）：页面停在已完成的第 1 点播放，目标点的
-    player 帧存在但不激活（滚动进视口 dur 仍 None，只有"轮到自己"才播）。
-    滚动+点击都是用户级页面操作：不碰上报链路、不跳过播放 —— dispatch 目标
-    的前序点均已服务端完成（承载规则），不存在"跳着学"。
-    oid 只接受 32 位 hex（DOM 属性回注防注入）。
+    真站实证（4738 e2e，用户目视）：滚动是用户级页面操作、无害但**不足以**
+    激活播放器（3 次 ok=True 绑定帧仍 dur=None）；激活靠后续 fastforward
+    动作。oid 只接受 32 位 hex（DOM 属性回注防注入）。
     """
     if not objectid or not re.fullmatch(r"[0-9a-fA-F]{32}", objectid):
         return False
@@ -287,43 +304,107 @@ def navigate_to_video_point(page, objectid: str, click: bool = False) -> bool:
         frames = page.frames
     except Exception:
         return False
-    scrolled = False
-    clicked = not click
     for fr in frames:
-        if not scrolled and "knowledge/cards" in (fr.url or ""):
-            try:
-                scrolled = bool(fr.evaluate("""(oid) => {
-                    const el = document.querySelector(
-                        '.ans-insertvideo-online[objectid="' + oid + '"]')
-                        || document.querySelector('[objectid="' + oid + '"]');
-                    if (!el) return false;
-                    el.scrollIntoView({block: 'center'});
-                    window.dispatchEvent(new Event('scroll'));
-                    return true;
-                }""", objectid))
-            except Exception:
-                pass
-        if not clicked:
-            try:
-                is_target = fr.evaluate("""(oid) => {
-                    const v = document.querySelector('video');
-                    return !!(v && (v.currentSrc || v.src || '').includes(oid));
-                }""", objectid)
-            except Exception:
-                is_target = False
-            if is_target:
-                for sel in player_activation_selectors():
-                    try:
-                        loc = fr.locator(sel)
-                        if loc.count() == 0:
-                            continue
-                        # 真实鼠标事件 → 该帧获得用户激活上下文，等效人按下播放
-                        loc.first.click(timeout=3000)
-                        clicked = True
-                        break
-                    except Exception:
-                        continue
-    return scrolled and clicked
+        if "knowledge/cards" not in (fr.url or ""):
+            continue
+        try:
+            if fr.evaluate("""(oid) => {
+                const el = document.querySelector(
+                    '.ans-insertvideo-online[objectid="' + oid + '"]')
+                    || document.querySelector('[objectid="' + oid + '"]');
+                if (!el) return false;
+                el.scrollIntoView({block: 'center'});
+                window.dispatchEvent(new Event('scroll'));
+                return true;
+            }""", objectid):
+                return True
+        except Exception:
+            continue
+    return False
+
+
+def fastforward_current_player(page, target_objectid: str) -> bool:
+    """快进"轮内当前"播放器到 90%，让页面自己的 ended→推进 状态机走到目标点。
+
+    run 4 实证：给目标点（轮外）起播会被页面每 ~2s 暂停并切章；唯一能自由
+    操作的是当前点，且**仅当它服务端已 finished**（红线闸门
+    should_fastforward_current，真值读自 cards 的 ans-job-finished 类）。
+    probe v4 实证：finished 点 seek 0.9×dur 无回钳、连续播。
+    当前点=有 metadata 且 src 不含目标 oid 的那帧；seek 只在该帧内按 src
+    匹配执行，oid 不进 JS 字符串拼接（防注入）。
+    """
+    if not target_objectid:
+        return False
+    try:
+        frames = page.frames
+    except Exception:
+        return False
+
+    cur = None   # (frame, oid, duration)
+    for fr in frames:
+        try:
+            st = fr.evaluate("""() => {
+                const v = document.querySelector('video');
+                if (!v) return null;
+                return {src: v.currentSrc || v.src || '',
+                        duration: (isFinite(v.duration) && v.duration > 0)
+                            ? v.duration : null};
+            }""")
+        except Exception:
+            st = None
+        if not st or not st.get("duration"):
+            continue
+        src = st["src"]
+        if target_objectid in src:
+            continue
+        m = re.search(r"[0-9a-fA-F]{32}", src)
+        if not m:
+            continue
+        cur = (fr, m.group(0), st["duration"])
+        break
+    if not cur:
+        return False
+    fr_cur, cur_oid, dur = cur
+
+    finished = None
+    for fr in frames:
+        if "knowledge/cards" not in (fr.url or ""):
+            continue
+        try:
+            finished = fr.evaluate("""(oid) => {
+                const att = document.querySelector(
+                    '.ans-insertvideo-online[objectid="' + oid + '"]');
+                if (!att) return null;
+                const item = att.closest('.ans-attach-ct, .ans-job-item, .ans-item')
+                    || att.parentElement;
+                return item ? item.classList.contains('ans-job-finished') : null;
+            }""", cur_oid)
+        except Exception:
+            finished = None
+        break
+    if not should_fastforward_current(cur_oid, target_objectid, finished):
+        log(f"[bind] current point {cur_oid[:8]} finished={finished} —— "
+            f"红线闸门不放行，不 seek")
+        return False
+
+    pos = fastforward_seek_position(dur)
+    if pos is None:
+        return False
+    try:
+        ok = bool(fr_cur.evaluate("""([oid, pos]) => {
+            const v = document.querySelector('video');
+            if (!v) return false;
+            if ((v.currentSrc || v.src || '').indexOf(oid) < 0) return false;
+            if (!isFinite(v.duration) || v.duration <= 0) return false;
+            v.currentTime = Math.min(pos, v.duration - 1);
+            return Math.abs(v.currentTime - pos) < 2;
+        }""", [cur_oid, pos]))
+    except Exception:
+        ok = False
+    if ok:
+        log(f"[bind] fastforward current point {cur_oid[:8]} -> {pos}s "
+            f"(finished 真点，页面将自然 ended 推进)")
+    return ok
 
 
 def enumerate_video_objectids(page) -> list[str]:
@@ -572,7 +653,6 @@ def should_navigate_to_target(target_objectid, bound_dur, stalled_for_s,
         return False
     if target_vi < 2:
         return False
-        return False
     if bound_dur:
         return False
     if nav_attempts >= max_attempts:
@@ -807,8 +887,15 @@ def run_test(args, params: "CourseParams | None" = None):
                 last_nav_at = now_f
                 stalled_since = now_f
                 nav_action = nav_action_for_attempt(nav_attempts - 1)
-                moved = navigate_to_video_point(
-                    page, target_objectid, click=(nav_action == "scroll_click"))
+                if nav_action == "fastforward_finished_current":
+                    # 快进"当前"（轮内）播放器到 90%：页面自己的 ended→推进
+                    # 状态机会把目标点变成名正言顺的当前点（红线闸门在 helper
+                    # 内部：仅 finished 点可 seek）
+                    moved = fastforward_current_player(page, target_objectid)
+                    if moved:
+                        navigate_to_video_point(page, target_objectid)
+                else:
+                    moved = navigate_to_video_point(page, target_objectid)
                 evidence["target_nav_attempts"] = nav_attempts
                 evidence["target_nav_ok"] = moved
                 log(f"[bind] in-page navigate to target #{nav_attempts} "
