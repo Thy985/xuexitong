@@ -40,6 +40,7 @@ class ReconcileReport:
     kept_completed: int = 0                    # 有强证据、保留 COMPLETED
     downgraded: int = 0                        # 由 COMPLETED 降级（污染修复）
     upgraded_ui: int = 0                       # 由 NONE/非COMPLETED 升为 COMPLETED(UI)
+    healed_by_server: int = 0                  # BLOCKED 由服务端 finished 真源恢复
     repair_map: dict = field(default_factory=dict)   # {task_id: {before, after, reason}}
 
     def to_dict(self) -> dict:
@@ -49,6 +50,7 @@ class ReconcileReport:
             "kept_completed": self.kept_completed,
             "downgraded": self.downgraded,
             "upgraded_ui": self.upgraded_ui,
+            "healed_by_server": self.healed_by_server,
             "repair_map": self.repair_map,
         }
 
@@ -129,6 +131,7 @@ def reconcile_registry(
     discovery_tasks: list,
     dom_status: Optional[dict] = None,
     live_pending: Optional[set] = None,
+    live_finished: Optional[set] = None,
 ) -> tuple[dict[str, TaskRecord], ReconcileReport]:
     """将现有 Registry 与最新 Discovery 校准为 canonical 状态。
 
@@ -138,12 +141,15 @@ def reconcile_registry(
         dom_status: {chapter_id: 'completed'|'pending'|'unknown'} 服务器 DOM 渲染状态
         live_pending: 由 live verification（L2/L3）确认「当前确实未完成」的 task_id 集合。
                       非 None 时用于「COMPLETED 被实时状态覆盖」的校准（E6.2）
+        live_finished: 由 live verification 确认「服务端已判 finished」的 task_id 集合。
+                      用于 BLOCKED 任务的服务端真源恢复（用户手动看完某点的场景）
 
     Returns:
         (new_registry, report)
     """
     dom_status = dom_status or {}
     live_pending = live_pending if live_pending is not None else set()
+    live_finished = live_finished if live_finished is not None else set()
     report = ReconcileReport(course_key=course_key)
 
     # 迁移旧 task_id（title 匹配但 task_id 格式已变）
@@ -223,7 +229,13 @@ def reconcile_registry(
         # 「未完成」→ 下面对其 mark_stale+downgrade_to_pending → status 回到
         # PENDING → 反复重跑一个已达失败上限（如 headed-Xvfb 抓不到 <video> 的
         # 1217304719）的任务，形成无限循环。BLOCKED 保持冻结，等显式/冷却恢复。
+        # 例外（2026-09-21 用户选定方案1）：live job points 读到**本点**已被服务端
+        # 判 finished（用户手动看完的场景）→ 以 SERVER_VERIFIED 证据恢复为
+        # COMPLETED。replay 在此场景产生不了真实成功事件（点已完成不会播），
+        # 服务端判定本身就是那个真实事件。失败计数保留不清（留痕）。
         if old is not None and getattr(old, "status", "") == "BLOCKED":
+            if tid in live_finished:
+                _heal_blocked_by_server_truth(tid, old, report)
             result[tid] = old
             continue
         if dom_done:
@@ -320,27 +332,88 @@ def reconcile_registry(
     return result, report
 
 
+def _heal_blocked_by_server_truth(tid: str, rec: TaskRecord,
+                                  report: "ReconcileReport") -> bool:
+    """服务端真源恢复单个 BLOCKED 记录（方案1）。命中返回 True。
+
+    live job points 读到**本点**已被服务端判 finished（用户手动看完的场景）
+    → 以 SERVER_VERIFIED 证据恢复为 COMPLETED。replay 在此场景产生不了
+    真实成功事件（点已完成不会播），服务端判定本身就是那个真实事件。
+    失败计数保留不清（留痕：曾连续失败到熔断）。
+    """
+    rec.status = "COMPLETED"
+    rec.verification = Verification(
+        level="SERVER_VERIFIED", verified_at_utc=_now(), run_id="",
+        source_detail="live job points: server marked this point finished")
+    rec.completion_evidence = CompletionEvidence(
+        type="SERVER_VERIFIED", source="live job points",
+        run_id="",
+        detail="server finished marker on the exact point "
+               "(manual watch / server truth)")
+    report.healed_by_server += 1
+    report.repair_map[tid] = {
+        "before": "BLOCKED", "after": "COMPLETED",
+        "reason": "server live truth: point finished"}
+    return True
+
+
+def heal_blocked_by_live(
+    course_key: str,
+    existing: dict[str, TaskRecord],
+    discovery_tasks: list,
+    dom_status: Optional[dict],
+    verify_points,
+) -> tuple[dict[str, TaskRecord], ReconcileReport]:
+    """BLOCKED 章的服务端真源恢复（方案1，2026-09-21 用户选定）。
+
+    对每个含 BLOCKED 任务的章调用 `verify_points(cid) -> list[dict] | None`
+    （生产里是 live_verify_chapter 的 points；测试里是桩），把读到的 finished
+    点汇入 live_finished 交给 reconcile_registry。只读冻结章 —— 健康章不烧
+    L2 成本；读数失败/无 finished → 保持冻结（恢复必须踩在服务端真源上）。
+    """
+    frozen = sorted({
+        (t.chapter_id or "") for t in existing.values()
+        if getattr(t, "status", "") == "BLOCKED" and (t.chapter_id or "")
+    })
+    if not frozen:
+        return existing, ReconcileReport(course_key=course_key)
+    from tvdp.tdvp import build_live_finished
+    live_done: set[str] = set()
+    for cid in frozen:
+        pts = verify_points(cid) or []
+        live_done |= build_live_finished(pts)
+    if not live_done:
+        return existing, ReconcileReport(course_key=course_key)
+    report = ReconcileReport(course_key=course_key)
+    for tid, rec in existing.items():
+        if getattr(rec, "status", "") == "BLOCKED" and tid in live_done:
+            _heal_blocked_by_server_truth(tid, rec, report)
+    return existing, report
+
+
 def pick_conflict_chapters(
     chapter_ids: list[str],
     existing: dict[str, TaskRecord],
     dom_pending: set[str],
 ) -> list[str]:
     """选「需要 L2 live 复核」的章节：registry 里有 COMPLETED（视频已完成/强证据）
-    但服务器 DOM 此刻显示该章待完成 → 存在 COMPLETED 被实时状态推翻的嫌疑。
+    但服务器 DOM 此刻显示该章待完成 → 存在 COMPLETED 被实时状态推翻的嫌疑；
+    或该章有 BLOCKED 任务 —— 其服务端真源恢复（方案1）也依赖 live 读数。
 
     返回该章 id 列表；只对这些章做 read_chapter_job_points（成本梯度）。
     """
     conflicted = set()
     for cid in chapter_ids:
-        if cid not in dom_pending:
-            continue
         recs = [r for t, r in existing.items() if r.chapter_id == cid]
         completed = [r for r in recs if r.status == "COMPLETED"]
         completed_video = [
             r for r in completed
             if (getattr(r, "task_type", "video") or "video") == "video"
         ]
-        if completed or completed_video:
+        blocked = [r for r in recs if r.status == "BLOCKED"]
+        if (completed or completed_video) and cid in dom_pending:
+            conflicted.add(cid)
+        elif blocked:
             conflicted.add(cid)
     # 按原有章节顺序返回，保持确定性
     return [c for c in chapter_ids if c in conflicted]
@@ -455,6 +528,7 @@ def run_calibrated_reconcile(
     page=None,
     course_params: Optional[dict] = None,
     live_pending_override: Optional[set] = None,
+    live_finished_override: Optional[set] = None,
 ) -> tuple[dict[str, TaskRecord], ReconcileReport]:
     """Discovery → (可选) L2 live 复核冲突章 → Reconcile。
 
@@ -471,10 +545,12 @@ def run_calibrated_reconcile(
         t.chapter_id for t in discovery_tasks if t.chapter_id
     ]
     live = set(live_pending_override or set())
+    live_done = set(live_finished_override or set())
 
     conflicted = pick_conflict_chapters(chapter_ids, existing, dom_pending)
     if page is not None and course_params and conflicted:
-        from tvdp.tdvp import build_live_pending, read_chapter_job_points
+        from tvdp.tdvp import (build_live_finished, build_live_pending,
+                               read_chapter_job_points)
         for cid in conflicted:
             job_pts = read_chapter_job_points(
                 page, cid,
@@ -483,7 +559,9 @@ def run_calibrated_reconcile(
                 course_params.get("cpi", ""),
             )
             live |= build_live_pending(job_pts)
+            live_done |= build_live_finished(job_pts)
 
     return reconcile_registry(
-        course_key, existing, discovery_tasks, dom_status=dom, live_pending=live,
+        course_key, existing, discovery_tasks, dom_status=dom,
+        live_pending=live, live_finished=live_done,
     )

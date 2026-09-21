@@ -1307,6 +1307,36 @@ def _run_tdvp_probe(course_url: str, course_key: str,
         print(f"[scheduler] DIAG queue4 ppp_status={getattr(_dq4, 'status', None)} "
               f"frozen={_dq_frozen}", flush=True)
 
+        # 4.2 方案1（2026-09-21 用户选定）：BLOCKED 章的服务端真源恢复。
+        #     冻结章不进队列 → 4.5 的 live 复核永远轮不到它们；这里显式读冻结章
+        #     的 finished 点（L2 成本：每冻结章一次），命中即以 SERVER_VERIFIED
+        #     恢复（用户手动看完的场景 —— replay 产生不了事件，点已完成不会播），
+        #     再重建队列。读数失败/无 finished → 保持冻结（恢复必须踩在真源上）。
+        if _dq_frozen:
+            from app.registry.reconcile import heal_blocked_by_live
+
+            def _verify_frozen_points(cid):
+                _v = live_verify_chapter(
+                    cid, params.get("course_id", ""), params.get("clazz_id", ""),
+                    params.get("cpi", ""),
+                    os.environ.get("CX_USER", ""), os.environ.get("CX_PASS", ""))
+                return (_v or {}).get("points")
+
+            existing, _heal_rep = heal_blocked_by_live(
+                course_key, existing, tasks, dom_status, _verify_frozen_points)
+            if _heal_rep.healed_by_server:
+                save_registry(course_key, existing)
+                print(f"[scheduler] TDVP: healed_by_server="
+                      f"{_heal_rep.healed_by_server} "
+                      f"tasks={sorted(_heal_rep.repair_map)}", flush=True)
+                pts_map = load_chapter_points(course_key)
+                done_ids = merge_done_with_points(
+                    done_chapter_ids_from_registry(existing), set(), pts_map)
+                queue = reconcile_queue(course_key, existing, done_ids,
+                                        points_map=pts_map)
+                print(f"[scheduler] TDVP: queue rebuilt after heal, "
+                      f"{len(queue.items)} READY tasks", flush=True)
+
         # 4.5 E6.2：对候选目标章做 L2 live 复核，把「多视频章」拆成逐个 video task，
         #     并让「当前未完成的视频」不被提前当作完成（4708 双视频只播 1 个的问题）。
         if queue.items:

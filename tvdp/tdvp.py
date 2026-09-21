@@ -994,6 +994,17 @@ def build_live_pending(job_points: list[dict]) -> set[str]:
     return {p["task_id"] for p in job_points if not p.get("isFinished")}
 
 
+def build_live_finished(job_points: list[dict]) -> set[str]:
+    """从一章的实时 job 点列表推导「服务端已判 finished」的 task_id 集合。
+
+    与 build_live_pending 互补：BLOCKED 任务的合法恢复事件就是这里 ——
+    用户手动看完某点后服务端会把它判 finished，registry 据此以
+    SERVER_VERIFIED 证据恢复（replay 反而产生不了事件：点已完成不会播）。
+    """
+    return {p["task_id"] for p in job_points
+            if p.get("isFinished") and p.get("task_id")}
+
+
 def chapter_video_summary(job_points: list[dict]) -> tuple[int, int]:
     """返回一章的实时 job 点里 (视频点总数, 已完成视频点数)。
 
