@@ -604,6 +604,22 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
     if "cooldown expired" in reason:
         max_chapters = 1
 
+    # ── Step 2.7: 人工显式恢复（2026-09-22 用户定案）────────────────
+    # 课程级 manual override 在 determine_action 里；任务级冻结原先没有合法出口：
+    # 被冻的 `:videoN`（如 1217304738:video2，cf=3）往往正是章内剩余工作量的唯一
+    # 承载者（见 has_unfinished_video_sibling），既进不了队列又永远等不到治愈事件，
+    # 只剩手改账本一条路。manual = 人工主动干预 → 解冻回 PENDING，让它去挣一次真实成功。
+    # schedule 腿不走这里：夜巡不自行放宽熔断，只有服务端真源恢复那条路。
+    if trigger == "manual":
+        from app.registry.reconcile import restore_blocked_for_manual
+        from app.registry.task_registry import load_registry, save_registry
+        _reg = load_registry(identity_key)
+        _restored = restore_blocked_for_manual(_reg)
+        if _restored:
+            save_registry(identity_key, _reg)
+            print(f"[scheduler] TDVP: manual_restore={len(_restored)} "
+                  f"tasks={sorted(_restored)}", flush=True)
+
     # ── Step 3: 多章循环执行 ─────────────────────────────────────
     t0 = time.time()
     chapters_attempted: list[str] = []

@@ -22,9 +22,15 @@ from state.course_state import (
 
 @pytest.fixture
 def tmp_state_dir(tmp_path):
+    """使用临时目录替代全局 state/ 目录（含 registry 账本）。
+
+    registry 必须在内：`run_scheduler` 的 manual 腿会真写账本（解冻 BLOCKED 点），
+    只挪 state.course_state 时它会把仓库里的 tasks.json 改掉。
+    """
     with patch("state.course_state.STATE_DIR", tmp_path / "state"), \
          patch("state.course_state.COURSES_DIR", tmp_path / "state" / "courses"), \
-         patch("state.course_state.ACTIVE_FILE", tmp_path / "state" / "active_course.json"):
+         patch("state.course_state.ACTIVE_FILE", tmp_path / "state" / "active_course.json"), \
+         patch("app.registry.task_registry.TASKS_DIR", tmp_path / "registry"):
         yield tmp_path
 
 
@@ -430,5 +436,78 @@ def test_adaptive_video_watch_s():
     assert 900 <= W(200, 20000) <= 2400
 
 
+# ── 人工显式恢复：manual 腿解冻 BLOCKED 点，schedule 腿不放宽熔断 ──
+# 缺口原状：`1217304738:video2` 连续失败 3 次冻结后，账本没有任何合法入口再投它，
+# 而它正是那章剩余视频工作量的唯一承载者 → 整章搁浅，只剩手改 JSON。
+
+CID4738 = "1217304738"
+VID2_4738 = "1217304738:video2"
+
+
+def _frozen_4738():
+    from app.registry.task_registry import TaskRecord
+    first = TaskRecord(CID4738, CID4738, "IPV6", task_type="video",
+                       status="COMPLETED", consecutive_failures=1)
+    first.verification.level = "SERVER_VERIFIED"
+    first.completion_evidence.passed_object_ids = ["94382be4d0a1c2b3"]
+    second = TaskRecord(VID2_4738, CID4738, "IPV6", task_type="video",
+                        status="BLOCKED", consecutive_failures=3, attempt_count=3)
+    second.failure.stage = "7_CURRENTTIME_GROWING"
+    return {CID4738: first, VID2_4738: second}
+
+
+def test_manual_run_unfreezes_and_dispatches_the_frozen_point(
+        sample_identity, tmp_state_dir, monkeypatch):
+    from app.registry.task_registry import load_registry, save_registry
+    initialize_course(sample_identity)
+    save_course_state(CourseState(course_identity=sample_identity, status="ACTIVE"))
+    key = sample_identity.key()
+    save_registry(key, _frozen_4738())
+    from scheduler import scheduler as sched
+    monkeypatch.setattr(sched, "_run_tdvp_probe", lambda *a, **k: None)
+    monkeypatch.setattr(sched, "_probe_video_duration_s", lambda *a, **k: (0, "stub"))
+    dispatched = {}
+
+    def fake_run_one(course_url, chapter_id, task_id, trigger, run_id,
+                     video_index=0, max_s=900):
+        dispatched.update(task_id=task_id, chapter=chapter_id,
+                          video_index=video_index)
+        return {"passed": True, "verdict": "PASS", "runtime_evidence": {},
+                "failure_stage": None, "exit_code": 0, "timing_s": 1.0,
+                "timed_out": False}
+    monkeypatch.setattr(sched, "_run_one_chapter", fake_run_one)
+
+    out = sched.run_scheduler(course_url="", chapter_id=VID2_4738,
+                              trigger="manual", run_id="900", max_chapters=1)
+
+    reg = load_registry(key)
+    assert reg[VID2_4738].status == "PENDING"
+    assert reg[VID2_4738].consecutive_failures == 0
+    assert reg[VID2_4738].attempt_count == 3, "恢复不许抹掉历史尝试次数"
+    assert dispatched == {"task_id": VID2_4738, "chapter": CID4738,
+                          "video_index": 2}, dispatched
+    assert out.result == "SUCCESS"
+
+
+def test_scheduled_run_leaves_the_frozen_point_frozen(
+        sample_identity, tmp_state_dir, monkeypatch):
+    from app.registry.task_registry import load_registry, save_registry
+    initialize_course(sample_identity)
+    save_course_state(CourseState(course_identity=sample_identity, status="ACTIVE"))
+    key = sample_identity.key()
+    save_registry(key, _frozen_4738())
+    from scheduler import scheduler as sched
+    monkeypatch.setattr(sched, "_run_tdvp_probe", lambda *a, **k: None)
+    runs = []
+    monkeypatch.setattr(sched, "_run_one_chapter", lambda *a, **k: runs.append(k))
+
+    sched.run_scheduler(course_url="", chapter_id=VID2_4738,
+                        trigger="schedule", run_id="901", max_chapters=1)
+
+    assert runs == [], "冻结点不得被夜巡投出去"
+    assert load_registry(key)[VID2_4738].status == "BLOCKED"
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+

@@ -63,7 +63,8 @@ def state_and_fake(monkeypatch, tmp_path):
     """scoped fixture：临时 state 目录 + 假 app 子进程环境 + 激活课程。"""
     with patch("state.course_state.STATE_DIR", tmp_path / "state"), \
          patch("state.course_state.COURSES_DIR", tmp_path / "state" / "courses"), \
-         patch("state.course_state.ACTIVE_FILE", tmp_path / "state" / "active_course.json"):
+         patch("state.course_state.ACTIVE_FILE", tmp_path / "state" / "active_course.json"), \
+         patch("app.registry.task_registry.TASKS_DIR", tmp_path / "state" / "registry"):
         identity = CourseIdentity(
             course_id="265997861", clazz_id="151695658", cpi="506830460",
             title="计算机网络", raw_url="", resolved_at_utc="2026-01-01T00:00:00Z",

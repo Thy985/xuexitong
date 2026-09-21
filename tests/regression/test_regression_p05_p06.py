@@ -34,10 +34,11 @@ CH_B = "1217304702"
 
 @pytest.fixture
 def act(monkeypatch, tmp_path):
-    """临时 state：激活一个课程。"""
+    """临时 state：激活一个课程（registry 账本一起挪走，manual 腿会真写它）。"""
     with patch("state.course_state.STATE_DIR", tmp_path / "state"), \
          patch("state.course_state.COURSES_DIR", tmp_path / "state" / "courses"), \
-         patch("state.course_state.ACTIVE_FILE", tmp_path / "state" / "active_course.json"):
+         patch("state.course_state.ACTIVE_FILE", tmp_path / "state" / "active_course.json"), \
+         patch("app.registry.task_registry.TASKS_DIR", tmp_path / "state" / "registry"):
         identity = CourseIdentity(
             course_id="265997861", clazz_id="151695658", cpi="506830460",
             title="计算机网络", raw_url="", resolved_at_utc="2026-01-01T00:00:00Z",

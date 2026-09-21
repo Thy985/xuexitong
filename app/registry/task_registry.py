@@ -284,6 +284,22 @@ class TaskRecord:
         self.updated_at_utc = now
         return self.status
 
+    def restore_for_manual_retry(self) -> "bool":
+        """人工显式恢复：BLOCKED → PENDING，清失败计数，保留失败留痕与尝试次数。
+
+        任务级熔断原本只有两条出路（服务端真源治愈 / 手改 JSON），后者绕过账本，
+        前者在"点确实没学成"时永远等不到。manual 触发就是缺口的那条合法出路——
+        与课程级 manual override 同族。返回 True 表示本次真的解了冻。
+        """
+        if self.status != "BLOCKED":
+            return False
+        now = self._now()
+        self.status = "PENDING"
+        self.consecutive_failures = 0
+        self.lease = Lease()
+        self.updated_at_utc = now
+        return True
+
     def point_is_server_verified(self) -> bool:
         """该**点**自身是否带服务端确认（isPassed 的具体对象 id）。
 
