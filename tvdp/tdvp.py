@@ -907,6 +907,45 @@ def _classify_job(marker_class: str) -> str:
     return "other"
 
 
+def job_rows_to_points(rows: list[dict], knowledge_id: str) -> list[dict]:
+    """cards 帧原始行 → 点级任务（纯函数，可测）。D12 修复点。
+
+    去重按**点身份**而非文本：视频点带 `.ans-insertvideo-online[objectid]`
+    （稳定身份），同 oid 的重复访问（item 与内嵌 icon 各命中一次）折叠；
+    两个 marker/文本全同、只有 oid 不同的点**不再被吞**（旧键
+    `marker|text[:20]` 在空文本多视频章上碰撞，708 实测 total 2→1）。
+    无 oid 的行退回旧的文本键去重，行为不变。
+    """
+    points: list[dict] = []
+    seen_oids: set[str] = set()
+    seen_text_keys: set[str] = set()
+    video_seen = 0
+    for r in rows:
+        typ = r.get("type") or _classify_job(r.get("marker") or "")
+        oid = r.get("objectid")
+        if oid:
+            if oid in seen_oids:
+                continue
+            seen_oids.add(oid)
+        else:
+            key = (r.get("marker") or "") + "|" + (r.get("titleText") or "")[:20]
+            if key in seen_text_keys:
+                continue
+            seen_text_keys.add(key)
+        r = dict(r)
+        if typ == "video":
+            # 第 1 个视频沿用章节 id（与 registry 的 video task_id 一致）；
+            # 第 2+ 个用 <chapterId>:video<idx>（与 build_tasks 的多视频拆分一致）。
+            video_seen += 1
+            r["task_id"] = (knowledge_id if video_seen == 1
+                            else f"{knowledge_id}:video{video_seen}")
+        else:
+            r["task_id"] = f"{knowledge_id}:{typ}"
+        r["type"] = typ
+        points.append(r)
+    return points
+
+
 def read_chapter_job_points(
     page,
     knowledge_id: str,
@@ -939,7 +978,6 @@ def read_chapter_job_points(
         page.wait_for_timeout(1200)
         rows = fr.evaluate("""() => {
             const out = [];
-            const seen = new Set();
             document.querySelectorAll('.ans-job-item, .ans-item, .ans-job-icon').forEach(n => {
                 const icon = n.classList.contains('ans-job-icon')
                     ? n : n.querySelector('.ans-job-icon');
@@ -962,25 +1000,17 @@ def read_chapter_job_points(
                     if (hasVideo || /观看.*视频|播放|总时长的?\\s*\\d+%|视频点/i.test(txt)) type = 'video';
                     else if (/达标测试|测验|测试|作业|考试/i.test(txt)) type = 'quiz';
                 }
-                const key = marker + '|' + (item.innerText||'').slice(0,20);
-                if (seen.has(key)) return; seen.add(key);
+                // 视频点的稳定身份（D12）：同 oid = 同一点被 item/icon 双访问；
+                // 不同 oid = 不同点，绝不再按文本折叠。去重在 Python 侧
+                // job_rows_to_points 完成。
+                const vid = item.querySelector('.ans-insertvideo-online[objectid]');
                 out.push({ marker, type, isFinished: finished,
-                           titleText: (item.innerText||'').trim().replace(/\\s+/g,' ').slice(0,60) });
+                           titleText: (item.innerText||'').trim().replace(/\\s+/g,' ').slice(0,60),
+                           objectid: vid ? (vid.getAttribute('objectid') || '') : '' });
             });
             return out;
         }""")
-        video_seen = 0
-        for r in rows:
-            typ = r["type"] or _classify_job(r["marker"] or "")
-            if typ == "video":
-                # 第 1 个视频沿用章节 id（与 registry 的 video task_id 一致）；
-                # 第 2+ 个用 <chapterId>:video<idx>（与 build_tasks 的多视频拆分一致）。
-                video_seen += 1
-                r["task_id"] = knowledge_id if video_seen == 1 else f"{knowledge_id}:video{video_seen}"
-            else:
-                r["task_id"] = f"{knowledge_id}:{typ}"
-            r["type"] = typ
-            points.append(r)
+        points.extend(job_rows_to_points(rows, knowledge_id))
         break
     return points
 
