@@ -46,7 +46,14 @@ on:
         required: false
         default: "2"
   schedule:
-    - cron: '0 16 * * *'  # 每天北京时间 00:00 触发（GitHub cron 为 UTC，北京时间=UTC+8 → 每日 UTC 16:00）
+    # 一天两次触发，每次只学 1 个视频任务点（max_chapters 兜底 1；executed 对
+    # 每次尝试计数，所以一轮最多 1 次失败 → 一晚最多 2 次，够不到 failure_count>=3
+    # 的课程熔断阈值）。两条都走 scheduler 一条腿：MVP learn 步只在手动
+    # action=run 时跑（2026-09-21 之前 schedule 会同时触发 scheduler + MVP 两条腿）。
+    # GitHub cron 是 UTC：16:00 = 北京 00:00，04:00 = 北京 12:00，相隔 12h，
+    # 避开 concurrency group (xuexitong-active-course, cancel-in-progress:false) 排队。
+    - cron: '0 16 * * *'
+    - cron: '0 4 * * *'
 
 permissions:
   contents: write  # 允许将 state/ 持久化回仓库
@@ -157,7 +164,7 @@ jobs:
 
       # ── Run 模式: 执行视频学习 ────────────────────────────────────
       - name: Run MVP learn (headed + Xvfb)
-        if: github.event.inputs.action == 'run' || github.event.inputs.action == ''
+        if: github.event.inputs.action == 'run'
         continue-on-error: true
         run: |
           Xvfb :99 -screen 0 1440x900x24 -ac &
