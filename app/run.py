@@ -314,12 +314,11 @@ def cmd_run(args) -> int:
                     failure_stage = str((ev or {}).get("failure_stage", "") or "") \
                         if ev else ""
                     detail = str((ev or {}).get("verdict", "") or "")[:200]
-                    blocked = target.mark_failed(
+                    status = target.mark_failed(
                         run_id=run_id, detail=detail, failure_stage=failure_stage,
                     )
                     save_registry(identity.key(), reg)
-                    print(f"[run] Task {chapter} marked "
-                          f"{'BLOCKED' if blocked else 'FAILED'} "
+                    print(f"[run] Task {target.task_id} marked {status} "
                           f"(cf={target.consecutive_failures}/{target.max_attempts}, "
                           f"stage={failure_stage or '?'})", flush=True)
         except Exception as e:

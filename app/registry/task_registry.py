@@ -260,7 +260,7 @@ class TaskRecord:
                     failure_stage: str = "") -> "bool":
         """标记失败：consecutive_failures+1，达阈值 → BLOCKED，否则 FAILED。
         调用方必须立即 save_registry() 持久化。
-        返回 True 表示已达阈值进入 BLOCKED。
+        返回新的 status 字符串（"FAILED" / "BLOCKED"）—— 当 bool 用恒真，别看错。
         """
         now = self._now()
         self.attempt_count += 1
