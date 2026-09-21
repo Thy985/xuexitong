@@ -15,14 +15,14 @@
 L4  上云回归（GHA cron 真跑）            —— 只验收 Step「上云」
 L3  真站冒烟（真账号/真课程）             —— 本地，Playwright 起浏览器连真站
 L2  功能/稳定性验证（本地，含真浏览器但可离线/可控）  —— Xvfb 有头 / headless=False
-L1  纯逻辑测试（单元/集成/回归）         —— pytest，CI 已跑（现 389 passed + 1 skip）
+L1  纯逻辑测试（单元/集成/回归）         —— pytest，CI 已跑（现 394 passed + 1 skip）
 ```
 
 ### L1 · 纯逻辑测试（CI，pytest）
 - **跑法**：`.github/workflows/test.yml`（push/PR 自动）→ `pytest tests/unit tests/integration tests/regression`。
-- **判据**：全部通过；`--maxfail=5` 内不爆炸（不允许零星断言失败仍绿）。基线：2026-09-21 实测 **389 passed, 1 skipped**（共 390 collected，69.9s）。
+- **判据**：全部通过；`--maxfail=5` 内不爆炸（不允许零星断言失败仍绿）。基线：2026-09-21 实测 **394 passed, 1 skipped**（共 395 collected，69.4s）。
   > 09-15 基线 209+1/72s → 09-20 上午 296+1/68s → D1~D7、D10、D11、P1 十起缺陷各带回归后 364+1/69.8s
-  > → P1 帧绑定（+10）、方案1 服务端真源恢复（+10）、D12 点枚举去重（+5）后 389+1/69.9s。
+  > → P1 帧绑定（+10）、方案1 服务端真源恢复（+10）、D12 点枚举去重（+5）、绑定 reload 策略（+5）后 394+1/69.4s。
   > **耗时也是判据**：同一套用例从 239s 降到 68s，差额正是"测试偷偷起真浏览器"被堵住的时间（见 §4.4）；
   > 之后又加了 68 条用例，耗时几乎没动（68→69.8s），说明新用例全在 fake 层。
 - **证据**：`pytest.log`（失败时自动上传 artifact）。
@@ -117,6 +117,8 @@ L1  纯逻辑测试（单元/集成/回归）         —— pytest，CI 已跑�
 | 2026-09-20 | 修复验证 | L2 | head_cid / stdout 编码 / 降级不再静默 三项在真站生效 | ✅ 达标 | 同一份日志内：`E6.2 head=TaskRecord` **0 次**、`E6.2 head=<纯章号>` 4 次、`has no video` **0 次**、`⚠️ 看门狗降级` 4 次且不再崩 |
 | 2026-09-21 | 缺陷 | L2 | **D12：`read_chapter_job_points` 去重键 `marker\|text[:20]` 吞掉空文本的兄弟视频点** | ✅ 已修 + 真站读数实证 | 708 诊断：两视频行 marker 全同、innerText 同为空，仅 objectid 不同 → 第二点在读数前被丢 → live 报 `total=1`，方案1 恢复永远命不中。去重下沉为纯函数 `job_rows_to_points`（oid 身份去重、无 oid 退回文本键）；修后真站读数 `total=2 finished=2`，`:video2` 据此解冻（§4.9） |
 | 2026-09-21 | 缺陷 | L2/L3 | **P1 残留：headed 会话中绑定帧出现后消失，且 reload 恢复对绑定模式有害** | 📁 已立案，待修 | 复验日志：绑定帧 1s `found=True` → 11s 起 `target_frame_not_found`；同页 headless 只读探测两帧都在。reload 把页面打回点 1 适得其反。修法候选：绑定模式不触发 reload + 目标点导航手段（点击章内条目属页面内导航，不越播放红线，待定）。见 §4.9 |
+| 2026-09-21 | 定性更新 | L2/L3 | ↑ 该现象的根因：**已完成态 artifact，不是引擎缺陷** | ✅ 定性 + reload 已修 | 只读持续性观测（4738 真实未完成点：绑定帧 50s 稳定 25/25；708 消失只发生在服务端判完成的点 —— 完成点不再保留播放器）。修复：`video_reload_warranted` 纯函数，`target_frame_not_found` 不再触发 reload，Step F 预算耗尽诚实 FAIL。绑定链路端到端（真实未完成 `:videoN` 播进）仍待一次授权 run。 |
+| 2026-09-21 | 缺陷 | L2 | **D13：账本 `:videoN` 与绑定枚举源错位（幻影点级记录）** | 📁 已立案，待修 | 4730/4734/4737 账本有 `:video2`（`read_chapter_job_points` 按 icon/文本启发式数"视频点"），页面 `.ans-insertvideo-online[objectid]` 却只有 1 个（4734/4737 那 1 个还是 finished）。绑定侧现状**诚实 FAIL**（`target video point N not on page`，不误播），但幻影记录永远学不完、反复占投递。修复方向：用 D12 起 live 行携带的 objectid 把"非 attach-video 的视频点"从可 dispatch 集合区分出来。 |
 
 > 记录规则：追加不覆盖；结果不可复现时降级为「待验」而非删除。
 
@@ -459,6 +461,18 @@ finished=1 points=[('1217304708', True)]` —— `:video2` 根本不在读数里
 `cf=4` 保留不清（留痕）；同轮冻结章 `1217304719`（live finished=false）**不动**，
 护栏如设计。L1 `389 passed, 1 skipped`（390 collected，69.9s）。
 
+**P1 残留的定性收尾（同日，只读持续性观测）**：在真实**未完成**的 attach-video 点上
+（4738 的 `:video2`，目标 oid `e79a9a86…`），绑定帧在 headed 会话里 **50s 持续存在**
+（25/25 采样 found=True）—— 708 的"出现后消失"只发生在服务端已判完成的点：完成点
+不再保留播放器，是**已完成态 artifact，不是引擎缺陷**。已修的部分：
+`video_reload_warranted` 纯函数 —— `target_frame_not_found` 不再触发 reload
+（reload 实证把页面打回点 1、阻碍推进），Step F 预算耗尽即诚实 FAIL。
+未修并立案 **D13**：账本 `:videoN` 按 job-icon 启发数点、绑定按
+`.ans-insertvideo-online[objectid]` 枚举 —— 4730/4734/4737 出现"账本有 `:video2`、
+页面只有 1 个 attach-video"的幻影记录（现状只会诚实 FAIL，不再误播，但永远学不完）。
+绑定链路**端到端**（真实未完成 `:videoN` 从绑定到播进到完成）仍缺一次授权 run，
+候选目标 `1217304738:video2`。L1 `394 passed, 1 skipped`。
+
 
 ---
 
@@ -497,11 +511,11 @@ finished=1 points=[('1217304708', True)]` —— `:video2` 根本不在读数里
 1. **M0 / R-01 三次稳定性：第 4 轮已达标**（§4.6）—— 其中 1 次是 D7 造成的 23s 空投；
    **D7 已复验通过**（§4.7：`tasks=87→87`、投到 `:video2`、无空投），所以 M0 判据本身闭合。
    没宣布结案的真正原因改成下面第 2 条：多视频章的第 2 点仍学不完（P1）。
-2. **P1 章内切点（§4.8/§4.9）**：帧绑定修法已落地并推送；复验被两个事实改道 ——
-   用户手动看完点 2（服务端已 finished，replay 无意义）+ P1 残留缺陷（headed 下
-   目标帧消失、reload 有害，已立案待修）。`:video2` **已经服务端真源恢复路径
-   （§4.9 方案1）解冻**：一次只读 live 复核 → SERVER_VERIFIED 置 COMPLETED，
-   cf=4 留痕不清；期间顺带炸出并修复 D12（点枚举去重碰撞）。
+2. **P1 章内切点（§4.8/§4.9）**：帧绑定已推送；复验被改道 —— 用户手动看完 708 点 2
+   （服务端 finished，replay 无意义），`:video2` **已经服务端真源恢复路径（方案1）解冻**
+   （SERVER_VERIFIED，cf=4 留痕；期间顺带修复 D12）。原"P1 残留"经只读观测**定性为
+   已完成态 artifact**（未完成点绑定帧 50s 稳定），reload 策略已修；**未结**：
+   真实未完成 `:videoN` 的端到端授权 run（候选 4738:video2）+ D13 幻影点级记录。
 3. **P0-01 自适应看门狗从未生效**：第 4 轮 6/6 仍回落静态 900s（探测窗口内播放器没挂 metadata）。
    本轮最长 549.9s < 900s 属侥幸；>900s 内容的章会被误杀成 TIMEOUT。
 4. **R-04 真站未验**：自动续播有 12 个单测，但四轮真站里**没有一次观测到它触发**。
