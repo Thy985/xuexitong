@@ -473,6 +473,23 @@ finished=1 points=[('1217304708', True)]` —— `:video2` 根本不在读数里
 绑定链路**端到端**（真实未完成 `:videoN` 从绑定到播进到完成）仍缺一次授权 run，
 候选目标 `1217304738:video2`。L1 `394 passed, 1 skipped`。
 
+**端到端的三次尝试与"C 探测"结论（同日）**：4738:video2 连跑两次 ——
+① Step F 90s 内绑定帧始终 `dur=None` → 诚实 FAIL；② 加"滚动进视口"式导航
+（`scrollIntoView`，3 次 ok=True）仍 FAIL —— **滚动不能激活播放器**。第三次
+在点击 `<video>` 上加码 → `ok=False`：点击从未落地（video 元素被 poster/
+播放按钮层挡住，Playwright actionability 不通过）。用户目视确认"页面跳到了
+第二视频的位置，但播的还是第一个" —— 据此复盘：超星 cards 页**串行化**任务点，
+只有当前播放器由页面驱动，服务端 finished 不会让页面跳过重播；观测绑定解决
+"看哪一帧"，不解决"哪一帧在播"。headless 静态探测（`evidence/nav_probe.json`）：
+cards 无"定位任务点"入口（无 onclick/按钮/cursor:pointer）；播放器是 **video.js**，
+**每个点（含未激活的）都有可见且 hit-test 可命中的 `.vjs-big-play-button`** ——
+最用户级的激活动作=滚到目标节 + 点它自己的播放按钮（点 `<video>` 是无效目标，
+这是第二次点击 ok=False 的根因）。已落地 `player_activation_selectors()`
+（大按钮优先、video 兜底）；端到端待再跑一次授权 run（判据不变：绑定帧
+metadata→currentTime 增长→本轮 isPassed 含目标 oid）。
+本轮副作用账：`4738:video2` FAILED cf=1、课程 failure_count 3 → **BLOCKED**
+（解除照旧走真实成功事件）。L1 `402 passed, 1 skipped`。
+
 
 ---
 
