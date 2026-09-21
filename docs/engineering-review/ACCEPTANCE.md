@@ -116,7 +116,7 @@ L1  纯逻辑测试（单元/集成/回归）         —— pytest，CI 已跑�
 | 2026-09-20 | 缺陷 | L2 | **D11：累计 `failure_count` 被当"连续失败"用 → 单次失败锁死整门课** | ✅ 已修 + 后果已由真实 PASS 解除 | `run_count 104 / failure_count 31`，成功从不清零；D7 复验那一次 DEGRADED 直接把课程打成 `BLOCKED`（`scheduler.py:214` 见之即拒调度）⇒ 明晚 nightly 会拒绝学习。课程层与调度层（`ss.consecutive_failures>=3`）层次不同，问题是这条锁**名不副实**。修后复验：`BLOCKED→ACTIVE`、`failure_count→0`。见 §4.7 |
 | 2026-09-20 | 修复验证 | L2 | head_cid / stdout 编码 / 降级不再静默 三项在真站生效 | ✅ 达标 | 同一份日志内：`E6.2 head=TaskRecord` **0 次**、`E6.2 head=<纯章号>` 4 次、`has no video` **0 次**、`⚠️ 看门狗降级` 4 次且不再崩 |
 | 2026-09-21 | 缺陷 | L2 | **D12：`read_chapter_job_points` 去重键 `marker\|text[:20]` 吞掉空文本的兄弟视频点** | ✅ 已修 + 真站读数实证 | 708 诊断：两视频行 marker 全同、innerText 同为空，仅 objectid 不同 → 第二点在读数前被丢 → live 报 `total=1`，方案1 恢复永远命不中。去重下沉为纯函数 `job_rows_to_points`（oid 身份去重、无 oid 退回文本键）；修后真站读数 `total=2 finished=2`，`:video2` 据此解冻（§4.9） |
-| 2026-09-21 | 缺陷 | L2/L3 | **P1 残留：headed 会话中绑定帧出现后消失，且 reload 恢复对绑定模式有害** | 📁 已立案，待修 | 复验日志：绑定帧 1s `found=True` → 11s 起 `target_frame_not_found`；同页 headless 只读探测两帧都在。reload 把页面打回点 1 适得其反。修法候选：绑定模式不触发 reload + 目标点导航手段（点击章内条目属页面内导航，不越播放红线，待定）。见 §4.9 |
+| 2026-09-21 | 缺陷 | L2/L3 | **P1 残留：headed 会话中绑定帧出现后消失，且 reload 恢复对绑定模式有害** | ✅ 已修（reload 策略）+ 误判归因修正（probe v4）+ 方案 A 落地（§4.10） | 复验日志：绑定帧 1s `found=True` → 11s 起 `target_frame_not_found`；同页 headless 只读探测两帧都在。reload 把页面打回点 1 适得其反。修法候选：绑定模式不触发 reload + 目标点导航手段（点击章内条目属页面内导航，不越播放红线，待定）。见 §4.9/§4.10 |
 | 2026-09-21 | 定性更新 | L2/L3 | ↑ 该现象的根因：**已完成态 artifact，不是引擎缺陷** | ✅ 定性 + reload 已修 | 只读持续性观测（4738 真实未完成点：绑定帧 50s 稳定 25/25；708 消失只发生在服务端判完成的点 —— 完成点不再保留播放器）。修复：`video_reload_warranted` 纯函数，`target_frame_not_found` 不再触发 reload，Step F 预算耗尽诚实 FAIL。绑定链路端到端（真实未完成 `:videoN` 播进）仍待一次授权 run。 |
 | 2026-09-21 | 缺陷 | L2 | **D13：账本 `:videoN` 与绑定枚举源错位（幻影点级记录）** | 📁 已立案，待修 | 4730/4734/4737 账本有 `:video2`（`read_chapter_job_points` 按 icon/文本启发式数"视频点"），页面 `.ans-insertvideo-online[objectid]` 却只有 1 个（4734/4737 那 1 个还是 finished）。绑定侧现状**诚实 FAIL**（`target video point N not on page`，不误播），但幻影记录永远学不完、反复占投递。修复方向：用 D12 起 live 行携带的 objectid 把"非 attach-video 的视频点"从可 dispatch 集合区分出来。 |
 
@@ -487,9 +487,62 @@ cards 无"定位任务点"入口（无 onclick/按钮/cursor:pointer）；播放
 这是第二次点击 ok=False 的根因）。已落地 `player_activation_selectors()`
 （大按钮优先、video 兜底）；端到端待再跑一次授权 run（判据不变：绑定帧
 metadata→currentTime 增长→本轮 isPassed 含目标 oid）。
+**端到端的三次尝试与"C 探测"结论（同日，run 4 前）**：4738:video2 连跑两次 ——
+① Step F 90s 内绑定帧始终 `dur=None` → 诚实 FAIL；② 加"滚动进视口"式导航
+（`scrollIntoView`，3 次 ok=True）仍 FAIL —— **滚动不能激活播放器**。第三次
+在点击 `<video>` 上加码 → `ok=False`：点击从未落地（video 元素被 poster/
+播放按钮层挡住，Playwright actionability 不通过）。用户目视确认"页面跳到了
+第二视频的位置，但播的还是第一个" —— 据此复盘：超星 cards 页**串行化**任务点，
+只有当前播放器由页面驱动，服务端 finished 不会让页面跳过重播；观测绑定解决
+"看哪一帧"，不解决"哪一帧在播"。headless 静态探测（`evidence/nav_probe.json`）：
+cards 无"定位任务点"入口（无 onclick/按钮/cursor:pointer）；播放器是 **video.js**。
+此前把"点目标播放器大按钮"立为主解，run 4 实测后**证伪**（见 §4.10）：轮外播放器
+起播会被页面每 ~2s 暂停并整章切走 —— 已回退删除 `player_activation_selectors()`。
 本轮副作用账：`4738:video2` FAILED cf=1、课程 failure_count 3 → **BLOCKED**
-（解除照旧走真实成功事件）。L1 `402 passed, 1 skipped`。
+（解除照旧走真实成功事件）。L1 `402+1 passed`（403 collected）。
 
+**已有证据补充误判的根因修正（probe v4，只读）**：第 9 轮前两次 seek 探测
+播放器 90s 不激活（dur=None/rs=0，v3 静默）曾被归因于"滚动不激活/时序"；
+后与引擎 Step B 逐字对齐启动参数（`--disable-web-security` +
+`--disable-site-isolation-trials` + 1440x900 视口 + 真实 Chrome UA）后，
+**v3 立即启动并播放** —— 探测环境少传这两个跨域 flag 才导致 dur 永不出现。
+即：**引擎的启动参数就是 v3 能接管播放的前提**，探测自身条件缺口，不是站点行为。
+
+
+---
+
+### 4.10 方案 A 前提验证（probe v4）+ 快进链路落地（同日，只读探测 + L1 纯函数）
+
+**前提验证（用户定的先后：先证"已完成点能自由拖动"，再实现）**：4738 当前点
+（第 1 点，`ans-job-finished` 真值=True），引擎同构条件下 ——
+`evidence/seek_probe_v4.log`：
+- **激活**：注入 v3 后 2s 即 `dur=1062 ct=0.2 paused=False`，v3 控制台
+  "IPV6 开始播放→视频加载完成→1.5x"。**修正前两次探测的条件缺口**：probe v2/v3
+  漏传 `--disable-web-security`/`--disable-site-isolation-trials`（跨域 iframe
+  contentDocument 不可达）且默认 900x600 视口 —— 与引擎 Step B 对齐后 v3 立刻接管。
+- **seek-a（脚本置 currentTime=0.9×dur=955.8）**：+3s `ct=958.3 rs=4`、+8s
+  `ct=966.0` —— **无回钳、连续播**：已 finished 的点站点允许自由拖动（等效拖条）。
+- **seek-b（真实鼠标点进度条 90%）**：`hover` 3s 超时 —— 视频层 hover 不上
+  （视频播放中被覆盖/不在顶层），**真实输入路径不可用**；引擎实现只走 JS seek。
+- 快进后自然播放（未拉 100%），页面自己的 ended→推进 状态机负责把目标点变成
+  当前点 —— 不做 100% 是为了不越过"页面自己判完成"这条线。
+
+**落地（L1，TDD RED→GREEN）**：`tests/unit/test_bound_reload_policy.py` 新增
+4 组 RED 测试（`nav_action_for_attempt(1)=='fastforward_finished_current'`、
+闸门纯函数、seek 位置纯函数）→ `app/e2_headed_gha.py` 实现：
+- `nav_action_for_attempt`：第 1 次仍只滚动（最保守），第 2 次起改为
+  **快进当前点**（run 4 已证伪"点目标播放器"：轮外播放器被页面每 ~2s 暂停并切章）。
+- `should_fastforward_current`（红线闸门，纯函数）：**只快进服务端 finished 真点**；
+  未完成点绝不 seek（拖未完成的进度=跳课）。真值读 cards `ans-job-finished` 类。
+- `fastforward_seek_position`：90% 位置（纯函数，无效 dur 返回 None）。
+- `fastforward_current_player`：选"有 metadata 且 src 不含目标 oid"的**轮内当前**帧
+  → 读 finished 真值 → 闸门放行 → 按 src 匹配置 `currentTime=0.9×dur`。
+- `navigate_to_video_point` 撤掉 click 分支（只保留滚动）；删除失效的
+  `player_activation_selectors()`；修复 `should_navigate_to_target` 重复 return。
+L1 全套 `306 passed, 1 skipped`（RED=18 项含新 4 组先红后绿）。
+
+**未竟**：`4738:video2` 端到端 run 尚缺末次授权（§7）：验证快进 → ended → 页面自推进
+→ 目标点成当前 → 绑定帧 metadata→currentTime 增长 → 服务端判完成 + 课程解冻（BLOCKED fail=4）。
 
 ---
 
