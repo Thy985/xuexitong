@@ -3544,7 +3544,7 @@
     "chapter_id": "1217304708",
     "title": "数据通信的基础知识",
     "task_type": "video",
-    "status": "BLOCKED",
+    "status": "COMPLETED",
     "priority": 0,
     "attempt_count": 4,
     "attempts": 4,
@@ -3556,17 +3556,17 @@
       "expires_at_utc": null
     },
     "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
+      "level": "SERVER_VERIFIED",
+      "verified_at_utc": "2026-09-21T04:12:58.063620+00:00",
+      "run_id": "",
+      "source_detail": "live job points: server marked this point finished"
     },
     "completion_evidence": {
-      "type": "NONE",
-      "source": "",
+      "type": "SERVER_VERIFIED",
+      "source": "live job points",
       "run_id": "",
-      "observed_at_utc": "2026-09-20T06:25:02.082394+00:00",
-      "detail": "",
+      "observed_at_utc": "2026-09-21T04:12:58.063620+00:00",
+      "detail": "server finished marker on the exact point (manual watch / server truth)",
       "passed_object_ids": []
     },
     "failure": {
