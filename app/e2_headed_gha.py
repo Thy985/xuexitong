@@ -250,6 +250,66 @@ VIDEO_OID_ENUM_JS = """() => {
 }"""
 
 
+def nav_action_for_attempt(attempt: int) -> str:
+    """第 N 次章内导航的动作升级（纯函数）：先最保守的滚动，再加点。
+
+    实证（4738 第二次 run）：3 次 scrollIntoView 全 ok=True 但绑定帧仍
+    dur=None —— 滚动不足以激活播放器。第 2 次起加"可信点击目标帧 <video>"，
+    等同用户按播放键（Playwright click 走真实输入管线）。
+    """
+    return "scroll" if attempt <= 0 else "scroll_click"
+
+
+def navigate_to_video_point(page, objectid: str, click: bool = False) -> bool:
+    """章内导航：把目标视频点附件滚进视口中心；click=True 时再真实点击
+    绑定帧的 <video>（用户级起播）。
+
+    真站实证（4738 e2e，用户目视）：页面停在已完成的第 1 点播放，目标点的
+    player 帧存在但不激活（滚动进视口 dur 仍 None，只有"轮到自己"才播）。
+    滚动+点击都是用户级页面操作：不碰上报链路、不跳过播放 —— dispatch 目标
+    的前序点均已服务端完成（承载规则），不存在"跳着学"。
+    oid 只接受 32 位 hex（DOM 属性回注防注入）。
+    """
+    if not objectid or not re.fullmatch(r"[0-9a-fA-F]{32}", objectid):
+        return False
+    try:
+        frames = page.frames
+    except Exception:
+        return False
+    scrolled = False
+    clicked = not click
+    for fr in frames:
+        if not scrolled and "knowledge/cards" in (fr.url or ""):
+            try:
+                scrolled = bool(fr.evaluate("""(oid) => {
+                    const el = document.querySelector(
+                        '.ans-insertvideo-online[objectid="' + oid + '"]')
+                        || document.querySelector('[objectid="' + oid + '"]');
+                    if (!el) return false;
+                    el.scrollIntoView({block: 'center'});
+                    window.dispatchEvent(new Event('scroll'));
+                    return true;
+                }""", objectid))
+            except Exception:
+                pass
+        if not clicked:
+            try:
+                is_target = fr.evaluate("""(oid) => {
+                    const v = document.querySelector('video');
+                    return !!(v && (v.currentSrc || v.src || '').includes(oid));
+                }""", objectid)
+            except Exception:
+                is_target = False
+            if is_target:
+                try:
+                    # 真实鼠标事件 → 该帧获得用户激活上下文，等效人按下播放
+                    fr.locator("video").first.click(timeout=3000)
+                    clicked = True
+                except Exception:
+                    pass
+    return scrolled and clicked
+
+
 def enumerate_video_objectids(page) -> list[str]:
     """按 DOM 序读 cards 帧里全部视频任务点的 objectid（`:videoN` 的第 N 个）。
 
@@ -477,6 +537,29 @@ def bind_video_state(probes: list[dict] | None,
             "target_objectid": target_objectid}
 
 
+def should_navigate_to_target(target_objectid, bound_dur, stalled_for_s,
+                              nav_attempts, last_nav_at, now,
+                              min_stall_s: float = 15.0,
+                              cooldown_s: float = 15.0,
+                              max_attempts: int = 3) -> bool:
+    """绑定模式下，何时该主动把目标视频点滚进视口（纯函数，可测）。
+
+    真站实证（4738 e2e）：页面停在已完成的第 1 点播放，目标点的播放器帧
+    存在但永不激活（不在视口 → 页面自己的懒加载不触发）。绑定解决了
+    "看哪一帧"，还差"页面停在哪儿"。条件：绑定目标 + 绑定播放器没活
+    （无 metadata）+ 停滞超阈值 + 冷却已过 + 次数有界。
+    """
+    if not target_objectid:
+        return False
+    if bound_dur:
+        return False
+    if nav_attempts >= max_attempts:
+        return False
+    if last_nav_at is not None and (now - last_nav_at) < cooldown_s:
+        return False
+    return stalled_for_s >= min_stall_s
+
+
 def video_reload_warranted(reason) -> bool:
     """Step F「无视频帧」里哪些原因值得 reload 整页（纯函数，可测）。
 
@@ -659,6 +742,10 @@ def run_test(args, params: "CourseParams | None" = None):
         # 时长/完成判定全部只认 src 含该 objectid 的那一帧。
         target_vi = int(getattr(params, "video_index", 0) or 0)
         target_objectid = None
+        # 章内导航（4738 e2e 实证：目标点不在视口 → 页面永不激活其播放器）
+        nav_attempts = 0
+        last_nav_at = None
+        stalled_since = None
         for i in range(90):
             try:
                 page.wait_for_timeout(1000)
@@ -685,6 +772,25 @@ def run_test(args, params: "CourseParams | None" = None):
                     log(f"[bind] target video #{target_vi} -> "
                         f"objectid={target_objectid}")
             st = get_video_state(page, target_objectid)
+            now_f = time.time()
+            if st.get("found") and st.get("duration"):
+                stalled_since = None
+            elif target_objectid and stalled_since is None:
+                stalled_since = now_f
+            if should_navigate_to_target(
+                    target_objectid, st.get("duration"),
+                    (now_f - stalled_since) if stalled_since else 0.0,
+                    nav_attempts, last_nav_at, now_f):
+                nav_attempts += 1
+                last_nav_at = now_f
+                stalled_since = now_f
+                nav_action = nav_action_for_attempt(nav_attempts - 1)
+                moved = navigate_to_video_point(
+                    page, target_objectid, click=(nav_action == "scroll_click"))
+                evidence["target_nav_attempts"] = nav_attempts
+                evidence["target_nav_ok"] = moved
+                log(f"[bind] in-page navigate to target #{nav_attempts} "
+                    f"action={nav_action} ok={moved}")
             dur = st.get("duration")
             if st.get("found"):
                 stall_s = 0
