@@ -15,15 +15,15 @@
 L4  上云回归（GHA cron 真跑）            —— 只验收 Step「上云」
 L3  真站冒烟（真账号/真课程）             —— 本地，Playwright 起浏览器连真站
 L2  功能/稳定性验证（本地，含真浏览器但可离线/可控）  —— Xvfb 有头 / headless=False
-L1  纯逻辑测试（单元/集成/回归）         —— pytest，CI 已跑（现 356 passed + 1 skip）
+L1  纯逻辑测试（单元/集成/回归）         —— pytest，CI 已跑（现 364 passed + 1 skip）
 ```
 
 ### L1 · 纯逻辑测试（CI，pytest）
 - **跑法**：`.github/workflows/test.yml`（push/PR 自动）→ `pytest tests/unit tests/integration tests/regression`。
-- **判据**：全部通过；`--maxfail=5` 内不爆炸（不允许零星断言失败仍绿）。基线：2026-09-20 实测 **356 passed, 1 skipped**（共 357 collected，69.7s）。
-  > 09-15 基线 209+1/72s → 09-20 上午 296+1/68s → D1~D7、D10、D11 九起缺陷各带回归后 356+1/69.7s。
+- **判据**：全部通过；`--maxfail=5` 内不爆炸（不允许零星断言失败仍绿）。基线：2026-09-20 实测 **364 passed, 1 skipped**（共 365 collected，69.8s）。
+  > 09-15 基线 209+1/72s → 09-20 上午 296+1/68s → D1~D7、D10、D11、P1 十起缺陷各带回归后 364+1/69.8s。
   > **耗时也是判据**：同一套用例从 239s 降到 68s，差额正是"测试偷偷起真浏览器"被堵住的时间（见 §4.4）；
-  > 之后又加了 60 条用例，耗时几乎没动（68→69.7s），说明新用例全在 fake 层。
+  > 之后又加了 68 条用例，耗时几乎没动（68→69.8s），说明新用例全在 fake 层。
 - **证据**：`pytest.log`（失败时自动上传 artifact）。
 - **门禁**：任何 PR/M0~M3 改动必须保持 L1 全绿。**此层失败 = 阻断。**
 
@@ -111,7 +111,7 @@ L1  纯逻辑测试（单元/集成/回归）         —— pytest，CI 已跑�
 | 2026-09-20 | M0 | L2 | R-01 续：`--max-chapters 2` 连续 3 次只前进不重复不卡死（**第 4 轮**） | ✅ **首次达标** | `evidence/l2_stability_clean4_20260920.log`：6 次全 PASS，选章两两互异（708/722·730/732·733/734），`COMPLETED 23→29`；汇总第一次带上 `passed_count: 10`。详见 §4.6 |
 | 2026-09-20 | 缺陷 | L2 | **D7：E6.2 refine 的 by_title 迁移吃掉点级兄弟记录（82→74）** | ✅ 已修 + **真站已验** | `<cid>:videoN`/`:other` 与 `<cid>` 同 title → 被当成"task_id 格式迁移"合并 pop；护栏失效 → 第 4 轮 run1a 23s 空投已完成点。复验：`tasks=87→87`、`next_task=1217304708:video2`，第 2 点 `isPassed=true`；见 §4.7 |
 | 2026-09-20 | 缺陷 | L2 | **D10：点级 task_id 的 `:` 在 Windows 变成 NTFS 备用数据流** | ✅ 已修 + **真站已验** | `dir /r` 实证 0 字节空壳 `chapter_1217304708` + `:video2.json:$DATA`；`_archive_existing` 归档的是空壳 → D3 对点级任务失效。`artifact_slug()` 单一入口；产物已无损迁回，复验见 §4.7 |
-| 2026-09-20 | 缺陷 | L2 | **P1：章内切点未重新起播**（进 `:video2` 时复用点 1 已播完的 `<video>`） | 🔁 已定位，待修 | `DEGRADED 9/10`，唯一失败项 `7_currentTime_growing`，st `currentTime=655 / readyState=0 / duration=None`（655=点 1 片尾）；`9_isPassed_true` 却为 True ⇒ 真实播放层缺陷而非测量假阴性。见 §4.7 |
+| 2026-09-20 | 缺陷 | L2/L3 | **P1：`--video-index` 只当停止条件，且把"到达目标段"当"播完目标段"** | ✅ 已修（L1 已证，真站待验） | 子日志证明页面**确实换源到点 2**（`switch → src=69a6c4c5…`），但同一秒 `break`、`max_ct=0s` → 唯一失败项 `7_currentTime_growing` → 整章 DEGRADED。`video_count` 在 src 切换时自增，条件却不看 `ended_seen`。Windows 与 GHA/Linux 同现象。修法 `target_segment_done()`；见 §4.8。**注：本节初版把根因写成"复用点 1 的 <video>"，已在 §4.8 更正** |
 | 2026-09-20 | 缺陷 | L2 | **D11：累计 `failure_count` 被当"连续失败"用 → 单次失败锁死整门课** | ✅ 已修 + 后果已由真实 PASS 解除 | `run_count 104 / failure_count 31`，成功从不清零；D7 复验那一次 DEGRADED 直接把课程打成 `BLOCKED`（`scheduler.py:214` 见之即拒调度）⇒ 明晚 nightly 会拒绝学习。课程层与调度层（`ss.consecutive_failures>=3`）层次不同，问题是这条锁**名不副实**。修后复验：`BLOCKED→ACTIVE`、`failure_count→0`。见 §4.7 |
 | 2026-09-20 | 修复验证 | L2 | head_cid / stdout 编码 / 降级不再静默 三项在真站生效 | ✅ 达标 | 同一份日志内：`E6.2 head=TaskRecord` **0 次**、`E6.2 head=<纯章号>` 4 次、`has no video` **0 次**、`⚠️ 看门狗降级` 4 次且不再崩 |
 
@@ -366,6 +366,42 @@ L1：`356 passed, 1 skipped`（357 collected，69.7s）。**D10 目前只有 L1 
   与 `exit=1` 口径不一致 —— `verdict` 取末章，退出码取聚合 `FAILED`。
   "看起来 PASS 的汇总 + 失败退出码"是下一类归因歧义的种子。
 
+### 4.8 P1 根因：`--video-index` 只被当停止条件，而停止条件把"到达"当"播完"
+
+**先更正我自己在 §4.7 写下的定性。** 我写过"进 `:video2` 时页面复用点 1 那个已播完的
+`<video>`（`src=19da22cc…`、`ct=655`）" —— **这是错的**。那个快照来自**调度侧**的时长探测，
+它在切换**之前**取值；子进程自己的日志证明页面**确实换到了点 2**：
+
+```
+10:03:53  Video ready: duration=656s ct=655.0s rs=1        ← 服务端把点 1 恢复到片尾
+10:03:53  ★ isPassed=true …                               ← 点 1 早已通过
+10:03:55  ★ Video ended: ct=656s (waiting up to 45s…)     ← 开宽限窗口
+10:03:57  ★ Chapter video switch -> #3 src=…69a6c4c5…     ← 真的换源到点 2（另一对象 id）
+10:03:57  Playback loop ended: 4s max_ct=0s videos=2       ← 同一秒退出，点 2 一秒都没播
+```
+
+**根因**：`e2_headed_gha.py` 的 Options B 退出判定是
+
+```python
+if target_vi and video_count >= target_vi:   # 注释写"并结束"，条件里没有"结束"
+```
+
+而 `video_count` 在 `video.src` **变化（到达下一段）**时自增，表示"现在在第几段"，
+不表示"第几段播完了"；到达新段时 `ended_seen` 还会被归零。于是 `target_vi>=2` 的
+dispatch **刚跳到目标段就 break** → `max_ct=0s` → 10 项里唯一失败的就是
+`7_currentTime_growing` → 整章 DEGRADED。`<cid>`（`target_vi=1`）不受影响：它在第 1 段
+ended 时就已满足条件，行为逐字不变。
+
+**修法**：抽纯函数 `target_segment_done(target_vi, video_count, ended_seen)`，与既有
+`next_unit_decision` 同一模式；条件补上"该段真的 ended"。8 条参数化单测覆盖
+到达≠完成 / 目标段 ended=完成 / 未到目标段继续等 / `target_vi=1` 不退化 / `target_vi=0`
+自然连播不参与。L1 `364 passed, 1 skipped`（365 collected，69.8s）。
+
+**遗留（本轮不夹带，只记）**：切换日志打的是 `switch -> #{video_count + 1}`，
+即第 2 段被标成 `#3` —— 这正是把我（以及任何读日志的人）带偏的第一现场。
+另：`1217304708:video2` 已被熔断冻结（`cf=3`，本地 2 + nightly 1），整章 708 冻结；
+**P1 修好后需要一次真实成功 run 来解冻**，不手改账本。
+
 
 ---
 
@@ -404,9 +440,10 @@ L1：`356 passed, 1 skipped`（357 collected，69.7s）。**D10 目前只有 L1 
 1. **M0 / R-01 三次稳定性：第 4 轮已达标**（§4.6）—— 其中 1 次是 D7 造成的 23s 空投；
    **D7 已复验通过**（§4.7：`tasks=87→87`、投到 `:video2`、无空投），所以 M0 判据本身闭合。
    没宣布结案的真正原因改成下面第 2 条：多视频章的第 2 点仍学不完（P1）。
-2. **P1 章内切点未重新起播（§4.7）**：`:video2` 能投到、服务端也回 isPassed，但页面复用点 1
-   已播完的 `<video>`（`ct=655 / readyState=0`）→ `7_currentTime_growing` 失败 → 整章 DEGRADED。
-   **这是多视频章无法真正学完的当前卡点**，与 P0-01 的探测/看门狗是两回事。
+2. **P1 章内切点（§4.8）已修，等一次真实成功 run 复验**：`--video-index N` 原先刚**到达**
+   第 N 段就退出（`max_ct=0s`）→ 唯一失败项 `7_currentTime_growing` → 整章 DEGRADED。
+   多视频章的第 2 点因此学不到；且 `1217304708:video2` 已被熔断冻结（`cf=3`，整章 708 冻结），
+   解冻要靠一次真 PASS（`app.run --video-index 2`），不手改账本。
 3. **P0-01 自适应看门狗从未生效**：第 4 轮 6/6 仍回落静态 900s（探测窗口内播放器没挂 metadata）。
    本轮最长 549.9s < 900s 属侥幸；>900s 内容的章会被误杀成 TIMEOUT。
 4. **R-04 真站未验**：自动续播有 12 个单测，但四轮真站里**没有一次观测到它触发**。
