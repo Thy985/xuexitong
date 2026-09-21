@@ -367,6 +367,18 @@ def next_unit_decision(nextunit_seen: bool, has_passed: bool, max_ct: float,
     return "exit_switch"
 
 
+def target_segment_done(target_vi: int, video_count: int, ended_seen: bool) -> bool:
+    """Options B：本次 dispatch 指定的第 N 段视频是否**真的播完了**。
+
+    `video_count` 是在 `video.src` 变化（即**到达**下一段）时自增的，它表示"现在在第
+    几段"，不表示"第几段已播完"；到达新段时 `ended_seen` 还会被归零。所以"到达即完成"
+    会让 `N>=2` 的 dispatch 刚跳到目标段就退出（P1：真站 4s、`max_ct=0s`、唯一失败项
+    `7_currentTime_growing`）。完成必须以**该段真的 ended** 为准。
+
+    `target_vi=0` 是"自然连播整章"，不参与本判定。
+    """
+    return bool(target_vi) and video_count >= target_vi and ended_seen
+
 
 def run_test(args, params: "CourseParams | None" = None):
     """执行浏览器学习验证。
@@ -763,9 +775,9 @@ def run_test(args, params: "CourseParams | None" = None):
             )
 
             if in_next_video_grace:
-                # Options B：本次只做第 target_vi 段，且已推进到该段并结束 →
-                # 目标段完成，退出，不再等下一段。
-                if target_vi and video_count >= target_vi:
+                # Options B：本次只做第 target_vi 段，且**该段真的播完**（不是刚跳到）
+                # → 目标段完成，退出，不再等下一段。
+                if target_segment_done(target_vi, video_count, ended_seen):
                     log(f"[GHA] reached target video #{target_vi} "
                         f"(video_count={video_count}, ended={ended_seen}) — done")
                     chapter_completed = True
