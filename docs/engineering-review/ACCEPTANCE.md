@@ -15,12 +15,12 @@
 L4  上云回归（GHA cron 真跑）            —— 只验收 Step「上云」
 L3  真站冒烟（真账号/真课程）             —— 本地，Playwright 起浏览器连真站
 L2  功能/稳定性验证（本地，含真浏览器但可离线/可控）  —— Xvfb 有头 / headless=False
-L1  纯逻辑测试（单元/集成/回归）         —— pytest，CI 已跑（现 374 passed + 1 skip）
+L1  纯逻辑测试（单元/集成/回归）         —— pytest，CI 已跑（现 384 passed + 1 skip）
 ```
 
 ### L1 · 纯逻辑测试（CI，pytest）
 - **跑法**：`.github/workflows/test.yml`（push/PR 自动）→ `pytest tests/unit tests/integration tests/regression`。
-- **判据**：全部通过；`--maxfail=5` 内不爆炸（不允许零星断言失败仍绿）。基线：2026-09-21 实测 **374 passed, 1 skipped**（共 375 collected，69.6s）。
+- **判据**：全部通过；`--maxfail=5` 内不爆炸（不允许零星断言失败仍绿）。基线：2026-09-21 实测 **384 passed, 1 skipped**（共 385 collected，69.6s）。
   > 09-15 基线 209+1/72s → 09-20 上午 296+1/68s → D1~D7、D10、D11、P1 十起缺陷各带回归后 364+1/69.8s。
   > **耗时也是判据**：同一套用例从 239s 降到 68s，差额正是"测试偷偷起真浏览器"被堵住的时间（见 §4.4）；
   > 之后又加了 68 条用例，耗时几乎没动（68→69.8s），说明新用例全在 fake 层。
@@ -410,6 +410,40 @@ TDD：`tests/unit/test_video_frame_binding.py` 10 条（点↔objectid 解析、
 `1217304708:video2` 熔断解冻仍需一次真实成功 run，不手改账本。
 
 
+### 4.9 P1 真站复验 + 「手动已观看」恢复路径（方案1）
+
+**帧绑定复验（2026-09-21，章 1217304708:video2）**：绑定机制按设计工作 ——
+`[bind] target video #2 -> objectid=53d6b112…` 正确解析目标点；目标帧不在时诚实报
+`target_frame_not_found`，没有拿点 1 冒充（旧病灶消除）。但复验**没有播起来**，
+两个原因：
+
+1. **用户手动看完了点 2**：只读探测（headless，只读不上报）确认服务端已把两个点
+   都判 `finished: true` —— replay 的前提消失了：点已完成，页面不会播它，
+   replay 根本产生不了「真实成功事件」。
+2. **新缺陷立案（P1 残留）**：headed 会话中点 2 的 video 帧短暂出现（1s 时
+   `found=True dur=None`）后消失（11s 起 not_found），而 Step F 的 reload 恢复把
+   页面打回点 1、适得其反；同一页面 headless 探测下两帧都在。待修两点：
+   绑定模式下 `target_frame_not_found` 不应触发 reload；目标点不在当前播放
+   位置时需要导航手段（点击点内条目属页面内导航，不越播放红线，待定）。
+
+**「手动已观看」恢复路径（用户选定方案1）**：`reconcile` 的 BLOCKED 冻结护栏
+（§4.8 的 1217304719 教训）对「服务端已完成」场景过严。新路径：
+
+- `tvdp.build_live_finished(job_points)`：从实时 job 点读「服务端已判 finished」
+  的 task_id 集合（与 `build_live_pending` 互补；非 video 行无 task_id，安全跳过）。
+- `reconcile_registry(..., live_finished=…)`：BLOCKED 护栏的例外 —— **本点**
+  的 task_id 出现在服务端 finished 集合 → 以 SERVER_VERIFIED 证据置 COMPLETED，
+  失败计数保留不清（留痕曾熔断）。兄弟点 finished 不解冻（点身份精确匹配）。
+- `heal_blocked_by_live(course_key, existing, discovery, dom_status, verify_points)`：
+  生产封装 —— 只对冻结章做 live 读数（健康章不烧 L2 成本），读数失败保持冻结。
+- `scheduler` 步骤 4.2：冻结章不进队列 → 4.5 的 live 复核永远轮不到它们，故在
+  建队后显式对冻结章做恢复，命中则 `save_registry` + 重建队列。
+
+护栏回归：`test_reconcile_blocked_preserved`（无真源时 BLOCKED 原样冻结）全数保留。
+TDD：`tests/unit/test_reconcile_blocked_server_heal.py` 10 条。L1 `384 passed, 1 skipped`
+（385 collected，69.6s）。真站 ledger 恢复待授权（一次只读 live 复核 + 保存）。
+
+
 ---
 
 ## 5. 失败 / 回退策略
@@ -447,12 +481,10 @@ TDD：`tests/unit/test_video_frame_binding.py` 10 条（点↔objectid 解析、
 1. **M0 / R-01 三次稳定性：第 4 轮已达标**（§4.6）—— 其中 1 次是 D7 造成的 23s 空投；
    **D7 已复验通过**（§4.7：`tasks=87→87`、投到 `:video2`、无空投），所以 M0 判据本身闭合。
    没宣布结案的真正原因改成下面第 2 条：多视频章的第 2 点仍学不完（P1）。
-2. **P1 章内切点（§4.8 终版根因=帧未绑定）已修，等一次真实成功 run 复验**：
-   目标点 `:videoN` 从未被绑定——帧遍历顺序决定观测对象，点 1 的进度/时长/isPassed
-   被当成目标点 2 的，方案A 误判完成（真站 run 108 复验证伪了第一版
-   `target_segment_done` 修法，cf 3→4）。帧绑定修法已落地（L1 374+1 全绿）；
-   `1217304708:video2`（cf=4）解冻要靠一次真 PASS（`app.run --video-index 2`），
-   不手改账本。
+2. **P1 章内切点（§4.8/§4.9）**：帧绑定修法已落地；其复验被两个事实改道 ——
+   用户手动看完点 2（服务端已 finished，replay 无意义）+ P1 残留缺陷（headed 下
+   目标帧消失、reload 有害）。`:video2`（cf=4）改走服务端真源恢复路径（§4.9
+   方案1），一次只读 live 复核即可解冻，不手改账本。
 3. **P0-01 自适应看门狗从未生效**：第 4 轮 6/6 仍回落静态 900s（探测窗口内播放器没挂 metadata）。
    本轮最长 549.9s < 900s 属侥幸；>900s 内容的章会被误杀成 TIMEOUT。
 4. **R-04 真站未验**：自动续播有 12 个单测，但四轮真站里**没有一次观测到它触发**。
