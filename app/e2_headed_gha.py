@@ -260,6 +260,17 @@ def nav_action_for_attempt(attempt: int) -> str:
     return "scroll" if attempt <= 0 else "scroll_click"
 
 
+def player_activation_selectors() -> tuple:
+    """目标播放器内起播控件的尝试顺序（纯函数，可测）。
+
+    C 探测（2026-09-21，4738 headless 静态）：cards 无"定位任务点"入口；
+    播放器是 video.js，每个点（含未激活的）都有**可见且 hit-test 可命中**的
+    `.vjs-big-play-button` —— 点它=用户按播放。上一版点击落空的根因：点了
+    `<video>` 本体，被 poster/大按钮层挡住，Playwright actionability 不过。
+    """
+    return (".vjs-big-play-button", "video")
+
+
 def navigate_to_video_point(page, objectid: str, click: bool = False) -> bool:
     """章内导航：把目标视频点附件滚进视口中心；click=True 时再真实点击
     绑定帧的 <video>（用户级起播）。
@@ -301,12 +312,17 @@ def navigate_to_video_point(page, objectid: str, click: bool = False) -> bool:
             except Exception:
                 is_target = False
             if is_target:
-                try:
-                    # 真实鼠标事件 → 该帧获得用户激活上下文，等效人按下播放
-                    fr.locator("video").first.click(timeout=3000)
-                    clicked = True
-                except Exception:
-                    pass
+                for sel in player_activation_selectors():
+                    try:
+                        loc = fr.locator(sel)
+                        if loc.count() == 0:
+                            continue
+                        # 真实鼠标事件 → 该帧获得用户激活上下文，等效人按下播放
+                        loc.first.click(timeout=3000)
+                        clicked = True
+                        break
+                    except Exception:
+                        continue
     return scrolled and clicked
 
 

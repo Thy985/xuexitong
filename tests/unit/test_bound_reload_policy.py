@@ -85,3 +85,15 @@ def test_first_attempt_scrolls_then_later_attempts_add_click():
     assert nav_action_for_attempt(0) == "scroll"
     assert nav_action_for_attempt(1) == "scroll_click"
     assert nav_action_for_attempt(2) == "scroll_click"
+
+
+# 起播入口的选择（C 探测，2026-09-21）：cards 无"定位任务点"入口；页面是
+# video.js，目标点播放器里有**可见且 hit-test 可命中**的 .vjs-big-play-button
+# —— 点击它=用户按播放。上一版 click 落空的原因：点了 <video>，被 poster/
+# 大按钮层挡住，actionability 不通过。
+
+def test_activation_target_is_big_play_button_with_video_fallback():
+    from app.e2_headed_gha import player_activation_selectors
+    sels = player_activation_selectors()
+    assert sels[0] == ".vjs-big-play-button"      # 大播放按钮优先
+    assert "video" in sels                        # 找不到按钮时退回点视频本体
