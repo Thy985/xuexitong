@@ -235,7 +235,16 @@ def reconcile_registry(
         # 服务端判定本身就是那个真实事件。失败计数保留不清（留痕）。
         if old is not None and getattr(old, "status", "") == "BLOCKED":
             if tid in live_finished:
-                _heal_blocked_by_server_truth(tid, old, report)
+                _heal_by_server_truth(tid, old, report)
+            result[tid] = old
+            continue
+        # D14：服务端 finished 判定本身就是那个"真实事件"，治愈不该只发给 BLOCKED。
+        # 真站 1217304738 把已被服务端判 finished 的点留在 UNKNOWN 投了出去，而
+        # 页面绝不为已完成点起流（探针实测：点它只拿到 metadata，ct 冻结不动）→
+        # Step F 等 metadata 90s×2 超时 FAIL，点记 FAILED、课程被推向熔断。
+        if (old is not None and tid in live_finished
+                and getattr(old, "status", "") != "COMPLETED"):
+            _heal_by_server_truth(tid, old, report)
             result[tid] = old
             continue
         if dom_done:
@@ -332,9 +341,9 @@ def reconcile_registry(
     return result, report
 
 
-def _heal_blocked_by_server_truth(tid: str, rec: TaskRecord,
+def _heal_by_server_truth(tid: str, rec: TaskRecord,
                                   report: "ReconcileReport") -> bool:
-    """服务端真源恢复单个 BLOCKED 记录（方案1）。命中返回 True。
+    """服务端真源恢复单个非 COMPLETED 记录（方案1 + D14）。命中返回 True。
 
     live job points 读到**本点**已被服务端判 finished（用户手动看完的场景）
     → 以 SERVER_VERIFIED 证据恢复为 COMPLETED。replay 在此场景产生不了
@@ -387,7 +396,7 @@ def heal_blocked_by_live(
     report = ReconcileReport(course_key=course_key)
     for tid, rec in existing.items():
         if getattr(rec, "status", "") == "BLOCKED" and tid in live_done:
-            _heal_blocked_by_server_truth(tid, rec, report)
+            _heal_by_server_truth(tid, rec, report)
     return existing, report
 
 

@@ -54,3 +54,27 @@ def test_live_finished_now_sees_the_second_point():
     rows = [_row(oid="19da22cc8a80"), _row(oid="53d6b1122d40")]
     pts = job_rows_to_points(rows, "1217304708")
     assert build_live_finished(pts) == {"1217304708", "1217304708:video2"}
+
+
+# D13（2026-09-21 真站章 1217304738）：cards 帧里存在一个**裸** `.ans-job-icon`
+# —— 无类型 class、无 objectid、无文本，其 item 启发式仍把 type 判成 video。
+# job_rows_to_points 于是给它 mint 出 `1217304738:video3`：一个没有媒体身份、
+# 永远不可能完成的幻影任务（实测它停在 DISCOVERED，而该章 DOM 只有 2 个视频模块）。
+# 视频点的稳定身份就是 oid —— 无 oid 不成点，也不该占视频点序号
+# （否则 chapter_video_summary 计数虚高，投递交割全部跟着错）。
+def test_video_row_without_objectid_creates_no_phantom_point():
+    rows = [
+        _row(oid="94382be48a99", finished=True),
+        _row(oid="e79a9a86eba1", finished=False),
+        _row(oid="", marker="ans-job-icon ", text=""),
+    ]
+    pts = job_rows_to_points(rows, "1217304738")
+    assert [p["task_id"] for p in pts] == ["1217304738", "1217304738:video2"]
+    assert build_live_finished(pts) == {"1217304738"}
+
+
+def test_non_video_point_without_objectid_still_survives():
+    # 只掐"无 oid 的视频点"；作业/文档等本就没有 oid，不能被这条规则误杀
+    rows = [_row(oid="", typ="homework", marker="ans-job-icon ans-job-work ", text="达标测试")]
+    pts = job_rows_to_points(rows, "1217304738")
+    assert [p["task_id"] for p in pts] == ["1217304738:homework"]

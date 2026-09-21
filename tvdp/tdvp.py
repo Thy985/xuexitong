@@ -923,6 +923,17 @@ def job_rows_to_points(rows: list[dict], knowledge_id: str) -> list[dict]:
     for r in rows:
         typ = r.get("type") or _classify_job(r.get("marker") or "")
         oid = r.get("objectid")
+        marker_tokens = [t for t in (r.get("marker") or "").split()
+                         if t and t != "ans-job-icon"]
+        if (not oid and not marker_tokens
+                and not (r.get("titleText") or "").strip()):
+            # D13：cards 帧里有个**裸** `.ans-job-icon`（无 oid、marker 里没有任何
+            # 类型标记、无文本），内容启发式仍会把它判成 video，于是 mint 出一个
+            # 没有身份的幻影任务（真站 1217304738 的 `:video3`：停在 DISCOVERED、
+            # 永不可能完成，还把视频点计数抬高一格）。
+            # 只掐"三重无身份"的行 —— 带 ans-job-video 标记或带文本的行照旧走
+            # 文本去重（D12 行为不变），作业/文档等本就无 oid 的点也不被误杀。
+            continue
         if oid:
             if oid in seen_oids:
                 continue
