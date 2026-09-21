@@ -453,7 +453,9 @@ def _frozen_4738():
     second = TaskRecord(VID2_4738, CID4738, "IPV6", task_type="video",
                         status="BLOCKED", consecutive_failures=3, attempt_count=3)
     second.failure.stage = "7_CURRENTTIME_GROWING"
-    return {CID4738: first, VID2_4738: second}
+    ppp = TaskRecord("1217304719", "1217304719", "点对点协议PPP", task_type="video",
+                     status="BLOCKED", consecutive_failures=3, attempt_count=3)
+    return {CID4738: first, VID2_4738: second, ppp.task_id: ppp}
 
 
 def test_manual_run_unfreezes_and_dispatches_the_frozen_point(
@@ -484,6 +486,7 @@ def test_manual_run_unfreezes_and_dispatches_the_frozen_point(
     assert reg[VID2_4738].status == "PENDING"
     assert reg[VID2_4738].consecutive_failures == 0
     assert reg[VID2_4738].attempt_count == 3, "恢复不许抹掉历史尝试次数"
+    assert reg["1217304719"].status == "BLOCKED", "人只点了 4738，别替 PPP 章解熔断"
     assert dispatched == {"task_id": VID2_4738, "chapter": CID4738,
                           "video_index": 2}, dispatched
     assert out.result == "SUCCESS"

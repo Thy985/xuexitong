@@ -65,6 +65,16 @@ def test_helper_returns_only_the_ids_it_unfroze():
     assert restore_blocked_for_manual(reg) == [], "二次调用没有可恢复项"
 
 
+def test_restore_can_be_narrowed_to_the_chapter_the_human_named():
+    """一次人工投递不该顺带把别的冻结章（1217304719：headed 下反复抓不到 video）
+    放回夜巡队列 —— 那等于替它烧掉课程的失败预算。"""
+    other = TaskRecord("1217304719", "1217304719", "点对点协议PPP",
+                       status="BLOCKED", consecutive_failures=3)
+    reg = dict(_registry(), **{other.task_id: other})
+    assert restore_blocked_for_manual(reg, only_chapter=CID) == [VID2]
+    assert reg["1217304719"].status == "BLOCKED"
+
+
 def test_blocked_chapter_is_frozen_until_manual_restore_then_queues_the_point():
     """冻结→恢复→入队三步都要真函数：任何一步假了，`:video2` 仍然永远轮不到。"""
     reg = _registry()

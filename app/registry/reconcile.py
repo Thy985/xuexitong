@@ -436,14 +436,24 @@ def heal_blocked_by_live(
     return existing, report
 
 
-def restore_blocked_for_manual(existing: dict[str, TaskRecord]) -> list[str]:
+def restore_blocked_for_manual(existing: dict[str, TaskRecord],
+                               only_chapter: Optional[str] = None) -> list[str]:
     """人工显式恢复：把 BLOCKED 点解冻回 PENDING，返回被恢复的 task_id 列表。
 
     `heal_blocked_by_live` 只能治"服务端其实已经判完成"的点；像 `1217304738:video2`
     这种真没学成的点，冻结后既进不了队列、又是章内剩余工作量的唯一承载者 → 整章搁浅。
     只在 manual 触发腿调用（判据在 scheduler 侧），schedule 腿不放宽熔断。
+
+    `only_chapter` 把恢复限定在人指定的那一章：一次人工投递不该顺带把别的冻结章
+    （如 1217304719，headed 下反复抓不到 video）也放回夜巡队列烧课程失败预算。
     """
-    return [tid for tid, rec in existing.items() if rec.restore_for_manual_retry()]
+    restored = []
+    for tid, rec in existing.items():
+        if only_chapter and rec.chapter_id != only_chapter:
+            continue
+        if rec.restore_for_manual_retry():
+            restored.append(tid)
+    return restored
 
 
 def pick_conflict_chapters(

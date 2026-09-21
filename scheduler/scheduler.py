@@ -614,7 +614,8 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
         from app.registry.reconcile import restore_blocked_for_manual
         from app.registry.task_registry import load_registry, save_registry
         _reg = load_registry(identity_key)
-        _restored = restore_blocked_for_manual(_reg)
+        _restored = restore_blocked_for_manual(
+            _reg, only_chapter=(chapter_id.split(":")[0] if chapter_id else None))
         if _restored:
             save_registry(identity_key, _reg)
             print(f"[scheduler] TDVP: manual_restore={len(_restored)} "
