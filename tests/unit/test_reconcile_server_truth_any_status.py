@@ -51,3 +51,46 @@ def test_only_the_exact_finished_point_is_healed():
         live_finished={"1217304738:video2"},
     )
     assert fixed["1217304738"].status != "COMPLETED"
+
+
+# ── 生产路径接线（D14 续）────────────────────────────────────────────
+# reconcile_registry 的分支只有拿到 live_finished 才会治愈，而 live 读数来自
+# heal_blocked_by_live（冻结章）/ pick_conflict_chapters（有 COMPLETED 嫌疑的章）。
+# 4738 base 是 FAILED 且该章没有 COMPLETED 记录 ⇒ 两条路都不读它，
+# live_finished 永远为空，治愈形同虚设。冻结章既然已经读了 live，就该把
+# 读数用到所有非 COMPLETED 记录上，并顺手收掉枚举里不存在的幻影点。
+
+def _blocked_and_friends():
+    v1 = _rec("1217304738", "1217304738", "FAILED")
+    v1.consecutive_failures = 1
+    v2 = _rec("1217304738:video2", "1217304738", "BLOCKED")
+    v2.consecutive_failures = 3
+    v3 = _rec("1217304738:video3", "1217304738", "DISCOVERED")
+    return {v1.task_id: v1, v2.task_id: v2, v3.task_id: v3}
+
+
+def _live_two_points():
+    # 真站读数：两个视频点，第 1 个服务端已判 finished
+    return [
+        {"task_id": "1217304738", "type": "video", "isFinished": True,
+         "objectid": "94382be48a99"},
+        {"task_id": "1217304738:video2", "type": "video", "isFinished": False,
+         "objectid": "e79a9a86eba1"},
+    ]
+
+
+def test_frozen_chapter_live_heal_covers_failed_record():
+    from app.registry.reconcile import heal_blocked_by_live
+    existing = _blocked_and_friends()
+    fixed, rep = heal_blocked_by_live("k", existing, [], {}, lambda cid: _live_two_points())
+    assert fixed["1217304738"].status == "COMPLETED"
+    assert fixed["1217304738"].verification.level == "SERVER_VERIFIED"
+    assert rep.healed_by_server == 1
+
+
+def test_phantom_video_point_is_pruned_from_ledger():
+    from app.registry.reconcile import heal_blocked_by_live
+    existing = _blocked_and_friends()
+    fixed, rep = heal_blocked_by_live("k", existing, [], {}, lambda cid: _live_two_points())
+    assert "1217304738:video3" not in fixed, "枚举里不存在的幻影点该收掉"
+    assert getattr(rep, "phantom_pruned", 0) == 1

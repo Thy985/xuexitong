@@ -40,7 +40,8 @@ class ReconcileReport:
     kept_completed: int = 0                    # 有强证据、保留 COMPLETED
     downgraded: int = 0                        # 由 COMPLETED 降级（污染修复）
     upgraded_ui: int = 0                       # 由 NONE/非COMPLETED 升为 COMPLETED(UI)
-    healed_by_server: int = 0                  # BLOCKED 由服务端 finished 真源恢复
+    healed_by_server: int = 0                  # 非 COMPLETED 记录由服务端 finished 恢复
+    phantom_pruned: int = 0                    # D13：live 枚举里不存在的幻影视频点被收掉
     repair_map: dict = field(default_factory=dict)   # {task_id: {before, after, reason}}
 
     def to_dict(self) -> dict:
@@ -51,6 +52,7 @@ class ReconcileReport:
             "downgraded": self.downgraded,
             "upgraded_ui": self.upgraded_ui,
             "healed_by_server": self.healed_by_server,
+            "phantom_pruned": self.phantom_pruned,
             "repair_map": self.repair_map,
         }
 
@@ -373,7 +375,7 @@ def heal_blocked_by_live(
     dom_status: Optional[dict],
     verify_points,
 ) -> tuple[dict[str, TaskRecord], ReconcileReport]:
-    """BLOCKED 章的服务端真源恢复（方案1，2026-09-21 用户选定）。
+    """冻结章的服务端真源恢复 + 幻影点清理（方案1 + D13/D14）。
 
     对每个含 BLOCKED 任务的章调用 `verify_points(cid) -> list[dict] | None`
     （生产里是 live_verify_chapter 的 points；测试里是桩），把读到的 finished
@@ -388,15 +390,49 @@ def heal_blocked_by_live(
         return existing, ReconcileReport(course_key=course_key)
     from tvdp.tdvp import build_live_finished
     live_done: set[str] = set()
+    live_seqs: dict[str, set[int]] = {}
     for cid in frozen:
         pts = verify_points(cid) or []
         live_done |= build_live_finished(pts)
-    if not live_done:
-        return existing, ReconcileReport(course_key=course_key)
+        seqs: set[int] = set()
+        for pt in pts:
+            if pt.get("type") != "video":
+                continue
+            pt_tid = str(pt.get("task_id") or "")
+            if pt_tid == cid:
+                seqs.add(1)                      # 第 1 个视频点沿用章节 id
+            elif pt_tid.startswith(f"{cid}:video"):
+                try:
+                    seqs.add(int(pt_tid[len(cid) + 6:]))
+                except ValueError:
+                    pass
+        live_seqs[cid] = seqs
     report = ReconcileReport(course_key=course_key)
-    for tid, rec in existing.items():
-        if getattr(rec, "status", "") == "BLOCKED" and tid in live_done:
+    for tid in list(existing):
+        rec = existing[tid]
+        status = getattr(rec, "status", "")
+        # D14：服务端 finished 判定本身就是那个"真实事件" —— 治愈不该只发给
+        # BLOCKED。FAILED/UNKNOWN/PENDING/DISCOVERED 一律按真源落 COMPLETED
+        # （失败计数留痕不清），否则引擎会反复投递页面不肯起流的已完成点。
+        if status != "COMPLETED" and tid in live_done:
             _heal_by_server_truth(tid, rec, report)
+            continue
+        # D13：冻结章的 live 枚举里没有这个视频序号 ⇒ 幻影点（cards 帧裸
+        # `.ans-job-icon` 被启发式判成 video 而 mint 出来的），它永远不会产生
+        # 任何真实事件，却占着投递名额并撞 90s 死等 —— 从账本收掉。
+        cid = str(getattr(rec, "chapter_id", "") or "")
+        seqs = live_seqs.get(cid) or set()
+        if not seqs or status not in ("DISCOVERED", "UNKNOWN"):
+            continue
+        if getattr(rec, "consecutive_failures", 0) or not tid.startswith(f"{cid}:video"):
+            continue
+        try:
+            seq = int(tid[len(cid) + 6:])
+        except ValueError:
+            continue
+        if seq > max(seqs):
+            del existing[tid]
+            report.phantom_pruned += 1
     return existing, report
 
 
