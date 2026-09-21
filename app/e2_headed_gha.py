@@ -477,6 +477,17 @@ def bind_video_state(probes: list[dict] | None,
             "target_objectid": target_objectid}
 
 
+def video_reload_warranted(reason) -> bool:
+    """Step F「无视频帧」里哪些原因值得 reload 整页（纯函数，可测）。
+
+    只保留旧的三种"整章渲染不出视频层"的触发。**target_frame_not_found
+    绝不 reload**：绑定帧不在，要么是该点已被服务端判完成（不再保留播放器，
+    reload 救不回来 —— 708 实测），要么是页面尚未推进到目标点（reload 把页面
+    打回点 1，反而阻碍推进）。这两种都交给 Step F 的预算，耗尽即诚实 FAIL。
+    """
+    return reason in ("no_video_in_cards", "no_cards_doc", "no_cards_frame")
+
+
 def run_test(args, params: "CourseParams | None" = None):
     """执行浏览器学习验证。
 
@@ -644,8 +655,6 @@ def run_test(args, params: "CourseParams | None" = None):
         max_video_reload = 3
         stall_reload_after_s = 20      # 持续“无视频”秒数阈值 → 触发 reload
         stall_s = 0                    # 累计“无视频”秒数
-        stall_reasons = ("no_video_in_cards", "no_cards_doc", "no_cards_frame",
-                         "target_frame_not_found")
         # Options B 绑定（P1）：把 :videoN 解析成目标点的 objectid，观测/续播/
         # 时长/完成判定全部只认 src 含该 objectid 的那一帧。
         target_vi = int(getattr(params, "video_index", 0) or 0)
@@ -688,7 +697,7 @@ def run_test(args, params: "CourseParams | None" = None):
                     break
             else:
                 reason = st.get("reason") or ""
-                stall_s = (stall_s + 1) if reason in stall_reasons else 0
+                stall_s = (stall_s + 1) if video_reload_warranted(reason) else 0
                 # flaky 恢复：headed-Xvfb 偶发 video iframe 不渲染(no_video_in_cards)。
                 # 持续无视频超阈值 → 有界重载并从 v3 注入，强迫 fresh render，而不是
                 # 原地空转整 90s 就放弃。
