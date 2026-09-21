@@ -43,9 +43,17 @@ def test_other_absences_do_not_reload():
 
 def _nav(**kw):
     base = dict(target_objectid="e79a9a86" + "0" * 24, bound_dur=None,
-                stalled_for_s=20.0, nav_attempts=0, last_nav_at=None, now=100.0)
+                stalled_for_s=20.0, nav_attempts=0, last_nav_at=None, now=100.0,
+                target_vi=2)
     base.update(kw)
     return should_navigate_to_target(**base)
+
+
+def test_first_video_point_never_navigates():
+    # `<cid>`（N=1）路径是被验证过的稳定链路：第 1 点就是页面"当前"播放器，
+    # Step F 正常等得到 metadata —— 不往这条链路塞新交互（用户 2026-09-21 定）
+    assert _nav(target_vi=1) is False
+    assert _nav(target_vi=0) is False
 
 
 def test_natural_mode_never_navigates():

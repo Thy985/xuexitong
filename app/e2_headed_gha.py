@@ -555,17 +555,23 @@ def bind_video_state(probes: list[dict] | None,
 
 def should_navigate_to_target(target_objectid, bound_dur, stalled_for_s,
                               nav_attempts, last_nav_at, now,
+                              target_vi: int = 0,
                               min_stall_s: float = 15.0,
                               cooldown_s: float = 15.0,
                               max_attempts: int = 3) -> bool:
-    """绑定模式下，何时该主动把目标视频点滚进视口（纯函数，可测）。
+    """绑定模式下，何时该主动激活目标播放器（纯函数，可测）。
 
-    真站实证（4738 e2e）：页面停在已完成的第 1 点播放，目标点的播放器帧
-    存在但永不激活（不在视口 → 页面自己的懒加载不触发）。绑定解决了
-    "看哪一帧"，还差"页面停在哪儿"。条件：绑定目标 + 绑定播放器没活
-    （无 metadata）+ 停滞超阈值 + 冷却已过 + 次数有界。
+    真站实证（4738 e2e + C 探测）：cards 页**串行化**任务点 —— 只有页面
+    "当前"播放器由页面驱动，目标点的 video.js 实例存在但不加载
+    （rs=0/dur=None）。绑定解决"看哪一帧"，激活解决"让这一帧轮到播"。
+    **范围闸门（用户 2026-09-21 定）：仅 `:videoN`（N≥2） dispatch 启用**
+    —— 第 1 点本就是页面当前播放器，`<cid>` 链路已验证稳定，不塞新交互。
+    条件：目标 N≥2 + 绑定播放器没活 + 停滞超阈值 + 冷却已过 + 次数有界。
     """
     if not target_objectid:
+        return False
+    if target_vi < 2:
+        return False
         return False
     if bound_dur:
         return False
@@ -796,7 +802,7 @@ def run_test(args, params: "CourseParams | None" = None):
             if should_navigate_to_target(
                     target_objectid, st.get("duration"),
                     (now_f - stalled_since) if stalled_since else 0.0,
-                    nav_attempts, last_nav_at, now_f):
+                    nav_attempts, last_nav_at, now_f, target_vi=target_vi):
                 nav_attempts += 1
                 last_nav_at = now_f
                 stalled_since = now_f
