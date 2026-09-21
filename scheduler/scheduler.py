@@ -659,7 +659,8 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
         # 自适应看门狗：长视频按实际时长展开 per-chapter 预算（避免 838s 视频被
         # 900s 静态墙钟在 play ~46% 时误杀成 TIMEOUT）。取不到时长则回 base，
         # 但**降级必须打日志** —— 静默回退曾让 846s 视频在 34% 处被砍且无线索。
-        dur, dur_err = _probe_video_duration_s(course_url, run_cid)
+        dur, dur_err = _probe_video_duration_s(course_url, run_cid,
+                                               video_index=run_vidx)
         watch_s, watch_reason = video_watch_budget(chapter_max_s, dur, dur_err)
         if watch_reason.startswith("fallback"):
             print(f"[scheduler] ⚠️ 看门狗降级 chapter={run_cid} {watch_reason}",
@@ -925,9 +926,13 @@ def video_watch_budget(base_max_s: int,
                     f"-> 静态 {budget}s；长视频有被误杀成 TIMEOUT 的风险")
 
 
-def _probe_video_duration_s(course_url: str,
-                            chapter_id: str) -> "tuple[Optional[float], Optional[str]]":
+def _probe_video_duration_s(course_url: str, chapter_id: str,
+                            video_index: int = 1) -> "tuple[Optional[float], Optional[str]]":
     """尽力而为读取章节视频总时长（秒），供自适应看门狗用。
+
+    `video_index>1`（`:videoN` dispatch）时绑定读**目标点自己**的帧时长 ——
+    旧的整章探测拿到的是点 1 的时长，`:video2` 的看门狗预算因此失真（P1）。
+    目标点不可解析时显式报错回退 base 预算（降级打日志），不拿点 1 冒充。
 
     返回 `(时长, 失败原因)`。**失败不再静默**：调用方拿原因去记日志/证据，
     否则"自适应看门狗没生效"这种降级在日志里完全看不出来（曾把 846s 视频
@@ -950,7 +955,9 @@ def _probe_video_duration_s(course_url: str,
         return None, "缺少 CX_USER/CX_PASS 凭据，跳过时长探测"
     try:
         from resolvers.course_resolver import _parse_url_params
-        from app.e2_headed_gha import get_video_state, build_base_url
+        from app.e2_headed_gha import (get_video_state, build_base_url,
+                                       enumerate_video_objectids,
+                                       pick_target_objectid)
         from tvdp.tdvp import _tdvp_course_params
         import os as _os3
         from playwright.sync_api import sync_playwright
@@ -972,8 +979,21 @@ def _probe_video_duration_s(course_url: str,
             from utils.cookie_store import ensure_login
             ensure_login(page, ctx, base, user, pw)
             page.goto(base, wait_until="domcontentloaded", timeout=30000)
-            dur, dur_err = poll_video_duration(lambda: get_video_state(page),
-                                               deadline_s=25.0, sleep_s=1.0)
+            target_objectid = None
+            if video_index and video_index > 1:
+                for _ in range(10):
+                    oids = enumerate_video_objectids(page)
+                    target_objectid = pick_target_objectid(oids, video_index)
+                    if target_objectid:
+                        break
+                    page.wait_for_timeout(1000)
+                if not target_objectid:
+                    browser.close()
+                    return None, (f"章内第 {video_index} 个视频点不可解析，"
+                                  f"回退 base 预算")
+            dur, dur_err = poll_video_duration(
+                lambda: get_video_state(page, target_objectid),
+                deadline_s=25.0, sleep_s=1.0)
             browser.close()
             return dur, dur_err
     except Exception as e:

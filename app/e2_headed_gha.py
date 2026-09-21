@@ -208,21 +208,29 @@ def should_auto_resume(st: "dict|None", now: float,
     return True
 
 
-def resume_paused_video(page) -> bool:
-    """在含 <video> 的那一帧上调用 play()（帧遍历方式与 get_video_state 一致）。"""
+def resume_paused_video(page, target_objectid: str | None = None) -> bool:
+    """在含 <video> 的那一帧上调用 play()（帧遍历方式与 get_video_state 一致）。
+
+    绑定模式下只对「src 含目标 objectid」的那一帧调 play() —— 对别的点的
+    video 调 play() 等于替非目标点起播（P1 语义：观测与控制必须同一帧）。
+    """
     try:
         frames = page.frames
     except Exception:
         return False
     for fr in frames:
         try:
-            ok = fr.evaluate("""() => {
+            ok = fr.evaluate("""(oid) => {
                 const v = document.querySelector(
                     'video#video_html5_api, video[id*="video_html5"], video');
                 if (!v || !v.paused) return false;
+                if (oid) {
+                    const src = v.currentSrc || v.src || '';
+                    if (!src || !src.includes(oid)) return false;
+                }
                 v.play();
                 return !v.paused;
-            }""")
+            }""", target_objectid)
         except Exception:
             continue
         if ok:
@@ -231,7 +239,43 @@ def resume_paused_video(page) -> bool:
 
 
 # ── 视频状态获取（与 e1_2_ch16_v2.py 完全一致）───────────────────
-def get_video_state(page) -> dict:
+VIDEO_OID_ENUM_JS = """() => {
+    const seen = new Set();
+    const out = [];
+    document.querySelectorAll('.ans-insertvideo-online[objectid]').forEach(n => {
+        const oid = n.getAttribute('objectid') || '';
+        if (oid && !seen.has(oid)) { seen.add(oid); out.push(oid); }
+    });
+    return out;
+}"""
+
+
+def enumerate_video_objectids(page) -> list[str]:
+    """按 DOM 序读 cards 帧里全部视频任务点的 objectid（`:videoN` 的第 N 个）。
+
+    每个视频任务点是 cards 帧里的 `.ans-insertvideo-online[objectid]`，同时
+    存在一个 src 含该 objectid 的 ananas video 帧 —— 这就是「点序号 ↔ 帧」
+    的绑定键（真站 1217304708 只读探针 confirmed：两帧 src 各含
+    19da22cc…/53d6b112…，cards data 里正是这两个 objectid）。
+    无 cards 帧或尚未渲染 → 空列表（调用方在等待循环里重试）。
+    """
+    try:
+        frames = page.frames
+    except Exception:
+        return []
+    for fr in frames:
+        if "knowledge/cards" not in (fr.url or ""):
+            continue
+        try:
+            ids = fr.evaluate(VIDEO_OID_ENUM_JS)
+        except Exception:
+            continue
+        if ids:
+            return list(ids)
+    return []
+
+
+def get_video_state(page, target_objectid: str | None = None) -> dict:
     """Playwright 原生遍历所有 frames（含跨域/nested iframe）读视频状态。
 
     旧版用顶层 page.evaluate 逐层按 contentDocument 挖 iframe——一旦目标 <video>
@@ -239,6 +283,11 @@ def get_video_state(page) -> dict:
     （如点对点协议PPP 1217304719 在 headed-Xvfb 三连败，3 次 reload 仍找不到）。
     Playwright 的 page.frames 能枚举并进入跨域/nested frame，对每帧探测 <video>，
     任一帧有 video 元素即命中（duration 为 null 说明仍在加载，非“无视频”）。
+
+    绑定模式（target_objectid 非空，P1）：只认「<video>.src 含该 objectid」的
+    帧 —— 章内多视频点时页面同时挂多个 video 帧，帧遍历顺序决定观测目标的旧
+    行为会把点 1 的进度当成目标点 2 的（真站 1217304708:video2 实测）。找不到
+    绑定帧时显式报 target_frame_not_found，不拿别的帧冒充。
     """
     try:
         frames = page.frames
@@ -264,20 +313,28 @@ def get_video_state(page) -> dict:
         except Exception:
             return None
 
-    has_cards = any(("knowledge/cards" in (f.url or "")) for f in frames)
+    probes: list[tuple[bool, str, dict]] = []   # (是否 cards 帧, 兜底标签, 探针结果)
+    for fr in frames:
+        st = _probe(fr)
+        if st:
+            label = (fr.url or "").split('/')[-1][:24] or "any"
+            probes.append(("knowledge/cards" in (fr.url or ""), label, st))
+
+    if target_objectid:
+        bound = bind_video_state([st for _, _, st in probes], target_objectid)
+        if bound is not None:
+            return bound
+
+    has_cards = any(is_cards for is_cards, _, _ in probes) or any(
+        ("knowledge/cards" in (f.url or "")) for f in frames)
 
     # 优先 knowledge/cards 卡片帧里的视频
-    for fr in frames:
-        if "knowledge/cards" not in (fr.url or ""):
-            continue
-        st = _probe(fr)
-        if st:
+    for is_cards, _, st in probes:
+        if is_cards:
             return {"found": True, "frame": "cards", **st}
     # 兜底：任一帧含 video 元素（含跨域 video iframe帧）
-    for fr in frames:
-        st = _probe(fr)
-        if st:
-            return {"found": True, "frame": fr.url and fr.url.split('/')[-1][:24] or "any", **st}
+    for _, label, st in probes:
+        return {"found": True, "frame": label, **st}
     if has_cards:
         return {"found": False, "reason": "no_video_in_cards"}
     return {"found": False, "reason": "no_cards_frame"}
@@ -325,7 +382,8 @@ NextUnitDecision = str  # "none" | "exit_complete" | "exit_switch"
 
 def next_unit_decision(nextunit_seen: bool, has_passed: bool, max_ct: float,
                        ended_seen: bool = False,
-                       initial_duration: float = 0.0) -> str:
+                       initial_duration: float = 0.0,
+                       bound_max_ct: float | None = None) -> str:
     """完成语义状态机：视频点何时该「本轮推进到完成」并退出（纯函数，可测）。
 
     完成凭据有两种，都要求是**本轮运行真实观测**到的信号（不是历史持久态）：
@@ -349,6 +407,11 @@ def next_unit_decision(nextunit_seen: bool, has_passed: bool, max_ct: float,
             已 auto 进下一章 + 本轮 isPassed → 该章完成）
       - nextUnit 已切 + 未 passed               → "exit_switch"（真切换、非完成）
       - 其它（未切 Unit / 未 passed）           → "none"（继续播，等完成信号）
+
+    Options B 绑定（P1）：bound_max_ct 非 None 表示本次 dispatch 绑定到了目标
+    视频点自己的帧。此时 max_ct/initial_duration 只反映绑定帧；绑定帧自身
+    max_ct==0 说明目标点一秒都没播 —— 即使 passed_object_ids 里有 isPassed
+    （那也是别的点——比如点 1——本轮的凭据），也绝不判完成，只判切换。
     """
     # 防假完成护栏（锤磊自老事故 run 34332366744）：严禁单凭 max_ct/已知时长/
     # 历史进度近似「完成」判完成。必须本轮真实读到 ended 或「服务端已切章 + 本轮
@@ -358,6 +421,9 @@ def next_unit_decision(nextunit_seen: bool, has_passed: bool, max_ct: float,
     if not nextunit_seen:
         return "none"
     if has_passed and (max_ct > 0 or initial_duration > 0):
+        if bound_max_ct is not None and bound_max_ct <= 0:
+            # P1 护栏：绑定帧（目标点）自身零进度 → isPassed 是别的点的，不判完成
+            return "exit_switch"
         # 方案A：本轮真实 is_passed + 服务端把 URL 切到另一章（chapterId 变）→
         # 该章服务端已完成，以此判 exit_complete。要求有实际进度(max_ct>0 或
         # 已知时长>0)，守住「零进度不判完成」的旧防早切护栏。不再死等旧
@@ -378,6 +444,37 @@ def target_segment_done(target_vi: int, video_count: int, ended_seen: bool) -> b
     `target_vi=0` 是"自然连播整章"，不参与本判定。
     """
     return bool(target_vi) and video_count >= target_vi and ended_seen
+
+
+def pick_target_objectid(video_objectids: list[str], target_vi: int) -> str | None:
+    """Options B：把「第 N 个视频任务点」解析成它的 objectid（纯函数，可测）。
+
+    cards 帧里 `.ans-insertvideo-online[objectid]` 按 DOM 序排列，第 N 个即
+    `:videoN` dispatch 的目标点身份。`target_vi<=0`（自然连播整章）或越界
+    （页面可解析的视频点少于 N）→ None，即不做绑定。
+    """
+    if not target_vi or target_vi < 1 or target_vi > len(video_objectids or []):
+        return None
+    oid = (video_objectids or [])[target_vi - 1]
+    return oid or None
+
+
+def bind_video_state(probes: list[dict] | None,
+                     target_objectid: str | None) -> dict | None:
+    """在逐帧探针结果里选出「<video>.src 含目标 objectid」的那一帧（纯函数）。
+
+    `target_objectid` 为空 → 返回 None（调用方回退旧的无绑定帧遍历顺序）。
+    找不到匹配帧 → 返回 found=False 的显式结果，绝不拿别的帧冒充目标
+    （P1 根因：无绑定时帧顺序决定观测目标，点 1 的 ct=655 被当成点 2 的进度）。
+    """
+    if not target_objectid:
+        return None
+    for st in probes or []:
+        src = (st or {}).get("src") or ""
+        if src and target_objectid in src:
+            return {"found": True, "frame": "bound", **st}
+    return {"found": False, "reason": "target_frame_not_found",
+            "target_objectid": target_objectid}
 
 
 def run_test(args, params: "CourseParams | None" = None):
@@ -547,7 +644,12 @@ def run_test(args, params: "CourseParams | None" = None):
         max_video_reload = 3
         stall_reload_after_s = 20      # 持续“无视频”秒数阈值 → 触发 reload
         stall_s = 0                    # 累计“无视频”秒数
-        stall_reasons = ("no_video_in_cards", "no_cards_doc", "no_cards_frame")
+        stall_reasons = ("no_video_in_cards", "no_cards_doc", "no_cards_frame",
+                         "target_frame_not_found")
+        # Options B 绑定（P1）：把 :videoN 解析成目标点的 objectid，观测/续播/
+        # 时长/完成判定全部只认 src 含该 objectid 的那一帧。
+        target_vi = int(getattr(params, "video_index", 0) or 0)
+        target_objectid = None
         for i in range(90):
             try:
                 page.wait_for_timeout(1000)
@@ -556,7 +658,24 @@ def run_test(args, params: "CourseParams | None" = None):
             if is_session_kicked(page.url):
                 evidence["verdict"] = "FAIL(session-kicked during video-wait)"
                 break
-            st = get_video_state(page)
+            if target_vi and target_objectid is None:
+                oids = enumerate_video_objectids(page)
+                if oids:
+                    evidence["video_objectids"] = oids
+                    target_objectid = pick_target_objectid(oids, target_vi)
+                    if target_objectid is None:
+                        # dispatch 指定的点在页面上不存在 —— 诚实失败，绝不
+                        # 拿点 1 的帧冒充目标（P1 旧病灶）
+                        evidence["verdict"] = (
+                            f"FAIL(target video point {target_vi} not on page; "
+                            f"points={len(oids)})")
+                        _write(evidence, args.output)
+                        browser.close()
+                        return evidence
+                    evidence["target_objectid"] = target_objectid
+                    log(f"[bind] target video #{target_vi} -> "
+                        f"objectid={target_objectid}")
+            st = get_video_state(page, target_objectid)
             dur = st.get("duration")
             if st.get("found"):
                 stall_s = 0
@@ -620,9 +739,8 @@ def run_test(args, params: "CourseParams | None" = None):
         # R-04 自动续播计数（进 evidence，供验收与事后归因）
         recovered_count = 0
         last_resume_at = None
-        # Options B：本次 run 目标章内视频段（1-based）。0 = 自然连播整章；
-        # N>0 = 推进到第 N 段视频并只把该段判完成（逐段 dispatch）。
-        target_vi = int(getattr(params, "video_index", 0) or 0)
+        # Options B 绑定：target_vi/target_objectid 已在 Step F 解析（evidence
+        # 里有 video_objectids / target_objectid）。0/None = 自然连播整章。
         initial_duration = evidence.get("video_duration", 0) or 0  # 记录初始视频总时长
         summary = {
             "duration": evidence["video_duration"],
@@ -638,13 +756,13 @@ def run_test(args, params: "CourseParams | None" = None):
                 log("⚠️ Session kicked during playback!")
                 break
 
-            st = get_video_state(page)
+            st = get_video_state(page, target_objectid)
             # R-04 自动续播：引擎一直在读 video.paused 却从不处理它 —— 实测整章
             # 卡在起播几秒处（1217304751 停 ct=8/595、1217304753 停 ct=9/1045）。
             # 只调页面自己的 play()，仍属"真实浏览器自然播放"，不碰上报链路。
             if should_auto_resume(st, now, last_resume_at, recovered_count,
                                   ended_seen):
-                if resume_paused_video(page):
+                if resume_paused_video(page, target_objectid):
                     recovered_count += 1
                     log(f"★ R-04 auto-resume #{recovered_count} "
                         f"(ct={(st.get('currentTime') or 0):.0f}s paused=True)")
@@ -764,14 +882,25 @@ def run_test(args, params: "CourseParams | None" = None):
                     evidence["nextunit_title"] = title_now
                     log(f"[GHA] nextUnit (URL chapterId changed): {args.chapter_id} -> {cur_chap}")
 
+            # 绑定模式（P1）：观测只认目标点自己的帧，它的 ended 就是「该段真的
+            # 播完」——不存在「页面还要自动切下一段」的问题（绑定帧的 src 不会
+            # 变成别的点），直接判完成退出，不走宽限期。
+            if target_objectid and ended_seen:
+                log(f"[GHA] bound target video #{target_vi} "
+                    f"(objectid={target_objectid}) ended at ct={max_ct:.0f}s — done")
+                chapter_completed = True
+                break
+
             # 章内多视频宽限期：一段视频 ended 后，给页面一点时间自动切到「同章节
             # 下一个视频」。宽限期内绝不判完成/退出——否则像 4706 这种 8 视频章，
             # 播完第 1 段就以 chapter_completed 退出，视频 2/8..8/8 根本不会被播。
             # 窗口内若页面自动切换 src，上面 st>0 分支会 video_count++ 并清空
             # next_video_deadline → 自然继续播下一段；只有窗口耗尽仍无新 src 时，
             # 才说明「这是最后一段」，此时下面的完成判定才生效。
+            # （绑定模式不进宽限：上一分支已处理目标点 ended。）
             in_next_video_grace = (
-                next_video_deadline is not None and now < next_video_deadline
+                not target_objectid
+                and next_video_deadline is not None and now < next_video_deadline
             )
 
             if in_next_video_grace:
@@ -793,9 +922,17 @@ def run_test(args, params: "CourseParams | None" = None):
             # 退出判定 / 完成语义状态机：见 next_unit_decision（纯函数）。
             # 走到这里说明：要么根本没 ended，要么宽限期已过、没有切到下一段视频 →
             # 当前就是最后一段，把它判完成（ended_seen=True）退出。
-            nd = next_unit_decision(nextunit_seen, bool(passed_object_ids), max_ct,
-                                    ended_seen=ended_seen,
-                                    initial_duration=initial_duration)
+            # 绑定模式（P1）：has_passed 收窄为「目标点自己的 objectId 收到了
+            # isPassed」——别的点的凭据不算数；并把绑定帧自身 max_ct 传给护栏，
+            # 绑定帧零进度时方案A 只能判切换、不能判完成。
+            nd = next_unit_decision(
+                nextunit_seen,
+                (target_objectid in passed_object_ids) if target_objectid
+                else bool(passed_object_ids),
+                max_ct,
+                ended_seen=ended_seen,
+                initial_duration=initial_duration,
+                bound_max_ct=max_ct if target_objectid else None)
             if nd == "exit_complete":
                 # 完成可从两条真源之一触发：
                 #   1) ended_seen=True（本轮视频真实播到末尾，真实推进基线）；
