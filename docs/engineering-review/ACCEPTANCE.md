@@ -15,13 +15,14 @@
 L4  上云回归（GHA cron 真跑）            —— 只验收 Step「上云」
 L3  真站冒烟（真账号/真课程）             —— 本地，Playwright 起浏览器连真站
 L2  功能/稳定性验证（本地，含真浏览器但可离线/可控）  —— Xvfb 有头 / headless=False
-L1  纯逻辑测试（单元/集成/回归）         —— pytest，CI 已跑（现 384 passed + 1 skip）
+L1  纯逻辑测试（单元/集成/回归）         —— pytest，CI 已跑（现 389 passed + 1 skip）
 ```
 
 ### L1 · 纯逻辑测试（CI，pytest）
 - **跑法**：`.github/workflows/test.yml`（push/PR 自动）→ `pytest tests/unit tests/integration tests/regression`。
-- **判据**：全部通过；`--maxfail=5` 内不爆炸（不允许零星断言失败仍绿）。基线：2026-09-21 实测 **384 passed, 1 skipped**（共 385 collected，69.6s）。
-  > 09-15 基线 209+1/72s → 09-20 上午 296+1/68s → D1~D7、D10、D11、P1 十起缺陷各带回归后 364+1/69.8s。
+- **判据**：全部通过；`--maxfail=5` 内不爆炸（不允许零星断言失败仍绿）。基线：2026-09-21 实测 **389 passed, 1 skipped**（共 390 collected，69.9s）。
+  > 09-15 基线 209+1/72s → 09-20 上午 296+1/68s → D1~D7、D10、D11、P1 十起缺陷各带回归后 364+1/69.8s
+  > → P1 帧绑定（+10）、方案1 服务端真源恢复（+10）、D12 点枚举去重（+5）后 389+1/69.9s。
   > **耗时也是判据**：同一套用例从 239s 降到 68s，差额正是"测试偷偷起真浏览器"被堵住的时间（见 §4.4）；
   > 之后又加了 68 条用例，耗时几乎没动（68→69.8s），说明新用例全在 fake 层。
 - **证据**：`pytest.log`（失败时自动上传 artifact）。
@@ -114,6 +115,8 @@ L1  纯逻辑测试（单元/集成/回归）         —— pytest，CI 已跑�
 | 2026-09-20 | 缺陷 | L2/L3 | **P1：`--video-index` 只当停止条件，且把"到达目标段"当"播完目标段"** | 🔁 终版根因=目标点未绑定（见 §4.8 终版） | 子日志证明页面**确实换源到点 2**（`switch → src=69a6c4c5…`），但同一秒 `break`、`max_ct=0s` → 唯一失败项 `7_currentTime_growing` → 整章 DEGRADED。`video_count` 在 src 切换时自增，条件却不看 `ended_seen`。Windows 与 GHA/Linux 同现象。第一版修法 `target_segment_done()` 被 run 108 真站复验证伪（宽限从未进入）；终版修法=objectid 帧绑定，见 §4.8 终版 |
 | 2026-09-20 | 缺陷 | L2 | **D11：累计 `failure_count` 被当"连续失败"用 → 单次失败锁死整门课** | ✅ 已修 + 后果已由真实 PASS 解除 | `run_count 104 / failure_count 31`，成功从不清零；D7 复验那一次 DEGRADED 直接把课程打成 `BLOCKED`（`scheduler.py:214` 见之即拒调度）⇒ 明晚 nightly 会拒绝学习。课程层与调度层（`ss.consecutive_failures>=3`）层次不同，问题是这条锁**名不副实**。修后复验：`BLOCKED→ACTIVE`、`failure_count→0`。见 §4.7 |
 | 2026-09-20 | 修复验证 | L2 | head_cid / stdout 编码 / 降级不再静默 三项在真站生效 | ✅ 达标 | 同一份日志内：`E6.2 head=TaskRecord` **0 次**、`E6.2 head=<纯章号>` 4 次、`has no video` **0 次**、`⚠️ 看门狗降级` 4 次且不再崩 |
+| 2026-09-21 | 缺陷 | L2 | **D12：`read_chapter_job_points` 去重键 `marker\|text[:20]` 吞掉空文本的兄弟视频点** | ✅ 已修 + 真站读数实证 | 708 诊断：两视频行 marker 全同、innerText 同为空，仅 objectid 不同 → 第二点在读数前被丢 → live 报 `total=1`，方案1 恢复永远命不中。去重下沉为纯函数 `job_rows_to_points`（oid 身份去重、无 oid 退回文本键）；修后真站读数 `total=2 finished=2`，`:video2` 据此解冻（§4.9） |
+| 2026-09-21 | 缺陷 | L2/L3 | **P1 残留：headed 会话中绑定帧出现后消失，且 reload 恢复对绑定模式有害** | 📁 已立案，待修 | 复验日志：绑定帧 1s `found=True` → 11s 起 `target_frame_not_found`；同页 headless 只读探测两帧都在。reload 把页面打回点 1 适得其反。修法候选：绑定模式不触发 reload + 目标点导航手段（点击章内条目属页面内导航，不越播放红线，待定）。见 §4.9 |
 
 > 记录规则：追加不覆盖；结果不可复现时降级为「待验」而非删除。
 
@@ -440,8 +443,21 @@ TDD：`tests/unit/test_video_frame_binding.py` 10 条（点↔objectid 解析、
   建队后显式对冻结章做恢复，命中则 `save_registry` + 重建队列。
 
 护栏回归：`test_reconcile_blocked_preserved`（无真源时 BLOCKED 原样冻结）全数保留。
-TDD：`tests/unit/test_reconcile_blocked_server_heal.py` 10 条。L1 `384 passed, 1 skipped`
-（385 collected，69.6s）。真站 ledger 恢复待授权（一次只读 live 复核 + 保存）。
+TDD：`tests/unit/test_reconcile_blocked_server_heal.py` 10 条。
+
+**首跑落空 → 炸出 D12**：第一次执行恢复动作时 live 读数报 `708: total=1
+finished=1 points=[('1217304708', True)]` —— `:video2` 根本不在读数里，护栏正确地
+不动账本。只读诊断（同页两行 marker 全同、innerText 同为空、仅 objectid 不同）
+定位为 `read_chapter_job_points` 的 JS 去重键碰撞（新立 D12）。修法：行携带
+`.ans-insertvideo-online[objectid]`，去重下沉为纯函数 `job_rows_to_points`
+（oid 身份去重；无 oid 退回旧文本键，双访问折叠能力不变）。TDD：
+`tests/unit/test_job_rows.py` 5 条。
+
+**恢复结果（2026-09-21，用户授权的只读动作）**：修后 live 读数
+`total=2 finished=2` → `healed_by_server=1`，`:video2` 以
+`SERVER_VERIFIED("server finished marker on the exact point")` 置 COMPLETED，
+`cf=4` 保留不清（留痕）；同轮冻结章 `1217304719`（live finished=false）**不动**，
+护栏如设计。L1 `389 passed, 1 skipped`（390 collected，69.9s）。
 
 
 ---
@@ -481,10 +497,11 @@ TDD：`tests/unit/test_reconcile_blocked_server_heal.py` 10 条。L1 `384 passed
 1. **M0 / R-01 三次稳定性：第 4 轮已达标**（§4.6）—— 其中 1 次是 D7 造成的 23s 空投；
    **D7 已复验通过**（§4.7：`tasks=87→87`、投到 `:video2`、无空投），所以 M0 判据本身闭合。
    没宣布结案的真正原因改成下面第 2 条：多视频章的第 2 点仍学不完（P1）。
-2. **P1 章内切点（§4.8/§4.9）**：帧绑定修法已落地；其复验被两个事实改道 ——
+2. **P1 章内切点（§4.8/§4.9）**：帧绑定修法已落地并推送；复验被两个事实改道 ——
    用户手动看完点 2（服务端已 finished，replay 无意义）+ P1 残留缺陷（headed 下
-   目标帧消失、reload 有害）。`:video2`（cf=4）改走服务端真源恢复路径（§4.9
-   方案1），一次只读 live 复核即可解冻，不手改账本。
+   目标帧消失、reload 有害，已立案待修）。`:video2` **已经服务端真源恢复路径
+   （§4.9 方案1）解冻**：一次只读 live 复核 → SERVER_VERIFIED 置 COMPLETED，
+   cf=4 留痕不清；期间顺带炸出并修复 D12（点枚举去重碰撞）。
 3. **P0-01 自适应看门狗从未生效**：第 4 轮 6/6 仍回落静态 900s（探测窗口内播放器没挂 metadata）。
    本轮最长 549.9s < 900s 属侥幸；>900s 内容的章会被误杀成 TIMEOUT。
 4. **R-04 真站未验**：自动续播有 12 个单测，但四轮真站里**没有一次观测到它触发**。
