@@ -719,3 +719,69 @@ def prune_phantom_points_after_refine(existing, *, chapter_id, verify) -> list:
     if observed < 1:
         return []
     return prune_phantom_video_points(existing, chapter_id=chapter_id, observed=observed)
+
+
+# ── 投递侧证据闸门（ACCEPTANCE §4.17）──────────────────────────────
+EVIDENCE_ALLOW = "ALLOW"
+EVIDENCE_PRUNE = "PRUNE"
+EVIDENCE_UNKNOWN = "UNKNOWN"
+
+
+def record_has_own_point_evidence(rec) -> bool:
+    """这个点自己留没留下"被看见过"的痕迹 —— 有就不必为它再花一次读数。
+
+    三种痕迹：服务端确认过该点的 objectid（`point_is_server_verified`，status 翻脸也不
+    影响它）、真跑过（attempts）、跑失败过（consecutive_failures，失败也证明引擎到过那段）。
+    """
+    if rec is None:
+        return False
+    try:
+        if rec.point_is_server_verified():
+            return True
+    except Exception:
+        pass
+    return bool(getattr(rec, "attempts", 0)
+                or getattr(rec, "attempt_count", 0)
+                or getattr(rec, "consecutive_failures", 0))
+
+
+def point_evidence_verdict(video_index, observed) -> str:
+    """拿"这一次"的新鲜读数裁决第 N 段的断言。"""
+    try:
+        idx = int(video_index)
+    except (TypeError, ValueError):
+        return EVIDENCE_UNKNOWN
+    try:
+        obs = int(observed)
+    except (TypeError, ValueError):
+        return EVIDENCE_UNKNOWN
+    if obs < 1:
+        return EVIDENCE_UNKNOWN       # 读空不等于"该章没有第 N 点"
+    return EVIDENCE_ALLOW if obs >= idx else EVIDENCE_PRUNE
+
+
+def dispatch_gate_needs_read(rec, *, video_index) -> bool:
+    """要不要为"`<cid>` 至少有第 N 个视频点"这条断言花一次读数。
+
+    章自己的记录（index<=1）与已经被看见过的记录都不必 —— 调用方在**花钱之前**先问这句，
+    否则"带证据者免读"只存在于判据函数内部，生产侧照样会为每条已证明的点开一次浏览器。
+    """
+    try:
+        idx = int(video_index)
+    except (TypeError, ValueError):
+        return False
+    if idx <= 1:
+        return False
+    return not record_has_own_point_evidence(rec)
+
+
+def dispatch_gate_decision(rec, *, video_index, observed) -> str:
+    """投递一个 `<cid>:videoN` 之前的裁决（§4.16 的判据搬到决策点）。
+
+    `video_index <= 1` 是章自己的记录，不是 mint 出来的兄弟断言，没有可质疑的东西。
+    UNKNOWN 一律**照投**：把"没读到"当成"没有"正是 R5/R6 那一族事故的方向 —— 投错只损失
+    一晚，饿死一个真点则是不可逆的账面缺失（本次实测里 1217304741:video2 就是真点）。
+    """
+    if not dispatch_gate_needs_read(rec, video_index=video_index):
+        return EVIDENCE_ALLOW
+    return point_evidence_verdict(video_index, observed)

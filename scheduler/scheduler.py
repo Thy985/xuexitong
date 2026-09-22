@@ -1297,6 +1297,45 @@ def _align_chapter_url(course_url: str, chapter_id: str) -> str:
         return course_url
 
 
+def _dispatch_evidence_gate(candidates, existing, *, read_points, rebuild, note=None):
+    """投递前的一次问证据：`<cid>:videoN` 里 "N>=2" 是一条**断言**，投它之前就地要读数。
+
+    read_points(chapter_id) -> Optional[int]：该章**本轮**新鲜数出的视频点数（None=没读到）。
+    rebuild() -> list：收掉幻影之后重建候选列表（生产侧同时负责落盘）。
+
+    判据本体在 `reconcile.dispatch_gate_decision`（L1 覆盖）。这一层只保证三件事：
+      * 章自己的记录（index<=1）与"自己被看见过"的记录，一次额外读数都不许多花；
+      * 新鲜读数反驳时当场收掉、换下一个候选，而不是让引擎花掉整晚去撞（max_chapters=1）；
+      * 读不到一律照投 —— 把"没读到"当成"没有"会饿死真实学习量（§4.17 实测的
+        1217304741:video2 就是 2 点章里那个未完成的真点）。
+    """
+    from app.registry.reconcile import (
+        EVIDENCE_PRUNE, EVIDENCE_UNKNOWN, dispatch_gate_decision,
+        dispatch_gate_needs_read, prune_phantom_video_points,
+    )
+    say = note or (lambda msg: print(f"[scheduler] {msg}", flush=True))
+    while candidates:
+        tid = str(candidates[0].get("task_id", "") or "")
+        cid, idx = _split_video_target(tid)
+        if not cid or not dispatch_gate_needs_read(existing.get(tid), video_index=idx):
+            return candidates       # 章自己的点 / 已被看见过的点：不花读数，直接投
+        obs = read_points(cid)
+        verdict = dispatch_gate_decision(existing.get(tid), video_index=idx, observed=obs)
+        if verdict == EVIDENCE_UNKNOWN:
+            say(f"TDVP: DISPATCH-GATE {tid} 本轮读不到 {cid} 的点级 —— 照投"
+                f"（读空不等于该章没有第 {idx} 个视频点）")
+            return candidates
+        if verdict != EVIDENCE_PRUNE:
+            return candidates
+        gone = prune_phantom_video_points(existing, chapter_id=cid, observed=obs)
+        if not gone:
+            return candidates
+        say(f"TDVP: DISPATCH-GATE {tid}: 新鲜读数说 {cid} 只有 {obs} 个视频点 -> "
+            f"收掉 {sorted(gone)}，换下一个候选（不等引擎拿整晚去撞）")
+        candidates = rebuild()
+    return candidates
+
+
 def _run_tdvp_probe(course_url: str, course_key: str,
                     run_id: str = "local",
                     exclude_chapters=None) -> Optional[str]:
@@ -1585,6 +1624,53 @@ def _run_tdvp_probe(course_url: str, course_key: str,
             print("[scheduler] TDVP: queue empty (or all remaining chapters "
                   "already handled this run)", flush=True)
             return None
+
+        # ── 投递侧证据闸门（§4.17）：决定投 `<cid>:videoN` 的这一问，就地要证据 ──
+        # §4.16 把同一条判据放在 refine 处，run 35733572959 实测覆盖率 0 —— refine 读的是
+        # **预测队首章**，被投的却是重建队列后的 candidates[0]，两个不是同一个章。
+        _gate_head_cid = locals().get("head_cid", "") or ""
+        _gate_verify = locals().get("verify", None)
+        _gate_reads = {"left": 2}          # 一晚最多两次额外 L2 深读，闸门不许吃掉整晚
+        _gate_observed = {}
+
+        def _read_points(cid):
+            """该章**本轮**新鲜数出的视频点数；内存里没有就开一次 L2 复核（读预算内有界）。"""
+            if cid in _gate_observed:
+                return _gate_observed[cid]
+            obs = None
+            if cid == _gate_head_cid and isinstance(_gate_verify, dict):
+                _v = _gate_verify
+            elif _gate_reads["left"] > 0:
+                _gate_reads["left"] -= 1
+                _v = live_verify_chapter(cid, params.get("course_id", ""),
+                                         params.get("clazz_id", ""), params.get("cpi", ""),
+                                         os.environ.get("CX_USER", ""),
+                                         os.environ.get("CX_PASS", ""))
+            else:
+                _v = None
+            if isinstance(_v, dict):
+                from tvdp.tdvp import chapter_video_summary
+                try:
+                    pts = _v.get("points") or []
+                    obs = int(chapter_video_summary(pts)[0] if pts
+                              else (_v.get("video_total") or 0))
+                except Exception:
+                    obs = None
+            _gate_observed[cid] = obs
+            return obs
+
+        def _rebuild_after_prune():
+            save_registry(course_key, existing)
+            _done = merge_done_with_points(
+                done_chapter_ids_from_registry(existing), set(),
+                load_chapter_points(course_key))
+            _q = reconcile_queue(course_key, existing, _done,
+                                 points_map=load_chapter_points(course_key))
+            return _drop_frozen_candidates(_apply_excluded(_q, exclude_chapters),
+                                           existing)[1]
+
+        candidates = _dispatch_evidence_gate(candidates, existing, read_points=_read_points,
+                                             rebuild=_rebuild_after_prune)
 
         next_item = candidates[0]
         next_tid = next_item.get("task_id", "")
