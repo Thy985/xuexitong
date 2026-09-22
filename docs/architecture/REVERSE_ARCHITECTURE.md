@@ -260,17 +260,32 @@ run_scheduler(course_url?, chapter_id?, trigger, run_id, max_chapters)   :512
     - 第 1 点：25s 不激活（设计上就不点）→ 日志 `时长探测失败(25s 内未读到 video.duration（最后 st={'found': True, 'currentTime': 227…}) -> 静态 900s`；
     - 第 ≥2 点：先 `activate_target_point` 再轮询 45s，但子进程解析目标 oid 约 33s + 点击→metadata 约 32s，45s 常不够。
     后果不是理论风险：本轮 `chapter 1217304738 verdict=PASS timing_s=868.1` —— 距 900s 墙钟只剩 **32s**，稍慢一点就是"已经通过却被砍成 TIMEOUT"。候选修法：像 Step F 那样重试激活、把子进程读到的 `video_duration` 回灌父进程预算，或干脆把预算判定移到子进程内。
+9. **陈旧点级快照会 mint 出不存在的 `:videoN`，并且很可能就是 R6 的起因**（R7，2026-09-22 实测+已修一半）：
+   快照条目是 `build_tasks_from_discovery` 拆分视频点数的唯一来源（`video_counts_from_points` ←
+   `load_chapter_points`，scheduler.py:1302）。本地那批 9/20 的读数已在说谎：4730 今天三路实测
+   （引擎枚举 / cards DOM 标记 / 服务端 live 点读）都是 **1**，快照写 **2**；4738 实测 **2**，快照写 **3**
+   （D12/D13 那类错计数被固化进缓存）。后果链：`一次错读数 → 缓存固化 → 每轮 mint 幻影点 → 引擎判
+   not-on-page → 记一次真实 FAILED → 三次冻整章`。**R6 现场可被同一条解释**：4738 被降级时用的正是
+   `{video_total: 3, video_finished: 1}` 这份旧快照（3>1 ⇒ 判"还有未 finish 的视频点"），而十几秒后的
+   E6.2 live refine 读到 2/2 —— 降级判据与自己随后的读数矛盾，其实矛盾的是**新旧两份读数**。
+   已修：① 撞上了不再记播放失败（判据 `phantom_correction_policy` +
+   `prune_phantom_video_points` + `video_total_from_observation`，真站 35684654409 复验通过）；
+   ② 陈旧不再参与 mint（TTL 1 天）。**未修**：done 判定侧仍读陈旧快照，且缓存只存聚合数、
+   不存点列表与 objectid，事后无从复核"当时为什么读到 3"。
+
 8. **L1 廉价校准会把服务器已判完成的章降级回炉**（R6，2026-09-22 同一 run 实证）：
    `TDVP: stale=1 chapters re-queued: ['1217304738']` —— 而同一轮 E6.2 live refine 读到的是
    `1217304738 video_total=2 finished_video=2`（服务器视角两个视频点**都已 finished**）。
    即：降级判据与它自己十几秒后的 live 读数**互相矛盾**，队首仍是该章 → 引擎把已经 PASS 过的
    点重播一遍（attempts 2→3），**吃掉当晚唯一的 1 个点位预算**，而真正该学的 `1217304730:video2`
-   仍在队列里没轮到。打印未区分是 `stale_completed_by_catalog` 还是 `_by_points` 干的（:1312/:1313
-   合成一个 `stale_ids`），这也是 §7.3#2 那半项「未与服务器判定实测比对」第一次给出**反向**证据：
+   仍在队列里没轮到。原先打印与账本都区分不出是哪条腿干的（:1312/:1313 合成一个 `stale_ids`）——
+   **已修**：`mark_stale_with_source` 把 `stale_by=catalog|points|catalog+points` 写进
+   `completion_evidence.detail` 与日志（§5 Step 3 / §10），但真站 35681460999 未再触发降级，
+   腿名仍要等下一次真实降级才有。这也是 §7.3#2 那半项「未与服务器判定实测比对」第一次给出**反向**证据：
    本地判据偏保守（假回炉），不是判据偏松（假绿）。
-   **待验假设（未证实）**：该章账本里 `1217304738:other` 仍是 UNKNOWN —— 若降级由 catalog 腿触发，
-   那就是"**为非视频的 other 点把整章回炉，而引擎只会重播视频**"；确认方法是把 :1312/:1313 两个
-   返回值分别打印（现在被合并成一个 `stale_ids`，事后无从区分）。
+   **待验假设（未证实，现成可测）**：该章账本里 `1217304738:other` 仍是 UNKNOWN —— 若降级由 catalog 腿触发，
+   那就是"**为非视频的 other 点把整章回炉，而引擎只会重播视频**"；确认手段已就位（`stale_by=` 留痕），
+   等一次真实降级即可读出。
 
 ### 7.3 待查/不确定点（2026-09-21 逐项核验，2026-09-22 行号与结论对齐）
 
@@ -279,7 +294,7 @@ run_scheduler(course_url?, chapter_id?, trigger, run_id, max_chapters)   :512
 | 1 | **L6 服务器真接受点端到端证明** | **仍未做**（维持 `PROGRESS_OUTCOME_DATAFLOW` §2「谨慎保留，不拍板」定位）；代码中无对应检查点。**注**：单个任务点的 `isPassed=true` → `mark_completed(SERVER_VERIFIED)` 已有真站实例（4738:video2），但「服务器进度与本地账整体一致」这门课级对账仍未做。 |
 | 2 | `merge_done / stale_completed_by_*` 精确判定 | **已证（逻辑+触发链）**：真名 `merge_done_with_points`（task_registry.py:547，剔除快照显示未完成章）；`stale_completed_by_catalog`（reconcile.py:521，目录 job_remaining>0 且无点级服务端确认且无快照兜底）与 `stale_completed_by_points`（reconcile.py:557，快照有未 finish 视频点且无兄弟点）。生产调用点 scheduler.py:1227-1229 / 1312-1313 / 1331 / 1369-1371 / 1429-1431 / 1452-1455。**剩余未验**：「语义与服务器判定一致」——只证了本地逻辑与触发。**2026-09-22 出现首个反向实例**：判据偏保守（把 live 已 finished 的章降级回炉），见 §7.2#8。 |
 | 3 | `resolve_course` 标题退化的影响面 | **已证**：生产三处调用皆默认 `verify_via_browser=False`（run.py:90/115、scheduler.py:553），title 恒 `course_<course_id>`（真实 state 文件实证）。**影响窄**：identity 键只取 course_id+clazz_id（`CourseIdentity.key()`，models.py:30），title 仅存留痕/展示，不进调度路径。 |
-| 4 | `chapter_points.json` 过期/刷新策略 | **已证**：生产唯一写点 = `set_chapter_point_snapshot`（定义 task_registry.py:491，唯一调用 scheduler.py:1411，对队首候选章 L2 复核后落盘）；**无 TTL、无删除路径** —— 陈旧章不刷新（除非再次成为候选+复核成功），也从不因课程变更清空。实证：4738:video2 于 9/22 完成后，该文件 mtime 仍是 **9/20 18:04** 未动。 |
+| 4 | `chapter_points.json` 过期/刷新策略 | **已证 + 2026-09-22 部分修**：生产唯一写点 = `set_chapter_point_snapshot`（定义 task_registry.py:491，唯一调用 scheduler.py:1411，对队首候选章 L2 复核后落盘）；**无删除路径**，且**陈旧章不刷新**（除非再次成为候选+复核成功）。实证：4738:video2 于 9/22 完成后，该文件 mtime 仍是 **9/20 18:04** 未动。**mint 侧已加时效**（`video_counts_from_points`，`POINTS_SNAPSHOT_TTL_S` 默认 1 天：`updated_at` 缺失/畸形/超时一律不采信 → 该章回退默认 1 点，见 §7.2#9）；**done 判定侧（`merge_done_with_points` / `chapter_done_from_snapshot`）仍无时效** —— 方向是保守的（可能把已完成章判成未完），但同一份陈旧缓存也会让 `stale_completed_by_*` 拿着旧点数去降级（R6 的实测现场即此）。 |
 | 5 | Windows 冒号 ADS 文件名覆盖范围 | **已证全覆盖**：全仓库以 task_id 拼文件名的位置仅 scheduler.py:417-419，且经 `artifact_slug`（:377）单一入口（`:→_`）；单元测试 `test_artifact_paths.py` 与回归 `test_regression_p2_evidence_attribution.py` 锁死格式。`{cid}:video2` 只作账本 key，不出现在文件名。 |
 | 6 | （复核新发现）`progress.total` 语义 | **已证**：见 §7.2#4 —— `total` 只在 `is None` 时写一次，永不重算；无 TTL 语义。 |
 | 7 | （原 §2/§I9 悬案）章内多视频点「怎么才学得到」 | **已定案（2026-09-22，三次只读探测 + 一次真 run）**：既不是 seek 前点（页面会跳章）、也不是 v3 连播（v3 抢回合、目标点被钉 paused）；唯一可用通道 = **不注入 v3 + 点击目标点自己的播放键**。落为 `should_inject_v3`/`activate_target_point` 两条腿，见 §2 e2e 引擎与 §6 I9。 |
