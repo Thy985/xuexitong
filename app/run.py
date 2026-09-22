@@ -263,7 +263,10 @@ def cmd_run(args) -> int:
     # 旧版只写 PASS，失败路径完全不更新 registry → 失败任务卡在 Queue 头部重复执行。
     if identity and chapter:
         try:
-            from app.registry.task_registry import load_registry, save_registry
+            from app.registry.task_registry import (
+                load_registry, save_registry, video_total_from_observation)
+            from app.registry.reconcile import (
+                phantom_correction_policy, prune_phantom_video_points)
             reg = load_registry(identity.key())
             # E6.2：同一章可有多个视频 task（<chapterId>, <chapterId>:video2, ...）。
             # 标记「本章第一个尚未完成的 video task」——即本次播放的那个视频点的任务，
@@ -314,13 +317,32 @@ def cmd_run(args) -> int:
                     failure_stage = str((ev or {}).get("failure_stage", "") or "") \
                         if ev else ""
                     detail = str((ev or {}).get("verdict", "") or "")[:200]
-                    status = target.mark_failed(
-                        run_id=run_id, detail=detail, failure_stage=failure_stage,
-                    )
-                    save_registry(identity.key(), reg)
-                    print(f"[run] Task {target.task_id} marked {status} "
-                          f"(cf={target.consecutive_failures}/{target.max_attempts}, "
-                          f"stage={failure_stage or '?'})", flush=True)
+                    adopted = phantom_correction_policy(
+                        failure_stage,
+                        video_index=(ev or {}).get("target_video_index"),
+                        observed_points=(ev or {}).get("video_points_observed"))
+                    if adopted is not None:
+                        # 页面实测只有 N 个点、却要投第 M>N 个 —— 是**账本/快照错**，
+                        # 不是播放失败。记 cf 会让三次撞墙后把整章冻住（§4.13），
+                        # 所以这里改的是账本本身：收掉超范围的幻影点 + 纠正快照的点数。
+                        pruned = prune_phantom_video_points(
+                            reg, chapter_id=target.chapter_id, observed=adopted)
+                        corrected = video_total_from_observation(
+                            identity.key(), target.chapter_id, observed=adopted,
+                            reason=f"engine enumerated {adopted} video point(s) on page")
+                        save_registry(identity.key(), reg)
+                        print(f"[run] PHANTOM target {target.task_id}: page has "
+                              f"{adopted} point(s) -> pruned={sorted(pruned)} "
+                              f"snapshot_corrected={corrected}; 不计 consecutive_failures",
+                              flush=True)
+                    else:
+                        status = target.mark_failed(
+                            run_id=run_id, detail=detail, failure_stage=failure_stage,
+                        )
+                        save_registry(identity.key(), reg)
+                        print(f"[run] Task {target.task_id} marked {status} "
+                              f"(cf={target.consecutive_failures}/{target.max_attempts}, "
+                              f"stage={failure_stage or '?'})", flush=True)
         except Exception as e:
             print(f"[run] Task registry update failed (non-fatal): {e}",
                   file=sys.stderr, flush=True)

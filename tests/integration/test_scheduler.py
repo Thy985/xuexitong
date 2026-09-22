@@ -317,6 +317,41 @@ class TestRunSchedulerMultiChapter:
         assert out.result == "SUCCESS"
         assert out.chapters_attempted == ["1217304701", "1217304702"]
 
+    def test_phantom_point_correction_is_not_a_playback_failure(
+            self, sample_identity, tmp_state_dir, monkeypatch):
+        """§4.13：页面实测只有 1 个点、却投了 :video2 —— 这该修账本，不该记播放失败。
+
+        聚合结论必须是 SUCCESS：workflow 里 state 提交步的条件是 `success()`，判 FAILED
+        就等于纠正根本落不回仓库，幻影明晚照旧再来吃一个点位。
+        """
+        initialize_course(sample_identity)
+        save_course_state(CourseState(course_identity=sample_identity, status="ACTIVE"))
+
+        from scheduler import scheduler as sched
+        monkeypatch.setattr(sched, "_run_tdvp_probe",
+                            lambda *a, **k: "1217304730:video2")
+
+        def fake_run_one(course_url, chapter_id, task_id, trigger, run_id,
+                         video_index=0, max_s=900):
+            return {"passed": False,
+                    "verdict": "FAIL(target video point 2 not on page; points=1)",
+                    "runtime_evidence": {"failure_stage": "TARGET_NOT_ON_PAGE",
+                                         "target_video_index": 2,
+                                         "video_points_observed": 1},
+                    "failure_stage": "TARGET_NOT_ON_PAGE",
+                    "exit_code": 1, "timing_s": 15.9, "timed_out": False}
+        monkeypatch.setattr(sched, "_run_one_chapter", fake_run_one)
+
+        out = sched.run_scheduler(course_url="", trigger="manual",
+                                  run_id="100", max_chapters=1)
+
+        assert out.chapters_corrected == ["1217304730:video2"]
+        assert out.chapters_failed == []
+        assert out.result == "SUCCESS"
+        # 课程级熔断也不该被一次账本错往前推
+        assert sched.load_scheduler_state(
+            sample_identity.key()).consecutive_failures == 0
+
     def test_apply_excluded_filters_same_chapter(self, tmp_state_dir):
         from scheduler import scheduler as sched
         # 展示队列 items 里有重复同章（本轮已处理）时应被剔除

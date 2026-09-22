@@ -630,3 +630,56 @@ def run_calibrated_reconcile(
         course_key, existing, discovery_tasks, dom_status=dom,
         live_pending=live, live_finished=live_done,
     )
+
+
+def phantom_correction_policy(failure_stage: str, *, video_index, observed_points):
+    """这个失败是不是「账本要的序号比页面上的点多」？是则返回应采纳的观测点数。
+    
+    只有一种观测可以采信：引擎确实数到了 >=1 个视频点，而投递要求的那个序号比它大。
+    数到 0 个是「没读到」（登录墙 / cards 帧未挂载 / 瞬态），把它当「该章没有视频点」
+    就会把好章的快照清零 —— 那正是 §4.2 那类误降的来路，所以这里一律拒绝 0。
+    """
+    if (failure_stage or "").upper() != "TARGET_NOT_ON_PAGE":
+        return None
+    try:
+        obs = int(observed_points)
+        vi = int(video_index)
+    except (TypeError, ValueError):
+        return None
+    if obs < 1 or vi <= obs:
+        return None
+    return obs
+
+
+def prune_phantom_video_points(existing, *, chapter_id, observed) -> list:
+    """按一次真实页面观测收掉序号超出该章实际点数的 `:videoN` 幻影记录。
+    
+    D13 的清理只覆盖「冻结章 + 无失败计数」这一角，于是 §4.13 的 4730:video2 —— 一个
+    已经因幻影记过 FAILED 的点 —— 永远清不掉，还会每轮被重新 mint 出来撞墙。这里去掉
+    cf 条件：**幻影点不该因为它撞过墙就获得豁免权**。COMPLETED 仍然不删（那是证据问题，
+    交给 reconcile 的降级路径处理，不在这里动）。observed<1 时不动任何记录。
+    """
+    cid = str(chapter_id or "")
+    try:
+        obs = int(observed)
+    except (TypeError, ValueError):
+        return []
+    if not cid or obs < 1:
+        return []
+    prefix = f"{cid}:video"
+    pruned = []
+    for tid in list(existing):
+        if not tid.startswith(prefix):
+            continue
+        try:
+            seq = int(tid[len(prefix):])
+        except ValueError:
+            continue
+        if seq <= obs:
+            continue
+        rec = existing[tid]
+        if getattr(rec, "status", "") == "COMPLETED":
+            continue
+        del existing[tid]
+        pruned.append(tid)
+    return pruned

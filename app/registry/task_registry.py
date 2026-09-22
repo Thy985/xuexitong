@@ -754,3 +754,35 @@ def pick_next_task(queue: ExecutionQueue) -> Optional[TaskRecord]:
     first = queue.items[0]
     reg = load_registry(first.get("course_key", ""))
     return reg.get(first["task_id"])
+
+
+def video_total_from_observation(course_key: str, cid: str, *, observed: int,
+                                 reason: str = "") -> bool:
+    """用一次真实页面观测纠正该章快照的视频点总数；真有变化才写，返回是否写了。
+    
+    快照是 `build_tasks_from_discovery` 拆分数量的唯一来源（经
+    `video_counts_from_points`），而它无 TTL、不当队首候选就不刷新 —— 一次读错就会
+    每轮重新 mint 出不存在的 `:videoN`（§4.13）。`video_finished` 一并夹到不超过
+    total，避免出现 finished>total 的倒挂快照。
+    """
+    try:
+        obs = int(observed)
+    except (TypeError, ValueError):
+        return False
+    if obs < 1:
+        return False
+    pts = load_chapter_points(course_key)
+    snap = pts.get(cid) or {}
+    if int(snap.get("video_total") or 0) == obs:
+        return False
+    entry = {
+        "video_total": obs,
+        "video_finished": min(int(snap.get("video_finished") or 0), obs),
+        "has_video": True,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    if reason:
+        entry["corrected_reason"] = str(reason)[:200]
+    pts[cid] = entry
+    save_chapter_points(course_key, pts)
+    return True

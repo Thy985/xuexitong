@@ -661,11 +661,23 @@ other 点把整章回炉、而引擎只会重播视频"，属系统性浪费（�
 **探针自纠**：本次输出里 `finished=None` 是我打印键名取错（真键是 `isFinished`，见 `chapter_video_summary`
 tvdp.py:1058），不构成站点读数结论 —— 已在此标注，避免下一轮把它当"服务端没判完成"。
 
-**两条修法（互补，待选）**：① 安全属性优先 —— 引擎遇到 `points < 目标序号` 时上报可区分的失败阶段
-（如 `TARGET_NOT_ON_PAGE`），reconcile 据此判"快照与站点不一致 → 刷新该章快照并按 live 点数清掉
-`:videoK`（K>N）"，**不计入 consecutive_failures**；现在这条路把"账本错"记成"播放失败"，三次就把整章冻掉。
-② 把 D13 已有的幻影清理从"冻结章恢复"一条路扩到正常 head-candidate refine，并给快照加"只有 live 复核成功才更新"
-的写入口。
+**落地（2026-09-22，方案①）**：引擎在早退出处新增 `failure_stage="TARGET_NOT_ON_PAGE"` +
+`target_video_index` + `video_points_observed`（e2_headed_gha.py:825-837）；子进程 postflight 命中该段时
+**不走 mark_failed**，改为 `prune_phantom_video_points`（收掉 K>observed 的记录，**去掉 D13 的 cf==0 条件**
+—— 幻影不该因为撞过墙就获得豁免权）+ `video_total_from_observation`（把快照的 video_total 纠正到实测值，
+`video_finished` 一并夹住）；`phantom_correction_policy` 是唯一判据，父层复用同一个函数。
+**一个非显然的坑**：纠正必须让整轮聚合判 SUCCESS —— workflow 的 state 提交步条件是 `success()`，
+若判 FAILED 则纠正根本落不回仓库，幻影明晚照旧再来吃一个点位。所以父层像 TIMEOUT 那样把它从
+`chapters_failed` 里摘出来，单独记 `chapters_corrected`（进 summary/日志，`PHANTOM-CORRECTED …`）。
+测试：`tests/unit/test_phantom_point_correction.py` 11 项（含"纠正之后 `build_tasks_from_discovery`
+不再 mint `:video2`"这条端到端保证、以及"observed=0 不许采信"）+ `tests/integration/test_scheduler.py`
+1 项（熔断/聚合）。**变异检查已做**：把 `chapters_corrected.append` 改回 `chapters_failed.append`
+后集成测试必须变红（第一次尝试因为 heredoc 没执行、误报通过，重做后才拿到红），还原后全量
+**439 passed, 1 skipped**。
+**尚未做（原方案②）**：把 D13 已有的幻影清理从"冻结章恢复"这一条路扩到正常的 head-candidate
+refine，并规定快照**只在 live 复核成功时**更新 —— ①治的是"撞上了怎么记账"，②治的是"别再从陈旧
+快照里 mint 出来"。另有一条同源缺口：快照只存聚合数（`video_total/video_finished`），不存点列表与
+objectid，所以 9/20 那次为什么读到 2 已经无法复核；要能事后审计就得把点级明细一并存进去。
 
 ---
 

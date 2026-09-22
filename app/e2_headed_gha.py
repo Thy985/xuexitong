@@ -828,6 +828,12 @@ def run_test(args, params: "CourseParams | None" = None):
                         evidence["verdict"] = (
                             f"FAIL(target video point {target_vi} not on page; "
                             f"points={len(oids)})")
+                        # 单独一个失败阶段：这不是"播不动"，是**账本要求的序号比页面上
+                        # 实际存在的点还大**。父层据此纠正点级快照并收掉幻影记录，
+                        # 而不是把它记成一次真实播放失败（§4.13：三次撞墙就冻整章）。
+                        evidence["failure_stage"] = "TARGET_NOT_ON_PAGE"
+                        evidence["target_video_index"] = target_vi
+                        evidence["video_points_observed"] = len(oids)
                         _write(evidence, args.output)
                         browser.close()
                         return evidence

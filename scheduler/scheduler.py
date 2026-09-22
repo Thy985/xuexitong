@@ -92,6 +92,7 @@ class ExecutionResult:
     chapters_attempted: list = field(default_factory=list)   # 本轮尝试的章节 id
     chapters_failed: list = field(default_factory=list)      # 本轮失败的章节 id（含 TIMEOUT）
     chapters_timed_out: list = field(default_factory=list)   # 本轮超时(watchdog)的章节 id
+    chapters_corrected: list = field(default_factory=list)    # 本轮按页面实测纠正账本错的章
 
     def __post_init__(self):
         if not self.timestamp_utc:
@@ -648,6 +649,7 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
     consecutive_fail_in_run = 0
     executed = 0
     chapters_timed_out: list = []
+    chapters_corrected: list = []      # 本轮按页面实测纠正掉账本错的章（§4.13）
     while executed < max_chapters:
         if time.time() - t0 > budget_s:
             print(f"[scheduler] budget exceeded ({budget_s}s), "
@@ -690,6 +692,11 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
         rt_ev = one["runtime_evidence"]
         fail_stage = one["failure_stage"]
         timed_out = one["timed_out"]
+        from app.registry.reconcile import phantom_correction_policy
+        phantom = phantom_correction_policy(
+            fail_stage,
+            video_index=(rt_ev or {}).get("target_video_index"),
+            observed_points=(rt_ev or {}).get("video_points_observed"))
         executed += 1
         last_verdict = verdict
         runtime_evidence = runtime_evidence or rt_ev
@@ -700,6 +707,15 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
 
         if passed:
             consecutive_fail_in_run = 0
+        elif phantom is not None:
+            # 幻影 `:videoN`（§4.13）：页面上没有这么多个点，子进程已按实测把账本与
+            # 点级快照纠正掉。这**不是播放失败**，所以既不计本轮连续失败预算、也不计入
+            # chapters_failed —— 否则整轮判 FAILED，workflow 的 state 提交步（`success()`）
+            # 直接跳过，纠正落不回仓库，幻影明晚照旧再来一次。
+            chapters_corrected.append(next_task)
+            print(f"[scheduler] PHANTOM-CORRECTED {next_task}: page has {phantom} "
+                  f"video point(s) -> ledger/snapshot repaired, not counted as a "
+                  f"playback failure", flush=True)
         elif timed_out:
             # TIMEOUT：执行器未能可靠终止。记为失败（计入 chapters_failed，供
             # 聚合结果用），但不计入「连续失败熔断 budget」——避免单个 watchdog
@@ -761,6 +777,7 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
     exec_result.chapters_attempted = chapters_attempted
     exec_result.chapters_failed = chapters_failed
     exec_result.chapters_timed_out = chapters_timed_out
+    exec_result.chapters_corrected = chapters_corrected
 
     # 记录结果（aggregate 后 commit 一次）
     record_result(identity_key, exec_result)
@@ -776,6 +793,7 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
     summary["chapters_attempted"] = chapters_attempted
     summary["chapters_failed"] = chapters_failed
     summary["chapters_timed_out"] = chapters_timed_out
+    summary["chapters_corrected"] = chapters_corrected
     _write_summary(summary)
 
     return exec_result
