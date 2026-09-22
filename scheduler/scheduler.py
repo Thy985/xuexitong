@@ -881,6 +881,28 @@ def duration_probe_policy(video_index) -> "tuple[bool, float]":
     return (True, 45.0) if idx > 1 else (False, 25.0)
 
 
+def mark_stale_with_source(existing, *, by_catalog, by_points) -> list:
+    """E6.2 降级 COMPLETED 记录，并把**是哪条腿降的**写进账本 detail（纯函数）。
+    
+    两条腿判据不同、误判方向也可能不同：`stale_completed_by_catalog` 看目录层的
+    job_remaining（含非视频的 other 点），`stale_completed_by_points` 看点级快照的
+    video 未 finish。原先两者被合成一个 `stale_ids`、detail 写死成同一句话，
+    于是真站 run 35678657158 之后无从判断是谁把 live 已 finished 的章打回队列。
+    """
+    tag = {}
+    for tid in by_catalog or []:
+        tag[tid] = "catalog"
+    for tid in by_points or []:
+        tag[tid] = f"{tag[tid]}+points" if tid in tag else "points"
+    stale_ids = list(dict.fromkeys(list(by_catalog or []) + list(by_points or [])))
+    for tid in stale_ids:
+        rec = existing.get(tid)
+        if rec is not None:
+            rec.mark_stale(detail="chapter has unfinished points; "
+                           f"stale_by={tag.get(tid, 'unknown')}")
+    return stale_ids
+
+
 PROBE_MAX_POLLS = 60          # 轮询硬上限：时钟不前进时也不许死循环
 
 
@@ -1311,15 +1333,11 @@ def _run_tdvp_probe(course_url: str, course_key: str,
         _pts = load_chapter_points(course_key)
         stale1 = stale_completed_by_catalog(existing, chapters_raw, points_map=_pts)
         stale2 = stale_completed_by_points(existing, _pts)
-        stale_ids = list(dict.fromkeys(stale1 + stale2))
+        stale_ids = mark_stale_with_source(existing, by_catalog=stale1, by_points=stale2)
         if stale_ids:
-            from app.registry.task_registry import TaskRecord
-            for sid in stale_ids:
-                rec = existing.get(sid)
-                if rec is not None:
-                    rec.mark_stale(detail="chapter has unfinished points")
             save_registry(course_key, existing)
             print(f"[scheduler] TDVP: stale={len(stale_ids)} "
+                  f"by_catalog={stale1} by_points={stale2} "
                   f"chapters re-queued: {sorted({existing[s].chapter_id for s in stale_ids if s in existing})}",
                   flush=True)
 

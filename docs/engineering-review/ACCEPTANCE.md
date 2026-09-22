@@ -591,6 +591,28 @@ e79a9a86's own play button` → `Video ready: duration=1130s ct=…` → `★ is
 本轮无碍（站点已存进度 1006/1130，只差 124s），但**换一个存储进度很低的 `:videoN` 长视频点就会
 再次被 900s 砍**。下一步：让探测像 Step F 那样反复重试激活（而不是只点一次），或让子进程把已读到的
 `video_duration` 回灌父层预算。
+
+### 4.12 R6：已完成章被 L1 校准降级回炉（2026-09-22，run 35678657158 实证 + L1 归因落地）
+
+**真站事实（读日志与远端账本，非退出码）**：手动 dispatch `--action scheduler --max-chapters 1`，
+- `manual_restore=1 tasks=['1217304719']`（Step 2.7 按预期把老的冻结章解冻回 PENDING，cf→0、attempts=3 留痕）；
+- `TDVP: stale=1 chapters re-queued: ['1217304738']` —— 而**同一轮**十几秒后的 E6.2 live refine 读到
+  `1217304738 video_total=2 finished_video=2`（服务器视角两视频点都已 finished）。降级判据与它自己的
+  live 读数互相矛盾，队首仍是该章 ⇒ 引擎重播已 PASS 的点（attempts 2→3、`verdict=PASS timing_s=868.1`），
+  **当晚唯一的 1 个点位预算被吃掉**，队列里真正该学的 `1217304730:video2` 没轮到（仍 DISCOVERED）。
+- 同一条日志顺手把 R5 从"`:videoN` 专属"扩大成"两点通吃"：点 1 的 25s 探测读到的是尚未激活的帧
+  （`st.found=True / currentTime=227 / dur=None`）→ 照样回落静态 900s，本轮距墙钟只剩 **32s**。
+
+**这一步只做归因，不改判据**（判据怎么错还不知道，先让它自己说出是谁干的）：
+新增纯函数 `mark_stale_with_source(existing, by_catalog=…, by_points=…)`（scheduler.py:884），
+把来源写进账本 `completion_evidence.detail`（`…; stale_by=catalog|points|catalog+points`），
+日志同步打 `by_catalog=[…] by_points=[…]`。原 `stale_ids` 合并逻辑与 `save_registry` 时机不变。
+L1：`tests/unit/test_stale_source_attribution.py` 5 项 RED→GREEN，全套 **427 passed, 1 skipped**。
+
+**待这一次真站复现给答案**：4738 的 `:other` 仍是 UNKNOWN —— 若 `stale_by=catalog`，就是"为不可播放的
+other 点把整章回炉、而引擎只会重播视频"，属系统性浪费（每个含 other 点的章在视频完成后都会被反复回炉）；
+若 `stale_by=points`，则是点级快照与 live 读数的口径冲突。两种修法不同，所以先测再改。
+
 ---
 
 ## 5. 失败 / 回退策略
