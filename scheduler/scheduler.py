@@ -865,6 +865,22 @@ def points_prove_no_video(job_points: Optional[list]) -> bool:
     return not any((p or {}).get("type") == "video" for p in job_points)
 
 
+def duration_probe_policy(video_index) -> "tuple[bool, float]":
+    """`(要不要先激活目标点, 轮询预算秒)`（纯函数）。
+
+    `:videoN` 那一帧不激活就永远没有 metadata（对照实测见
+    `app.e2_headed_gha.should_inject_v3`），所以时长探测也必须走那一次点击；
+    预算还要给"点击→metadata 到位"留时间 —— 真站 run 35673388111 里约 24s，
+    原来那 25s 刚好把自己判成探测失败，回退静态 900s 墙钟，砍掉了一个已经
+    播到 92%、服务端已回 isPassed=true 的子进程。
+    """
+    try:
+        idx = int(video_index or 1)
+    except (TypeError, ValueError):
+        idx = 1
+    return (True, 45.0) if idx > 1 else (False, 25.0)
+
+
 PROBE_MAX_POLLS = 60          # 轮询硬上限：时钟不前进时也不许死循环
 
 
@@ -974,7 +990,7 @@ def _probe_video_duration_s(course_url: str, chapter_id: str,
         from resolvers.course_resolver import _parse_url_params
         from app.e2_headed_gha import (get_video_state, build_base_url,
                                        enumerate_video_objectids,
-                                       pick_target_objectid)
+                                       pick_target_objectid, activate_target_point)
         from tvdp.tdvp import _tdvp_course_params
         import os as _os3
         from playwright.sync_api import sync_playwright
@@ -1008,9 +1024,12 @@ def _probe_video_duration_s(course_url: str, chapter_id: str,
                     browser.close()
                     return None, (f"章内第 {video_index} 个视频点不可解析，"
                                   f"回退 base 预算")
+            activate, deadline_s = duration_probe_policy(video_index)
+            if activate and target_objectid:
+                activate_target_point(page, target_objectid)
             dur, dur_err = poll_video_duration(
                 lambda: get_video_state(page, target_objectid),
-                deadline_s=25.0, sleep_s=1.0)
+                deadline_s=deadline_s, sleep_s=1.0)
             browser.close()
             return dur, dur_err
     except Exception as e:

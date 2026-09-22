@@ -511,6 +511,88 @@ def test_scheduled_run_leaves_the_frozen_point_frozen(
     assert load_registry(key)[VID2_4738].status == "BLOCKED"
 
 
+
+# ── :videoN 的时长探测必须先激活目标点（run 35673388111 的 900s 误杀）──────────
+
+
+def test_duration_probe_policy_binds_activation_to_the_budget():
+    """`:videoN` 不激活就永远读不到 duration；激活还要给点击留时间。"""
+    from scheduler.scheduler import duration_probe_policy
+    assert duration_probe_policy(1) == (False, 25.0)
+    assert duration_probe_policy(0) == (False, 25.0)
+    assert duration_probe_policy(None) == (False, 25.0)
+    assert duration_probe_policy(2) == (True, 45.0),         "真站实测：点击到 metadata 到位约 24s，25s 预算刚好把自己判成探测失败"
+
+
+def test_probe_video_duration_clicks_target_before_polling(monkeypatch):
+    import playwright.sync_api as PS
+    import utils.cookie_store as CS
+    import app.e2_headed_gha as E
+    from scheduler.scheduler import _probe_video_duration_s
+
+    calls = []
+    page = MagicMock()
+    page.wait_for_timeout = lambda ms: None
+    browser = MagicMock()
+    browser.new_context.return_value.new_page.return_value = page
+    pw = MagicMock()
+    pw.chromium.launch.return_value = browser
+    monkeypatch.setattr(PS, "sync_playwright",
+                        lambda: MagicMock(__enter__=lambda self: pw,
+                                          __exit__=lambda self, *a: False))
+    monkeypatch.setattr(CS, "ensure_login", lambda *a, **k: True)
+    monkeypatch.setattr(E, "build_base_url", lambda cid, cp: "http://x")
+    monkeypatch.setattr(E, "enumerate_video_objectids",
+                        lambda p: ["e79a9a86" + "0" * 24])
+    monkeypatch.setattr(E, "pick_target_objectid",
+                        lambda oids, vi: oids[0] if vi >= 2 else None)
+    monkeypatch.setattr(E, "activate_target_point",
+                        lambda p, oid: calls.append(("click", oid)) or True)
+    monkeypatch.setattr(E, "get_video_state",
+                        lambda p, oid=None: {"duration": 1130.0, "currentTime": 200.0})
+    monkeypatch.setenv("CX_USER", "u")
+    monkeypatch.setenv("CX_PASS", "p")
+    monkeypatch.delenv("XUE_VIDEO_DURATION_S", raising=False)
+
+    dur, err = _probe_video_duration_s("http://x", CID4738, video_index=2)
+
+    assert dur == 1130.0 and err is None, (dur, err)
+    assert calls == [("click", "e79a9a86" + "0" * 24)], calls
+
+
+def test_probe_video_duration_does_not_click_for_the_first_point(monkeypatch):
+    """点 1 的稳定链路照旧（由 v3 驱动播放），探测不去抢它的播放键。"""
+    import playwright.sync_api as PS
+    import utils.cookie_store as CS
+    import app.e2_headed_gha as E
+    from scheduler.scheduler import _probe_video_duration_s
+
+    clicks = []
+    page = MagicMock()
+    page.wait_for_timeout = lambda ms: None
+    browser = MagicMock()
+    browser.new_context.return_value.new_page.return_value = page
+    pw = MagicMock()
+    pw.chromium.launch.return_value = browser
+    monkeypatch.setattr(PS, "sync_playwright",
+                        lambda: MagicMock(__enter__=lambda self: pw,
+                                          __exit__=lambda self, *a: False))
+    monkeypatch.setattr(CS, "ensure_login", lambda *a, **k: True)
+    monkeypatch.setattr(E, "build_base_url", lambda cid, cp: "http://x")
+    monkeypatch.setattr(E, "activate_target_point",
+                        lambda p, oid: clicks.append(oid))
+    monkeypatch.setattr(E, "get_video_state",
+                        lambda p, oid=None: {"duration": 645.0})
+    monkeypatch.setenv("CX_USER", "u")
+    monkeypatch.setenv("CX_PASS", "p")
+    monkeypatch.delenv("XUE_VIDEO_DURATION_S", raising=False)
+
+    dur, _err = _probe_video_duration_s("http://x", CID4738, video_index=1)
+
+    assert dur == 645.0
+    assert clicks == []
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
 
