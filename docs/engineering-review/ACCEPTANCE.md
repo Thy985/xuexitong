@@ -633,6 +633,40 @@ other 点把整章回炉、而引擎只会重播视频"，属系统性浪费（�
 （是否 lazy-mount、第 2 个点在什么时刻才出现），确认是"渲染时机"而非"账本幻影"（D13 那一类）之后，
 再决定给 Step F 加「重载入 + 重枚举」恢复路。
 
+### 4.13 `1217304730:video2` 是幻影：陈旧点级快照每轮重新 mint 出根本不存在的点（2026-09-22，两次只读探测）
+
+**测量设计**：`_probe_point_mount.py`（只读，不点击/不 seek/不注入 v3/不写 state），同一套采样分别打
+三件事 —— 引擎自己的 `enumerate_video_objectids`、cards 帧内 `.ans-insertvideo-online[objectid]` 原始标记、
+服务端 `read_chapter_job_points`；时间点 t=0/3/8/15/30/45/60/90s + 滚动到底后再一次。
+**对照组 = 已知确有 2 个视频点的 4738**（用来排除"读数在少算"这种测量自身故障）。
+
+| 章 | engine | DOM markers | 服务端 live 点读 | 随时间/滚动 |
+|---|---|---|---|---|
+| 1217304730 | 1（`2b3ec8e6`） | 1 | 1（`video_points=1`） | 0→3s 起恒为 1，滚动后仍 1 |
+| 1217304738 | 2（`94382be4`,`e79a9a86`） | 2 | 2 | 恒为 2 |
+
+⇒ **lazy-mount 被否证**（对照组 apparatus 正常，空标题的多点也没被折叠 —— D12 的修法在这条路上仍成立），
+**站点今天对 4730 只暴露 1 个视频点**，而账本里躺着 `1217304730:video2`（DISCOVERED→本轮 FAILED cf=1/3）。
+
+**幻影是怎么被 mint、且为什么每轮都会重 mint**（读代码定位，非猜测）：
+`build_tasks_from_discovery` 的拆分数 `n_videos` 来自 `video_counts_from_points(load_chapter_points(...))`
+（scheduler.py:1302 + task_registry.py:530）—— 也就是**来自缓存快照**，而 `chapter_points.json` 里
+`1217304730 = {video_total: 2, video_finished: 1}`，`updated_at = 2026-09-20T06:15Z`。§7.3#4 已证该快照
+**无 TTL、无删除路径**：不是队首候选就永不刷新。于是「一次快照读错（或老师真的删了一个视频）→ 每轮 reconcile
+按它 mint 出 `:video2` → 引擎 15.9s 判 `target video point 2 not on page` → 记一次真实 FAILED → 三次后整章冻结」
+是一条**自我维持**的链路，4719 当初 BLOCKED 很可能就是同一形态。
+**快照自身也不可审计**：它只存聚合数（`video_total/video_finished`），不存点列表与 objectid，所以
+"9/20 那天到底读到什么"已无从复核。
+
+**探针自纠**：本次输出里 `finished=None` 是我打印键名取错（真键是 `isFinished`，见 `chapter_video_summary`
+tvdp.py:1058），不构成站点读数结论 —— 已在此标注，避免下一轮把它当"服务端没判完成"。
+
+**两条修法（互补，待选）**：① 安全属性优先 —— 引擎遇到 `points < 目标序号` 时上报可区分的失败阶段
+（如 `TARGET_NOT_ON_PAGE`），reconcile 据此判"快照与站点不一致 → 刷新该章快照并按 live 点数清掉
+`:videoK`（K>N）"，**不计入 consecutive_failures**；现在这条路把"账本错"记成"播放失败"，三次就把整章冻掉。
+② 把 D13 已有的幻影清理从"冻结章恢复"一条路扩到正常 head-candidate refine，并给快照加"只有 live 复核成功才更新"
+的写入口。
+
 ---
 
 ## 5. 失败 / 回退策略
