@@ -103,7 +103,7 @@ TDVP.probe ──(build_tasks)──> registry（DISCOVERED 落账）
 registry(account) ──(done_chapter_ids_from_registry)──> 章节完成集合
 registry(account) ──(_sync_progress_from_registry)──> CourseState.progress
 CourseState ──(input)──> 下一次 determine_action（"RUN"|"NOOP"|"BLOCKED"；第四值 "ERROR"
-                         属 ExecutionResult.decision，由 resolve 失败在 :556 直出，:33）
+                         属 ExecutionResult.decision，由 resolve 失败在 :598 直出，:33）
 scheduler(manual) ──(restore_blocked_for_manual)──> TaskRegistry（BLOCKED→PENDING，仅人点名的章）
 ```
 
@@ -122,10 +122,10 @@ scheduler(manual) ──(restore_blocked_for_manual)──> TaskRegistry（BLOCK
 | TaskRecord.status | registry（per course） | `state/registry/<key>/tasks.json` | `mark_completed / mark_failed / mark_rollback / mark_stale / downgrade_to_pending / restore_for_manual_retry` |
 | ExecutionQueue | 运行期 | `state/registry/<key>/execution_queue.json` | `reconcile_queue`（唯一写入口） |
 | CourseState.status | 课程 | `state/courses/<key>.json` | `update_course_state / run_course` |
-| progress.completed/total | 课程 | 同上 | 运行时由 `_sync_progress_from_registry`（scheduler.py:795）驱动（单一入口） |
-| chapter_points | 缓存 | `state/registry/<key>/chapter_points.json` | `set_chapter_point_snapshot`（task_registry.py:491，生产唯一调用点 scheduler.py:1411） |
+| progress.completed/total | 课程 | 同上 | 运行时由 `_sync_progress_from_registry`（scheduler.py:854）驱动（单一入口） |
+| chapter_points | 缓存 | `state/registry/<key>/chapter_points.json` | `set_chapter_point_snapshot`（task_registry.py:491，生产唯一调用点 scheduler.py:1512） |
 | active_course | 全局单例 | `state/active_course.json` | `init/activate/switch` |
-| SchedulerState（熔断计数：`consecutive_failures` / `blocked_hits` / `blocked_since` / `history`） | 课程，**内嵌在 CourseState 的 `scheduler` 字段里**，不是独立文件 | `state/courses/<key>.json` | `load_scheduler_state`/`save_scheduler_state`（scheduler.py:110，读写走 course_state） |
+| SchedulerState（熔断计数：`consecutive_failures` / `blocked_hits` / `blocked_since` / `history`） | 课程，**内嵌在 CourseState 的 `scheduler` 字段里**，不是独立文件 | `state/courses/<key>.json` | `load_scheduler_state`/`save_scheduler_state`（scheduler.py:111/:123，读写走 course_state） |
 | cookie | 会话 | `.cache/cookies.json`（gitignored） | `ensure_login` |
 | 账本修复留痕 | 一次性人工 | `state/migrations/<ts>/report.json` | `python -m state.migrations.repair [--course k] [--apply]`（**无自动调用方**，只由操作者跑） |
 
@@ -133,7 +133,7 @@ scheduler(manual) ──(restore_blocked_for_manual)──> TaskRegistry（BLOCK
 - **registry 完成状态的唯一合法写入口** = `TaskRecord.mark_completed(...)`；证据缺失/URL/导航推理一律 `ValueError`（"URL/nextUnit/navigation inferences are NOT valid completion"）。
 - **执行队列唯一写入口** = `reconcile_queue`（同时做排序+去重+保存）。
 - **进度（completed）唯一写入口** = `_sync_progress_from_registry`（registry 派生，非手动）。
-- **课程状态唯一 RMW 入口** = `course_state` 的 file-lock 上下文（`_course_lock`）；连 SchedulerState 的写入也是 `save_scheduler_state` 经 `update_course_state` 合并进同一文件（scheduler.py:121），**没有第二套熔断账**。
+- **课程状态唯一 RMW 入口** = `course_state` 的 file-lock 上下文（`_course_lock`）；连 SchedulerState 的写入也是 `save_scheduler_state` 经 `update_course_state` 合并进同一文件（scheduler.py:123 → `update_course_state` :126），**没有第二套熔断账**。
 - **账本回填只有一条路** = `state/migrations/repair.py`（E6.1，CLI 显式 `--apply`；把「无证据/仅靠导航推断」的 COMPLETED 降 UNKNOWN，**绝不删执行历史**，留痕写 `state/migrations/<ts>/`）。它不是状态机的一环，运行期无人调用它。
 - **点级解冻有两条且只有两条入口**：服务端真源 → `heal_blocked_by_live`（reconcile.py:371，probe 内自动）；人工显式 → `restore_blocked_for_manual`（reconcile.py:439，只在 `trigger=="manual"` 且经 `only_chapter` 收窄到人点名的章，见 §5 Step 2.7）。两者之外没有任何「手改账本」路径。
 
@@ -176,39 +176,44 @@ scheduler(manual) ──(restore_blocked_for_manual)──> TaskRegistry（BLOCK
 ## 5. 控制流图（Control-Flow）
 
 ```
-run_scheduler(course_url?, chapter_id?, trigger, run_id, max_chapters)   :512
+run_scheduler(course_url?, chapter_id?, trigger, run_id, max_chapters)   :554
  │
- ├─ Step 1  resolve_course(url)                  读身份（verify_via_browser 生产恒 False → 标题恒 course_<id>）
- │                                               解析失败 → ExecutionResult(decision="ERROR") 直出 :556
- ├─ Step 2  determine_action :186                RUN / NOOP / BLOCKED（schedule 下 consecutive_failures≥3 亦 BLOCKED）
- │    └─ BLOCKED：manual 立即放行 :168；schedule 需等 blocked_retry_interval（cooldown 到点放行一次）
- ├─ Step 2.5 cooldown 复位点只给最小推进          max_chapters=1 :604
- ├─ Step 2.7 人工显式恢复 :607（仅 trigger=="manual"）
- │    restore_blocked_for_manual(reg, only_chapter=chapter_id.split(":")[0]) :617
+ ├─ Step 1  resolve_course(url) :587             读身份（verify_via_browser 生产恒 False → 标题恒 course_<id>）
+ │                                               解析失败 → ExecutionResult(decision="ERROR") 直出 :598
+ ├─ Step 2  determine_action :187                RUN / NOOP / BLOCKED（schedule 下 consecutive_failures≥3 亦 BLOCKED :220）
+ │    └─ BLOCKED：manual 立即放行 :168；schedule 需等 blocked_retry_interval（cooldown 到点放行一次 :175-179）
+ ├─ Step 2.5 cooldown 复位点只给最小推进          max_chapters=1 :647
+ ├─ Step 2.7 人工显式恢复 :655（仅 trigger=="manual"）
+ │    restore_blocked_for_manual(reg, only_chapter=chapter_id.split(":")[0]) :659
  │    → 被点名的章内 BLOCKED 点回 PENDING；schedule 腿不走这里（夜巡不自行放宽熔断）
  ├─ Step 3  多章循环（max_chapters 次预算，executed 对**每次尝试**计数）
- │    ├─ 选任务：next_task = chapter_id 或 _run_tdvp_probe（**循环前首探** :633；
- │    │    跳过跨阈值点后 :669 再探、跑完一段后 :721 再探，exclude_chapters=本轮已处理，
+ │    ├─ 选任务：next_task = chapter_id 或 _run_tdvp_probe（**循环前首探** :675；
+ │    │    跳过跨阈值点后 :712 再探、跑完一段后 :778 再探，exclude_chapters=本轮已处理，
  │    │    允许同章下一视频段接着被选中）
  │    │    无显式章且探测为空 → 诚实 NOOP，不臆测选章
- │    │    └─ _run_tdvp_probe :1195               浏览器探针：
- │    │         fetch_course_detail_and_verify（:1240）→ reconcile_registry
- │    │         → stale_completed_by_catalog / _by_points（L1 廉价校准，:1312/:1313）
- │    │         → merge_done_with_points（done 剔除「快照显示未完」章，:1331）
- │    │         → reconcile_queue（:1337）
- │    │         → heal_blocked_by_live（冻结章服务端真源恢复，:1361）
- │    │         → live_verify_chapter（:1395）→ set_chapter_point_snapshot（写点级快照，:1411）
- │    │         → 重建 discovery/registry/queue → 无视频章降级 other（points_prove_no_video 守卫 :857）
- │    ├─ _task_is_blocked 兜底：本轮中途才跨阈值的点直接 skip 并换下一候选 :664
- │    └─ [每章] _run_one_chapter :388
- │         ├─ 时长探测 _probe_video_duration_s :962 → poll_video_duration :887
- │         │    └─ duration_probe_policy(video_index) :868：第 1 点不激活、25s 预算；
+ │    │    └─ _run_tdvp_probe :1300              浏览器探针：
+ │    │         fetch_course_detail_and_verify（:1344）→ reconcile_registry
+ │    │         → stale_completed_by_catalog / _by_points（L1 廉价校准，:1417/:1418）
+ │    │         → mark_stale_with_source（降级腿名写进 detail，判据 :943 / 调用 :1419）
+ │    │         → merge_done_with_points（done 剔除「快照显示未完」章，:1432）
+ │    │         → reconcile_queue（:1438）
+ │    │         → heal_blocked_by_live（冻结章服务端真源恢复，:1453-1462）
+ │    │         → live_verify_chapter（:1496）→ set_chapter_point_snapshot（写点级快照，:1512）
+ │    │         → 重建 discovery/registry/queue → 无视频章降级 other（points_prove_no_video 守卫 :916）
+ │    ├─ _task_is_blocked 兜底：本轮中途才跨阈值的点直接 skip 并换下一候选 :707
+ │    └─ [每章] _run_one_chapter :389
+ │         ├─ 时长探测 _probe_video_duration_s :1067 → poll_video_duration :968
+ │         │    └─ duration_probe_policy(video_index) :927：第 1 点不激活、25s 预算；
  │         │       第 ≥2 点先 activate_target_point 再轮询、45s 预算
- │         └─ 子进程隔离（start_new_session）+ watchdog（video_watch_budget :946，
- │             基线 XUE_CHAPTER_MAX_S=900 :541）
- │             └─ 输出归档 + 证据 JSON（exit 124 = 看门狗判定；探测失败 → 回落静态 900s 并留 dur_err）
- ├─ record_result :233                             写 schedule state / history
- └─ _sync_progress_from_registry :795              progress.completed 0→N（由 done 章驱动）
+ │         │       —— 真站上这两条腿**都没读到过时长**：探测跑在子进程起播之前（R5）
+ │         └─ 子进程隔离（start_new_session）+ watchdog（video_watch_budget :1051，
+ │             基线 XUE_CHAPTER_MAX_S=900 :583）
+ │             ├─ 墙钟分片轮询（15s/片）：每片回读子进程日志，一读到它自己播报的
+ │             │  `Video ready: duration=NNNs`（e2_headed_gha.py:867）就按
+ │             │  `_adaptive_video_watch_s` :1025 把预算扩**一次**（解析器 child_reported_duration :1001）
+ │             └─ 输出归档 + 证据 JSON（exit 124 = 看门狗判定；读不到时长则照 base 判死）
+ ├─ record_result :234                             写 schedule state / history
+ └─ _sync_progress_from_registry :854              progress.completed 0→N（由 done 章驱动）
 
 并行约束：GHA concurrency.group 单一 active-course；每课程 file-lock；每运行 子进程隔离。
 ```
@@ -253,16 +258,19 @@ run_scheduler(course_url?, chapter_id?, trigger, run_id, max_chapters)   :512
 1. **test 污染 worktree state**（R1，2026-09-22 复核：**部分缓解，未闭环**）：conftest 仍不隔离 state 目录；6 个测试文件已自带 `TASKS_DIR` patch，但 `test_rollback_priority.py` 用键 `"k"` 那条**今日仍在真实 worktree 重新生成** `state/registry/k/execution_queue.json`。制造幻影状态（详见 §8、§3.3）。
 2. **课程标题退化**（R2）：生产路径 `resolve_course(... verify_via_browser=False)` 使 identity.title 恒等于 `course_<id>`，课程标题从来不是真实标题（见实证数据）；后续若依赖 title 做展示会失真。
 3. **`catalog.py` 死代码岛**（R3）：`build_chapter_map` 无生产调用，`state/catalog_map/<id>.json` 提交后从未被消费。见 §9。
-4. **progress.completed 与 total 不一致**（R4，已核验）：`_sync_progress_from_registry`（scheduler.py:795-824）每次运行重算 `completed`（= done 章数），但 `total` 仅在 `is None` 时写一次（首次 = registry 发现章数）。真实数据 `completed=25 / total=4`（`state/courses/265997861_151695658.json`，2026-09-22）由此而来：completed 持续演化、total 是历史首写值的冻结残留 → 展示侧自相矛盾但**不是会计错误**，属字段语义分轨。
+4. **progress.completed 与 total 不一致**（R4，已核验）：`_sync_progress_from_registry`（scheduler.py:854-883）每次运行重算 `completed`（= done 章数），但 `total` 仅在 `is None` 时写一次（首次 = registry 发现章数）。真实数据 `completed=25 / total=4`（`state/courses/265997861_151695658.json`，2026-09-22）由此而来：completed 持续演化、total 是历史首写值的冻结残留 → 展示侧自相矛盾但**不是会计错误**，属字段语义分轨。
 5. **令牌/凭据贴合**：cookie 在 gitignored `.cache/cookies.json`，若 cookie 过期（服务端 403），重登录需真浏览器，时间成本高。
 6. **看门狗与外网瞬时断**（本地已有事实）：断网时视频卡、看门狗误杀，需要足够预算。
-7. **时长探测基本没生效，自适应预算形同虚设**（R5，2026-09-22 真 run 实证，**两点通吃**）：探测在**子进程起播之前**跑，父进程读到的是"尚未激活"的帧。
+7. **时长探测基本没生效，自适应预算形同虚设**（R5，2026-09-22 真 run 实证 → **同日机制已修**）：探测在**子进程起播之前**跑，父进程读到的是"尚未激活"的帧。
     - 第 1 点：25s 不激活（设计上就不点）→ 日志 `时长探测失败(25s 内未读到 video.duration（最后 st={'found': True, 'currentTime': 227…}) -> 静态 900s`；
     - 第 ≥2 点：先 `activate_target_point` 再轮询 45s，但子进程解析目标 oid 约 33s + 点击→metadata 约 32s，45s 常不够。
-    后果不是理论风险：本轮 `chapter 1217304738 verdict=PASS timing_s=868.1` —— 距 900s 墙钟只剩 **32s**，稍慢一点就是"已经通过却被砍成 TIMEOUT"。候选修法：像 Step F 那样重试激活、把子进程读到的 `video_duration` 回灌父进程预算，或干脆把预算判定移到子进程内。
+    后果不是理论风险：`chapter 1217304738 verdict=PASS timing_s=868.1` —— 距 900s 墙钟只剩 **32s**，稍慢一点就是"已经通过却被砍成 TIMEOUT"；本地更有被真砍的现场（`evidence/chapter_1217304752.scheduler.stdout.log`：dur=846s 播到 `ct=286 (34%)` 就断在这里）。
+    **已落地修法（不再猜）**：这个数子进程一直有 —— Step F 打 `Video ready: duration=NNNs`（`e2_headed_gha.py:867`，`flush=True`），而父进程本来就把子进程 stdout 重定向进 `chapter_<slug>.scheduler.stdout.log`。于是 `_run_one_chapter` 的墙钟由一次 `wait(timeout=max_s)` 改成 **15s 分片轮询**，每片用 `child_reported_duration`（:1001：只认结尾带 `s` 的完整播报、取最后一次）回读该日志，一读到就按**同一个** `_adaptive_video_watch_s`（:1025）把预算扩**一次**（日志行 `watchdog extended`）；读不到就照 base 判死，不给无限续命。
+    **实测复核**：本地 14 份真子日志 **14/14** 解析成功（dur 441–1045s），900s 基线预算变成 1061–1967s（上述 846s 被砍现场 → 1669s）。回归 `tests/regression/test_regression_r5_watchdog_handoff.py`（6 项，含反向用例「不播报 ⇒ 原墙钟 exit 124」，变异测试确认去掉轮询即 FAIL）。
+    **残留**：① 14/14 真日志只有 1 次播报，所以"只扩一次"目前无反证；但若一个子进程内连播多点，第二次播报会被忽略，且预算恒从 t0 起算 → 多段章仍可能偏紧；② `_probe_video_duration_s` 那条腿没删，现在只是"早到的可能读数"，扩展判定不再依赖它。
 9. **陈旧点级快照会 mint 出不存在的 `:videoN`，并且很可能就是 R6 的起因**（R7，2026-09-22 实测+已修一半）：
    快照条目是 `build_tasks_from_discovery` 拆分视频点数的唯一来源（`video_counts_from_points` ←
-   `load_chapter_points`，scheduler.py:1302）。本地那批 9/20 的读数已在说谎：4730 今天三路实测
+   `load_chapter_points`，调用点 scheduler.py:1382）。本地那批 9/20 的读数已在说谎：4730 今天三路实测
    （引擎枚举 / cards DOM 标记 / 服务端 live 点读）都是 **1**，快照写 **2**；4738 实测 **2**，快照写 **3**
    （D12/D13 那类错计数被固化进缓存）。后果链：`一次错读数 → 缓存固化 → 每轮 mint 幻影点 → 引擎判
    not-on-page → 记一次真实 FAILED → 三次冻整章`。**R6 现场可被同一条解释**：4738 被降级时用的正是
@@ -278,7 +286,7 @@ run_scheduler(course_url?, chapter_id?, trigger, run_id, max_chapters)   :512
    `1217304738 video_total=2 finished_video=2`（服务器视角两个视频点**都已 finished**）。
    即：降级判据与它自己十几秒后的 live 读数**互相矛盾**，队首仍是该章 → 引擎把已经 PASS 过的
    点重播一遍（attempts 2→3），**吃掉当晚唯一的 1 个点位预算**，而真正该学的 `1217304730:video2`
-   仍在队列里没轮到。原先打印与账本都区分不出是哪条腿干的（:1312/:1313 合成一个 `stale_ids`）——
+   仍在队列里没轮到。原先打印与账本都区分不出是哪条腿干的（:1417/:1418 合成一个 `stale_ids`）——
    **已修**：`mark_stale_with_source` 把 `stale_by=catalog|points|catalog+points` 写进
    `completion_evidence.detail` 与日志（§5 Step 3 / §10），但真站 35681460999 未再触发降级，
    腿名仍要等下一次真实降级才有。这也是 §7.3#2 那半项「未与服务器判定实测比对」第一次给出**反向**证据：
@@ -292,10 +300,10 @@ run_scheduler(course_url?, chapter_id?, trigger, run_id, max_chapters)   :512
 | # | 原不确定点 | 核验结果（证据） |
 |---|---|---|
 | 1 | **L6 服务器真接受点端到端证明** | **仍未做**（维持 `PROGRESS_OUTCOME_DATAFLOW` §2「谨慎保留，不拍板」定位）；代码中无对应检查点。**注**：单个任务点的 `isPassed=true` → `mark_completed(SERVER_VERIFIED)` 已有真站实例（4738:video2），但「服务器进度与本地账整体一致」这门课级对账仍未做。 |
-| 2 | `merge_done / stale_completed_by_*` 精确判定 | **已证（逻辑+触发链）**：真名 `merge_done_with_points`（task_registry.py:547，剔除快照显示未完成章）；`stale_completed_by_catalog`（reconcile.py:521，目录 job_remaining>0 且无点级服务端确认且无快照兜底）与 `stale_completed_by_points`（reconcile.py:557，快照有未 finish 视频点且无兄弟点）。生产调用点 scheduler.py:1227-1229 / 1312-1313 / 1331 / 1369-1371 / 1429-1431 / 1452-1455。**剩余未验**：「语义与服务器判定一致」——只证了本地逻辑与触发。**2026-09-22 出现首个反向实例**：判据偏保守（把 live 已 finished 的章降级回炉），见 §7.2#8。 |
-| 3 | `resolve_course` 标题退化的影响面 | **已证**：生产三处调用皆默认 `verify_via_browser=False`（run.py:90/115、scheduler.py:553），title 恒 `course_<course_id>`（真实 state 文件实证）。**影响窄**：identity 键只取 course_id+clazz_id（`CourseIdentity.key()`，models.py:30），title 仅存留痕/展示，不进调度路径。 |
-| 4 | `chapter_points.json` 过期/刷新策略 | **已证 + 2026-09-22 部分修**：生产唯一写点 = `set_chapter_point_snapshot`（定义 task_registry.py:491，唯一调用 scheduler.py:1411，对队首候选章 L2 复核后落盘）；**无删除路径**，且**陈旧章不刷新**（除非再次成为候选+复核成功）。实证：4738:video2 于 9/22 完成后，该文件 mtime 仍是 **9/20 18:04** 未动。**mint 侧已加时效**（`video_counts_from_points`，`POINTS_SNAPSHOT_TTL_S` 默认 1 天：`updated_at` 缺失/畸形/超时一律不采信 → 该章回退默认 1 点，见 §7.2#9）；**done 判定侧（`merge_done_with_points` / `chapter_done_from_snapshot`）仍无时效** —— 方向是保守的（可能把已完成章判成未完），但同一份陈旧缓存也会让 `stale_completed_by_*` 拿着旧点数去降级（R6 的实测现场即此）。 |
-| 5 | Windows 冒号 ADS 文件名覆盖范围 | **已证全覆盖**：全仓库以 task_id 拼文件名的位置仅 scheduler.py:417-419，且经 `artifact_slug`（:377）单一入口（`:→_`）；单元测试 `test_artifact_paths.py` 与回归 `test_regression_p2_evidence_attribution.py` 锁死格式。`{cid}:video2` 只作账本 key，不出现在文件名。 |
+| 2 | `merge_done / stale_completed_by_*` 精确判定 | **已证（逻辑+触发链）**：真名 `merge_done_with_points`（task_registry.py:577，剔除快照显示未完成章）；`stale_completed_by_catalog`（reconcile.py:521，目录 job_remaining>0 且无点级服务端确认且无快照兜底）与 `stale_completed_by_points`（reconcile.py:557，快照有未 finish 视频点且无兄弟点）。生产调用点（2026-09-22 看门狗改动后重钉）：stale 两腿 + 归因 scheduler.py:1413-1419，`merge_done_with_points` :1332/:1432/:1470/:1530/:1553，`reconcile_queue` :1214/:1334/:1438/:1472/:1532/:1556/:1599/:1625，`heal_blocked_by_live` :1453-1462，`live_verify_chapter` :1456/:1496。**剩余未验**：「语义与服务器判定一致」——只证了本地逻辑与触发。**2026-09-22 出现首个反向实例**：判据偏保守（把 live 已 finished 的章降级回炉），见 §7.2#8。 |
+| 3 | `resolve_course` 标题退化的影响面 | **已证**：生产三处调用皆默认 `verify_via_browser=False`（run.py:90/115、scheduler.py:587），title 恒 `course_<course_id>`（真实 state 文件实证）。**影响窄**：identity 键只取 course_id+clazz_id（`CourseIdentity.key()`，models.py:30），title 仅存留痕/展示，不进调度路径。 |
+| 4 | `chapter_points.json` 过期/刷新策略 | **已证 + 2026-09-22 部分修**：生产唯一写点 = `set_chapter_point_snapshot`（定义 task_registry.py:491，唯一调用 scheduler.py:1512，对队首候选章 L2 复核后落盘）；**无删除路径**，且**陈旧章不刷新**（除非再次成为候选+复核成功）。实证：4738:video2 于 9/22 完成后，该文件 mtime 仍是 **9/20 18:04** 未动。**mint 侧已加时效**（`video_counts_from_points`，`POINTS_SNAPSHOT_TTL_S` 默认 1 天：`updated_at` 缺失/畸形/超时一律不采信 → 该章回退默认 1 点，见 §7.2#9）；**done 判定侧（`merge_done_with_points` / `chapter_done_from_snapshot`）仍无时效** —— 方向是保守的（可能把已完成章判成未完），但同一份陈旧缓存也会让 `stale_completed_by_*` 拿着旧点数去降级（R6 的实测现场即此）。 |
+| 5 | Windows 冒号 ADS 文件名覆盖范围 | **已证全覆盖**：全仓库以 task_id 拼文件名的位置仅 scheduler.py:420-422，且经 `artifact_slug`（:378）单一入口（`:→_`）；单元测试 `test_artifact_paths.py` 与回归 `test_regression_p2_evidence_attribution.py` 锁死格式。`{cid}:video2` 只作账本 key，不出现在文件名。 |
 | 6 | （复核新发现）`progress.total` 语义 | **已证**：见 §7.2#4 —— `total` 只在 `is None` 时写一次，永不重算；无 TTL 语义。 |
 | 7 | （原 §2/§I9 悬案）章内多视频点「怎么才学得到」 | **已定案（2026-09-22，三次只读探测 + 一次真 run）**：既不是 seek 前点（页面会跳章）、也不是 v3 连播（v3 抢回合、目标点被钉 paused）；唯一可用通道 = **不注入 v3 + 点击目标点自己的播放键**。落为 `should_inject_v3`/`activate_target_point` 两条腿，见 §2 e2e 引擎与 §6 I9。 |
 
@@ -310,7 +318,7 @@ run_scheduler(course_url?, chapter_id?, trigger, run_id, max_chapters)   :512
 **证据链（已闭合）**：
 1. `grep -r "reconcile_queue\|builder" state tests`：调用方只有 `scheduler`（生产）与 `tests/unit/test_rollback_priority.py`（测试）。
 2. `tests/unit/test_rollback_priority.py:23/:35`：`reconcile_queue("k", {"X": unknown, "Y": far}, done_ids(...))` —— **使用密钥 "k" 并期望 Y 入队**。
-3. `app/registry/task_registry.py:410` `TASKS_DIR = _REPO_ROOT / "state" / "registry"`；`:631` `reconcile_queue()` 末端 `:746` 调 `save_queue(course_key, q)` → **直接写 `<TASKS_DIR>/k/execution_queue.json`**。
+3. `app/registry/task_registry.py:410` `TASKS_DIR = _REPO_ROOT / "state" / "registry"`；`:661` `reconcile_queue()` 末端 `:776` 调 `save_queue(course_key, q)` → **直接写 `<TASKS_DIR>/k/execution_queue.json`**。
 4. `state/registry/k/` 实测产物（**mtime 2026-09-22 09:11**，即本仓库当日跑完 `pytest` 之后）：
    ```json
    {"items": [{"task_id": "Y", "chapter_id": "chY", "priority": 0, "state": "READY", "course_key": "k"}], "reconciled_at_utc": "2026-09-22T01:11:24Z"}
@@ -347,29 +355,30 @@ run_scheduler(course_url?, chapter_id?, trigger, run_id, max_chapters)   :512
 | `task_id = objectid（超星 content 的 objectid）` | **错**。task_id = 章 chapterId，后缀 `:videoN`/`:other`；objectid 是另一套 32 位 hex，只在播放期与 `passed_object_ids` 证据里出现 | tdvp.py:852/:861/:881 |
 | `CourseIdentity(url, course_id, class_id, user_id)` | **错**。字段是 `course_id/clazz_id/cpi/title/raw_url/resolved_at_utc`，**没有 user_id**；键 = `course_id_clazz_id` | models.py:21-32 |
 | 定时「UTC 16:00 一条 cron」 | **两条** cron（16:00 + 04:00），且 schedule 明确 `max_chapters=1` —— 节奏是风控设计不是吞吐限制 | run.yml:48-56 |
-| chapter_points 写者 `save_chapter_points / pocedural` | **函数名不存在**。真名 `set_chapter_point_snapshot`，生产唯一调用 scheduler.py:1411 | task_registry.py:491 |
-| `determine_action` 值 `RECORD/NOOP/BLOCKED` | **`RUN`/`NOOP`/`BLOCKED`**；`ERROR` 属 ExecutionResult，由 resolve 失败直出 | scheduler.py:33/:186/:556 |
+| chapter_points 写者 `save_chapter_points / pocedural` | **函数名不存在**。真名 `set_chapter_point_snapshot`，生产唯一调用 scheduler.py:1512 | task_registry.py:491 |
+| `determine_action` 值 `RECORD/NOOP/BLOCKED` | **`RUN`/`NOOP`/`BLOCKED`**；`ERROR` 属 ExecutionResult，由 resolve 失败直出 | scheduler.py:33/:187/:598 |
 | I7「BLOCKED 释放 = manual 立即 / schedule 定时」 | 补第三条：**点级**解冻（`heal_blocked_by_live` 或 manual-only `restore_blocked_for_manual`），schedule 腿永不自愈点级冻结 | reconcile.py:371/:439、§5 Step 2.7 |
 | §9「catalog_map 与主线 id 体系不相容，故复用不上」 | **错**。55 个 registry chapterId **全部命中** catalog_map 的 79 键；它闲置是因为 value 只有展示标题、无任务点/完成态 | 实测两份 json |
 | §3.3/§8「测试无条件污染真实 worktree」 | **部分缓解**：6 个测试文件已各自 patch `TASKS_DIR`；`test_rollback_priority.py` 的 `"k"` 那条今日仍在写 | grep + 文件 mtime |
 | `watchdvog` / `tvdp/tvdp.py` / `resolve/course_resolver.py` | 笔误，改为 `watchdog` / `tvdp/tdvp.py` / `resolvers/course_resolver.py` | ls |
-| 各函数行号（:1159/:531/:456/:492/:394/:730/:778…） | 全量重测并刷新；见 §5 与附录 | grep -n |
+| 各函数行号（:1159/:531/:456/:492/:394/:730/:778…） | 全量重测并刷新；**同日已因看门狗改动再刷一次**（见本节末「行号漂移」）| grep -n |
 | I6「progress 天然单调」 | **不成立**。派生性成立、单调性不成立：reconcile 降级会把 `completed` 下调 | task_registry.py:312/:332、reconcile.py:119 |
-| §5 把 `_run_tdvp_probe` 画成「每章前置」 | **结构错位**。首探在 Step 3 循环**之前**（:633），循环内只在「跳过跨阈值点」与「跑完一段选下一任务」两处再探（:669/:721） | run_scheduler 实读 |
+| §5 把 `_run_tdvp_probe` 画成「每章前置」 | **结构错位**。首探在 Step 3 循环**之前**（:675），循环内只在「跳过跨阈值点」与「跑完一段选下一任务」两处再探（:712/:778） | run_scheduler 实读 |
+| R5「时长探测没生效 → 预算回落 900s」是开放缺口 | **已修**：预算改由子进程自己播报的时长扩展（`child_reported_duration` :1001 + 15s 分片墙钟），本地 14/14 真日志可解析 | `tests/regression/test_regression_r5_watchdog_handoff.py` |
 
 **同批未覆盖（诚实登记，见 §11）**。
 
-**新增（首版没有的机制）**：§6 I9 章内串行化与其三条实证、§2 的 `activate_target_point`/`should_inject_v3` 两条腿、§5 Step 2.7 与时长探测策略、§7.2#7 的 `:videoN` 预算回落 900s **开放缺口**。
+**新增（首版没有的机制）**：§6 I9 章内串行化与其三条实证、§2 的 `activate_target_point`/`should_inject_v3` 两条腿、§5 Step 2.7 与时长探测策略、§5 watchdog 的「回读子进程播报扩预算」（R5 的落地形态）。
 
 ## 11. 本文仍未覆盖的范围（下一轮深读入口，2026-09-22 自查）
 
 这些不是「缺陷」而是**本图的空白** —— 代码存在、行为影响真实，但本文没有一个字：
 
-1. **verdict 是怎么合成 10/10 的**：`evidence["verification_10"]`（e2_headed_gha.py:1256-1270，
-   **是证据字典不是函数**）把 1_login_ok … 10_post_verification 摊成 10 项，`passed_count`（:1272）
+1. **verdict 是怎么合成 10/10 的**：`evidence["verification_10"]`（e2_headed_gha.py:1261-1275，
+   **是证据字典不是函数**）把 1_login_ok … 10_post_verification 摊成 10 项，`passed_count`（:1276）
    满 10 才算通过，紧接着推导失败阶段；最终式子
-   `10_post_verification = isPassed_seen and (ended_seen or nextunit_triggered)`（:1267）的含义、
-   以及 `nextunit_triggered` 为何要再与 `chapter_completed` 与一次（:1240）—— §2 只列了检查项名字。
+   `10_post_verification = isPassed_seen and (ended_seen or nextunit_triggered)`（:1273）的含义、
+   以及 `nextunit_triggered` 为何要再与 `chapter_completed` 与一次（:1246）—— §2 只列了检查项名字。
 2. **R-04 一族的判据**：`should_auto_resume`（:187）为什么拒绝 `ct=0` 的"起播"、
    `resume_paused_video` 的选择规则；以及绑定模式下的 3×reload / reload-恢复再注入分支。
 3. **`:other` 的完整语义**：什么条件下非视频任务被归并成一个点、`points_prove_no_video` 只挡住了
@@ -383,8 +392,11 @@ run_scheduler(course_url?, chapter_id?, trigger, run_id, max_chapters)   :512
 7. **测试资产本身**：`tests/fixtures/dom/*.html`（真站 DOM 快照）、四层验收金字塔、
    mutation-check 的做法 —— 本文 §3.3/§8 只写到"测试污染 state"这一面。
 
-另有一类**结构性弱点**：本文所有 `:1234` 行号是快照，仓库里没有任何测试或 CI 守它们（§7.3 的行号
-在 12 小时内已漂过一次）。若要长期可用，得改成"符号名 + 少量锚点"，或加一个校验脚本。
+另有一类**结构性弱点**：本文所有 `:1234` 行号是快照，仓库里没有任何测试或 CI 守它们。§7.3 的行号
+在 12 小时内**已漂过两次**：第一次是本轮复核自己刷新，第二次是 §7.2#7 的看门狗改动（`_run_one_chapter`
+内 +42 行、`child_reported_duration` 又 +24 行 → :512→:554、:962→:1067、:1195→:1300 这种整片位移）。
+今天靠人工逐条 grep 重钉；若要长期可用，得改成"符号名 + 少量锚点"，或加一个校验脚本
+（把本文的 `file:line` 全抽出来，逐条断言该行仍是所引符号的定义/调用点）。
 
 ---
 
@@ -392,11 +404,11 @@ run_scheduler(course_url?, chapter_id?, trigger, run_id, max_chapters)   :512
 
 | 主题 | 文件 |
 |---|---|
-| run_scheduler 编排 | `scheduler/scheduler.py`（`run_scheduler` :512，Step 注释 :548/:590/:603/:607/:624） |
+| run_scheduler 编排 | `scheduler/scheduler.py`（1667 行；`run_scheduler` :554，Step 注释 :590/:632/:645/:649/:666） |
 | TDVP 探针/模型 | `tvdp/tdvp.py`（注意目录名 `tvdp`、模块名 `tdvp`；`build_tasks_from_discovery` :818、`read_chapter_job_points` :960、`live_verify_chapter` :1062） |
-| 任务注册表/对账 | `app/registry/task_registry.py`（756 行；`TASKS_DIR` :410、`set_chapter_point_snapshot` :491、`merge_done_with_points` :547、`reconcile_queue` :631-746、`TaskRecord.restore_for_manual_retry` :287） |
-| 对账覆盖正确性 | `app/registry/reconcile.py`（631 行；`downgrade_to_unknown` :119、`heal_blocked_by_live` :371、`restore_blocked_for_manual` :439、`stale_completed_by_catalog` :521、`stale_completed_by_points` :557） |
-| 播放引擎 | `app/e2_headed_gha.py`（1429 行；`should_auto_resume` :187、`resume_paused_video` :211、`should_inject_v3` :253、`activate_target_point` :310、`get_video_state` :383、`bind_video_state` :567、`run_test` :624、v3 路由留痕 :779-787） |
+| 任务注册表/对账 | `app/registry/task_registry.py`（818 行；`TASKS_DIR` :410、`set_chapter_point_snapshot` :491、`_snapshot_is_fresh` :533、`video_counts_from_points` :551、`merge_done_with_points` :577、`reconcile_queue` :661-776、`video_total_from_observation` :789、`TaskRecord.restore_for_manual_retry` :287） |
+| 对账覆盖正确性 | `app/registry/reconcile.py`（685 行；`downgrade_to_unknown` :119、`heal_blocked_by_live` :371、`restore_blocked_for_manual` :439、`stale_completed_by_catalog` :521、`stale_completed_by_points` :557、`phantom_correction_policy` :635、`prune_phantom_video_points` :654） |
+| 播放引擎 | `app/e2_headed_gha.py`（1435 行；`should_auto_resume` :187、`resume_paused_video` :211、`should_inject_v3` :253、`activate_target_point` :310、`get_video_state` :383、`bind_video_state` :567、`run_test` :624、v3 路由留痕 :779-787、`Video ready: duration=` :867） |
 | 课程状态持久化 | `state/course_state.py`（495 行） |
 | 课程身份/URL 规约 | `models.py`（`CourseIdentity` :21 / `key()` :30 / `CourseParams` :43） |
 | 解析错误兜底 | `resolvers/course_resolver.py`（`verify_via_browser` 默认 False 在 :113） |

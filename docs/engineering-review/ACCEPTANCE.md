@@ -113,7 +113,7 @@ L1  纯逻辑测试（单元/集成/回归）         —— pytest，CI 已跑�
 | 2026-09-20 | 缺陷 | L2 | **D7：E6.2 refine 的 by_title 迁移吃掉点级兄弟记录（82→74）** | ✅ 已修 + **真站已验** | `<cid>:videoN`/`:other` 与 `<cid>` 同 title → 被当成"task_id 格式迁移"合并 pop；护栏失效 → 第 4 轮 run1a 23s 空投已完成点。复验：`tasks=87→87`、`next_task=1217304708:video2`，第 2 点 `isPassed=true`；见 §4.7 |
 | 2026-09-20 | 缺陷 | L2 | **D10：点级 task_id 的 `:` 在 Windows 变成 NTFS 备用数据流** | ✅ 已修 + **真站已验** | `dir /r` 实证 0 字节空壳 `chapter_1217304708` + `:video2.json:$DATA`；`_archive_existing` 归档的是空壳 → D3 对点级任务失效。`artifact_slug()` 单一入口；产物已无损迁回，复验见 §4.7 |
 | 2026-09-20 | 缺陷 | L2/L3 | **P1：`--video-index` 只当停止条件，且把"到达目标段"当"播完目标段"** | 🔁 终版根因=目标点未绑定（见 §4.8 终版） | 子日志证明页面**确实换源到点 2**（`switch → src=69a6c4c5…`），但同一秒 `break`、`max_ct=0s` → 唯一失败项 `7_currentTime_growing` → 整章 DEGRADED。`video_count` 在 src 切换时自增，条件却不看 `ended_seen`。Windows 与 GHA/Linux 同现象。第一版修法 `target_segment_done()` 被 run 108 真站复验证伪（宽限从未进入）；终版修法=objectid 帧绑定，见 §4.8 终版 |
-| 2026-09-20 | 缺陷 | L2 | **D11：累计 `failure_count` 被当"连续失败"用 → 单次失败锁死整门课** | ✅ 已修 + 后果已由真实 PASS 解除 | `run_count 104 / failure_count 31`，成功从不清零；D7 复验那一次 DEGRADED 直接把课程打成 `BLOCKED`（`scheduler.py:214` 见之即拒调度）⇒ 明晚 nightly 会拒绝学习。课程层与调度层（`ss.consecutive_failures>=3`）层次不同，问题是这条锁**名不副实**。修后复验：`BLOCKED→ACTIVE`、`failure_count→0`。见 §4.7 |
+| 2026-09-20 | 缺陷 | L2 | **D11：累计 `failure_count` 被当"连续失败"用 → 单次失败锁死整门课** | ✅ 已修 + 后果已由真实 PASS 解除 | `run_count 104 / failure_count 31`，成功从不清零；D7 复验那一次 DEGRADED 直接把课程打成 `BLOCKED`（`scheduler.py:215` 见之即拒调度）⇒ 明晚 nightly 会拒绝学习。课程层与调度层（`ss.consecutive_failures>=3`）层次不同，问题是这条锁**名不副实**。修后复验：`BLOCKED→ACTIVE`、`failure_count→0`。见 §4.7 |
 | 2026-09-20 | 修复验证 | L2 | head_cid / stdout 编码 / 降级不再静默 三项在真站生效 | ✅ 达标 | 同一份日志内：`E6.2 head=TaskRecord` **0 次**、`E6.2 head=<纯章号>` 4 次、`has no video` **0 次**、`⚠️ 看门狗降级` 4 次且不再崩 |
 | 2026-09-21 | 缺陷 | L2 | **D12：`read_chapter_job_points` 去重键 `marker\|text[:20]` 吞掉空文本的兄弟视频点** | ✅ 已修 + 真站读数实证 | 708 诊断：两视频行 marker 全同、innerText 同为空，仅 objectid 不同 → 第二点在读数前被丢 → live 报 `total=1`，方案1 恢复永远命不中。去重下沉为纯函数 `job_rows_to_points`（oid 身份去重、无 oid 退回文本键）；修后真站读数 `total=2 finished=2`，`:video2` 据此解冻（§4.9） |
 | 2026-09-21 | 缺陷 | L2/L3 | **P1 残留：headed 会话中绑定帧出现后消失，且 reload 恢复对绑定模式有害** | ✅ 已修（reload 策略）+ 误判归因修正（probe v4）+ 方案 A 落地（§4.10） | 复验日志：绑定帧 1s `found=True` → 11s 起 `target_frame_not_found`；同页 headless 只读探测两帧都在。reload 把页面打回点 1 适得其反。修法候选：绑定模式不触发 reload + 目标点导航手段（点击章内条目属页面内导航，不越播放红线，待定）。见 §4.9/§4.10 |
@@ -276,7 +276,7 @@ UNKNOWN 又可排队 → 再投 → 再打回。**"恢复 status"正在与校准
 父日志里 `上一轮产物归档` 真实触发 2 次；整轮无 `产物读取失败`。
 
 **D7（新发现，已按 TDD 修）**：E6.2 live refine 只带**当前一章**的 `video_counts` 重建 discovery
-（`scheduler.py:1320`），其它多视频章退化成单条 `<cid>`；而 `<cid>:videoN` / `<cid>:other` 与 `<cid>`
+（`scheduler.py:1383`），其它多视频章退化成单条 `<cid>`；而 `<cid>:videoN` / `<cid>:other` 与 `<cid>`
 **同 title**，于是被 `reconcile_registry` 的 by_title「task_id 格式迁移」分支命中并 `result.pop()`。
 真站读数：`reconcile → 82 tasks` 之后 `E6.2 after live refine … tasks=74` —— 少的正是 `2182a11`
 刚建出来的 8 条点级记录。承载者一消失，`701a6ba` 的"已确认的点不再回队"护栏当场失效，
@@ -345,8 +345,8 @@ L1：`356 passed, 1 skipped`（357 collected，69.7s）。**D10 目前只有 L1 
 "连续失败多次"，读的却是**只增不减**的累计计数 `failure_count`（成功分支从不清零）。
 真站读数：`run_count: 104`、`failure_count: 31` —— 第 4 轮 6 次连续 PASS 也没把它拉回 0，
 于是这次 `:video2` 的**单次** DEGRADED 立刻把**整门课**打成 `BLOCKED`
-（`scheduler.py:214` 见课程 BLOCKED 即拒调度）。
-**与 `scheduler.py:219` 的 `ss.consecutive_failures >= 3` 不是简单重复**：后者是**调度层**的
+（`scheduler.py:215` 见课程 BLOCKED 即拒调度）。
+**与 `scheduler.py:220` 的 `ss.consecutive_failures >= 3` 不是简单重复**：后者是**调度层**的
 连续失败计数（`app/run.py:331 → run_course` 才是**课程状态层**，按章记账），两者层次不同；
 真正的问题是这条课程层的锁**语义名不副实** —— 它记的是累计值，却行使"连续失败才锁"的职责，
 结果任何一次失败都会永久锁死整门课。修法：成功即 `failure_count = 0`
@@ -604,7 +604,7 @@ e79a9a86's own play button` → `Video ready: duration=1130s ct=…` → `★ is
   （`st.found=True / currentTime=227 / dur=None`）→ 照样回落静态 900s，本轮距墙钟只剩 **32s**。
 
 **这一步只做归因，不改判据**（判据怎么错还不知道，先让它自己说出是谁干的）：
-新增纯函数 `mark_stale_with_source(existing, by_catalog=…, by_points=…)`（scheduler.py:884），
+新增纯函数 `mark_stale_with_source(existing, by_catalog=…, by_points=…)`（scheduler.py:943），
 把来源写进账本 `completion_evidence.detail`（`…; stale_by=catalog|points|catalog+points`），
 日志同步打 `by_catalog=[…] by_points=[…]`。原 `stale_ids` 合并逻辑与 `save_registry` 时机不变。
 L1：`tests/unit/test_stale_source_attribution.py` 5 项 RED→GREEN，全套 **427 passed, 1 skipped**。
@@ -650,7 +650,7 @@ other 点把整章回炉、而引擎只会重播视频"，属系统性浪费（�
 
 **幻影是怎么被 mint、且为什么每轮都会重 mint**（读代码定位，非猜测）：
 `build_tasks_from_discovery` 的拆分数 `n_videos` 来自 `video_counts_from_points(load_chapter_points(...))`
-（scheduler.py:1302 + task_registry.py:530）—— 也就是**来自缓存快照**，而 `chapter_points.json` 里
+（scheduler.py:1385 + task_registry.py:530）—— 也就是**来自缓存快照**，而 `chapter_points.json` 里
 `1217304730 = {video_total: 2, video_finished: 1}`，`updated_at = 2026-09-20T06:15Z`。§7.3#4 已证该快照
 **无 TTL、无删除路径**：不是队首候选就永不刷新。于是「一次快照读错（或老师真的删了一个视频）→ 每轮 reconcile
 按它 mint 出 `:video2` → 引擎 15.9s 判 `target video point 2 not on page` → 记一次真实 FAILED → 三次后整章冻结」
@@ -710,6 +710,49 @@ workflow 推回 `2b97fe6 chore(state)`。远端账本复跑核对：`1217304730:
 
 **仍未做（原方案②）**：把 D13 已有的幻影清理从"冻结章恢复"一条路扩到正常 head-candidate refine，并给快照加"只有 live 复核成功才更新"
 的写入口。
+
+### 4.14 R5：看门狗预算改由子进程自己播报的时长来扩（2026-09-22，L1 回归 + 14 份真日志复核）
+
+**缺口（本次收口的问题编号 #20）**：自适应预算从未生效。真站两个 run 的子日志一致显示父进程探测读到
+`duration=None`：
+
+| 腿 | 判据 | 实测 |
+|---|---|---|
+| 第 1 点 | 不激活 + 轮询 25s（`duration_probe_policy`） | `st={'found': True, 'currentTime': 227, 'duration': None}` → 回退静态 900s |
+| 第 ≥2 点 | 先 `activate_target_point` 再轮询 45s | 子进程解析目标 oid 约 33s + 点击→metadata 约 32s，45s 常不够 |
+
+根因是**结构**的，不是参数不够大：`_probe_video_duration_s` 跑在 `_run_one_chapter` 起子进程**之前**，
+那会儿页面上根本没有激活的播放器 —— 再多的轮询预算也只是在读一个还没被点开的帧。
+
+后果有现场：`chapter 1217304738 verdict=PASS timing_s=868.1`（距 900s 墙钟 32s，再抖一下就是"已通过却被
+砍成 TIMEOUT"）；本地 `evidence/chapter_1217304752.scheduler.stdout.log` 更是被真砍的那次 —— 日志停在
+`ct=286/846 (34%)`，846s 的视频拿 900s 预算。
+
+**修法（把判定挪到能看见时长的地方）**：时长这个信息子进程一直有，Step F 打
+`Video ready: duration=NNNs ct=... rs=...`（`e2_headed_gha.py:867`，`flush=True`），而父进程本来就把子进程
+stdout 重定向进 `chapter_<slug>.scheduler.stdout.log`。于是 `_run_one_chapter` 的墙钟从一次
+`wait(timeout=max_s)` 改成 **15s 分片轮询**，每片用新纯函数 `child_reported_duration`（scheduler.py:1001）
+回读该日志，一读到就按**同一个** `_adaptive_video_watch_s`（:1025）把预算扩**一次**并打
+`watchdog extended`；读不到照 base 判死。三条设计约束：
+
+- 只认结尾带 `s` 的完整播报 —— 半行 `duration=113` 会被读成 113s，而真值可能是 1130s；宁可回退 base。
+- 取**最后一次**播报 —— 引擎会重绑/重载播放器。
+- 只扩一次、上限 `ceiling_s=2400` 从 t0 起算 —— 不给无限续命（`max_s` 语义不变，只是"到点前有一次纠错"）。
+
+**验证**：`tests/regression/test_regression_r5_watchdog_handoff.py` 6 项。行为两项用**真子进程 + 真墙钟**
+（与 P0 看门狗回归同套路，新增 fake-app `behavior=slow_announced`，播报行形状与真站一致）：base 故意给 2s、
+子进程宣布 6s 后再跑 4s → 必须靠自报时长跑完（exit 0）；反向项钉住"不播报 ⇒ 原墙钟 exit 124"。
+**变异检查**：把轮询循环换回 `wait(timeout=max_s)` → 扩展项 FAIL（`verdict=TIMEOUT`），换回即绿。
+**真数据复核**：本地 14 份真子日志 **14/14** 解析成功（dur 441–1045s），900s 基线预算变 1061–1967s，
+其中上述被砍的 846s 章 → **1669s**。全量 **451 passed, 1 skipped**（含 P0 看门狗回归 57 项不破）。
+
+**残留（登记，不是本项缺口）**：① 14/14 真日志只有 1 次播报，所以"只扩一次"现在无反证；若一个子进程内
+连播多点，第二次播报会被忽略，且预算恒从 t0 起算 → 多段章仍可能偏紧（真站上多点章目前是按 `:videoN`
+分成多次子进程跑的，所以每次都有独立预算）。② 父进程那条探测腿没删，它现在只是"可能早到的读数"，
+扩展判定不再依赖它 —— 留着是因为它对 `XUE_VIDEO_DURATION_S` 显式覆盖仍有意义。
+
+**同日行号刷新**：本次改动使 scheduler.py 下移 +42/+24 行，`REVERSE_ARCHITECTURE.md` §3/§5/§7/§8/§11 与
+本文件 §4.7/§4.12/§4.13 的 `file:line` 已逐条 grep 重钉（漂移史见该文档 §11 末）。
 
 ---
 
