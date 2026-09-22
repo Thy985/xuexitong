@@ -279,11 +279,16 @@ run_scheduler(course_url?, chapter_id?, trigger, run_id, max_chapters)   :554
    E6.2 live refine 读到 2/2 —— 降级判据与自己随后的读数矛盾，其实矛盾的是**新旧两份读数**。
    已修：① 撞上了不再记播放失败（判据 `phantom_correction_policy` +
    `prune_phantom_video_points` + `video_total_from_observation`，真站 35684654409 复验通过）；
-   ② 陈旧不再参与 mint（TTL 1 天）；③ **投递之前批量收幻影**（2026-09-22，#26）：E6.2 refine
+   ② 陈旧不再参与 mint（TTL 1 天）；③ **曾试图"投递之前收幻影"**（2026-09-22，#26）：E6.2 refine
    拿这次读到的点列表直接删掉 `seq > 实际点数` 的记录（`prune_phantom_points_after_refine`，
-   reconcile.py:694），不再等引擎撞 17s 才收 —— 撞一次的真正代价不是那 17 秒，而是那一晚
-   `max_chapters=1` 就此不再投第二次（ACCEPTANCE §4.16）。
-   **未修**：done 判定侧仍读陈旧快照；refine 读到 `video_total=0` 且点列表也没证明"无视频"时，
+   reconcile.py:694）。**当天就被真站否证**：run 35733572959（sha 已含该改动）仍把整晚唯一次
+   投递花在幻影 `1217304733:video2` 上（18.7s FAIL，`done` 不动，聚合仍 SUCCESS）—— 因为 refine
+   深读的是**预测队首章**（scheduler.py:1329-1345），投递目标却是 refine 之后重建队列的
+   `candidates[0]`（:1590），两者不同章 ⇒ prune 拿不到被投递那一章的证据。判据没错，**位置错了：
+   闸门要钉在决策点，而不是证据到达处**（ACCEPTANCE §4.16 → §4.17）。
+   本批实际清账走的是"带正对照的一次性只读探针"（`_probe_phantom_batch.py`，§4.17）。
+   **未修**：投递侧仍没有证据闸门（无新鲜点级证据的 `:videoN` 照投）；done 判定侧仍读陈旧快照；
+   refine 读到 `video_total=0` 且点列表也没证明"无视频"时，
    scheduler.py:1517 仍会写一份**新鲜但不可信**的 0 值快照；缓存只存聚合数、不存点列表与
    objectid，事后无从复核"当时为什么读到 3"。
 
