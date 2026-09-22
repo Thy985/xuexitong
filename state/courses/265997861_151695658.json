@@ -13,7 +13,7 @@
     "resolved_at_utc": "2026-09-03T13:36:56.394188+00:00"
   },
   "progress": {
-    "completed": 28,
+    "completed": 29,
     "total": 4,
     "last_completed_task": "1217304738",
     "active_task": "1217304733"
@@ -385,8 +385,8 @@
     "consecutive_failures": 0,
     "execution_id": "35733572959",
     "attempt": 101,
-    "blocked_since": null,
-    "blocked_hits": 0,
+    "blocked_since": "2026-09-22T19:35:52.772732+00:00",
+    "blocked_hits": 1,
     "blocked_retry_interval": 0
   }
 }
