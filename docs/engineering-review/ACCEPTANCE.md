@@ -544,6 +544,43 @@ L1 全套 `306 passed, 1 skipped`（RED=18 项含新 4 组先红后绿）。
 **未竟**：`4738:video2` 端到端 run 尚缺末次授权（§7）：验证快进 → ended → 页面自推进
 → 目标点成当前 → 绑定帧 metadata→currentTime 增长 → 服务端判完成 + 课程解冻（BLOCKED fail=4）。
 
+**→ 本节的方案 A 前提已于 2026-09-22 被真站否证，快进链路整体退役，见 §4.11。**
+
+
+### 4.11 章内 `:videoN` 激活通道定论（2026-09-22，对照实测 + 方案 A 退役）
+
+**显式恢复先落地**（`run_scheduler` Step 2.7，仅 manual 腿、仅人点名的章）：任务级 BLOCKED
+原先只有"服务端真源治愈"与"手改 JSON"两条出路，真没学成的点永远等不到前者。真站验证
+（run 35669129208）：日志 `manual_restore=1 tasks=['1217304738:video2']`，远端账本该点
+`BLOCKED(cf=3) → FAILED(cf=1)`（attempt_count=4 留痕），未被点名的 `1217304719` 仍冻结。
+
+**同一次 run 的 verdict 是 FAIL，由此做完三腿对照**（`evidence/target_activation_with_v3.log`、
+`evidence/target_activation_no_v3.log`、`evidence/seek_play_probe.log`；同章 4738、同样只点一次
+目标卡的 `.vjs-big-play-button`）：
+
+| 腿 | 目标点 | 点 1 | 站点自己的进度上报 |
+|---|---|---|---|
+| 注入 v3 | `rs=4 dur=1130` 但 ct 恒 19.8、`paused=True`、180s 内 0 次翻转 | 被 v3 从 0 拽着连播到 262 | 只有点 1 |
+| 不注入 v3 | ct 20.4→194.1、89/90 采样前进、0 次暂停 | 安静停在存储位 227 | `playingTime=198 objectId=<目标点>` |
+| 播完点 1 的尾 | 从未激活 | 真播到 `ended` | — 页面 chapterId 直接跳 1217304740 |
+
+**结论**：① 方案 A 的前提"seek 后当前点不动"是错的（它照播），而"播完让页面自推进"更是
+反向 —— 播完即整节跳走；② 抢走当前位的一直是**我们自己的 v3**（它 resume 每个模块帧里
+第一个 `<video>` = 点 1，点 1 在播时站点绝不让点 2 播）；③ 章内 `:videoN` 的有效形态 =
+**不注入 v3 + 点目标卡自己的播放键 + 交给已绑定目标帧的 R-04 续播**。
+
+**改动（L1，TDD RED→GREEN）**：`should_inject_v3(video_index)`（段号 ≥2 不注入；点 1 与未
+指定段号照旧走 v3 这条已验证的稳定链路）、`frame_is_bound_to(src, objectid)`（点击与观测的
+身份判定，防"拿点 1 冒认目标点"这一 P1 旧病灶）、`activate_target_point()`（滚动进视口 +
+只点目标帧自己的播放键）；退役 `nav_action_for_attempt` / `should_fastforward_current` /
+`fastforward_seek_position` / `fastforward_current_player` 及其 6 项测试。Step E 的重载恢复
+注入点同样受 `should_inject_v3` 约束；`checks["v3_injected"]` 记"按本次分派设计处理好了"，
+具体路由 `evidence["v3_route"]` 说明，保证两条路都仍可达 10/10。
+L1 全套 `419 passed, 1 skipped`。
+
+**未竟**：新链路尚未在真站 run 上验证（需逐批授权）。验收判据：绑定帧 metadata→currentTime
+持续增长、`v3_route=skipped-for-in-chapter-target`、`multimedia/log` 出现目标 oid 的上报、
+该点以 `SERVER_VERIFIED` 落 COMPLETED。
 ---
 
 ## 5. 失败 / 回退策略

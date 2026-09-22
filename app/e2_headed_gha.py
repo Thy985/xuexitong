@@ -41,7 +41,6 @@
 
 import argparse
 import json
-import math
 import os
 import re
 import subprocess
@@ -251,52 +250,37 @@ VIDEO_OID_ENUM_JS = """() => {
 }"""
 
 
-def nav_action_for_attempt(attempt: int) -> str:
-    """第 N 次章内导航的动作升级（纯函数）：先最保守的滚动，再快进当前点。
+def should_inject_v3(video_index) -> bool:
+    """投章内第 2 个及以后的视频点时**不**注入 v3（纯函数）。
 
-    实证链（4738 两次 run + C/probe v4 探测）：
-     ① scrollIntoView 3 次全 ok=True 但绑定帧仍 dur=None —— 滚动不激活。
-     ② 点目标帧 .vjs-big-play-button（run 4）：起播成立，但页面串行化任务点，
-        轮外播放器每 ~2s 被状态机暂停、整章被切走 —— 目标点被打断。
-     ③ probe v4：页面**轮内**的已完成点可自由 seek（0.9×dur 无回钳）。
-    ⇒ 第 2 次起改为快进"当前"播放器（仅当该点服务端已 finished，见
-    should_fastforward_current 红线闸门），让它自然 ended、由页面自己推进到目标点。
+    v3 的 resume 循环挑的是每个模块帧里的第一个 <video>，也就是点 1。对照实测
+    （evidence/target_activation_{with_v3,no_v3}.log）：注入它时目标点被永久钉住
+    （ct 恒 19.8、180s 内 0 次翻转），不注入时点一次它自己的播放键就连播 180s、
+    站点自己上报该 oid。点 1 与未指定段号的稳定链路照旧由 v3 驱动播放。
     """
-    return "scroll" if attempt <= 0 else "fastforward_finished_current"
-
-
-def fastforward_seek_position(duration):
-    """已完成点快进位置 = 90%（纯函数）。不拉 100%：留结尾给页面自己的
-    ended→推进状态机；dur 无效（None/NaN/≤0）返回 None。"""
     try:
-        d = float(duration or 0)
+        return int(video_index or 1) < 2
     except (TypeError, ValueError):
-        return None
-    if not math.isfinite(d) or d <= 0:
-        return None
-    return round(d * 0.9, 1)
+        return True
 
 
-def should_fastforward_current(current_oid, target_oid,
-                               current_finished) -> bool:
-    """红线闸门（纯函数）：只快进**服务端已判 finished** 且不是目标点自己的当前点。
+def frame_is_bound_to(src: str, objectid: str) -> bool:
+    """这一帧是不是**目标点**自己（纯函数）。
 
-    拖未完成的进度 = 跳课，绝不允许；已完成点 seek 是站点授权范围内的用户级
-    操作（probe v4 实证无回钳、无惩罚），目的是让页面串行状态机走到目标点。
+    P1 的旧病灶就是拿点 1 的帧冒认目标点；激活和观测都必须先过这道身份判定。
     """
-    if not current_oid or not target_oid:
+    if not src or not objectid:
         return False
-    if current_oid == target_oid:
-        return False
-    return current_finished is True
+    return objectid in src
 
 
 def navigate_to_video_point(page, objectid: str) -> bool:
-    """章内导航：把目标视频点附件滚进视口中心（第 1 次尝试的动作）。
+    """章内导航：把目标视频点附件滚进视口中心（点击前的准备动作）。
 
     真站实证（4738 e2e，用户目视）：滚动是用户级页面操作、无害但**不足以**
-    激活播放器（3 次 ok=True 绑定帧仍 dur=None）；激活靠后续 fastforward
-    动作。oid 只接受 32 位 hex（DOM 属性回注防注入）。
+    激活播放器（3 次 ok=True 绑定帧仍 dur=None）；激活靠 activate_target_point
+    的那一次点击，这里只负责把卡片带进视口。oid 只接受 32 位 hex（DOM 属性
+    回注防注入）。
     """
     if not objectid or not re.fullmatch(r"[0-9a-fA-F]{32}", objectid):
         return False
@@ -323,88 +307,52 @@ def navigate_to_video_point(page, objectid: str) -> bool:
     return False
 
 
-def fastforward_current_player(page, target_objectid: str) -> bool:
-    """快进"轮内当前"播放器到 90%，让页面自己的 ended→推进 状态机走到目标点。
+def activate_target_point(page, objectid: str) -> bool:
+    """点目标卡自己的 video.js 播放键 —— 目前唯一实测有效的章内激活通道。
 
-    run 4 实证：给目标点（轮外）起播会被页面每 ~2s 暂停并切章；唯一能自由
-    操作的是当前点，且**仅当它服务端已 finished**（红线闸门
-    should_fastforward_current，真值读自 cards 的 ans-job-finished 类）。
-    probe v4 实证：finished 点 seek 0.9×dur 无回钳、连续播。
-    当前点=有 metadata 且 src 不含目标 oid 的那帧；seek 只在该帧内按 src
-    匹配执行，oid 不进 JS 字符串拼接（防注入）。
+    真站对照（同章 4738、同样只点一次）：不注入 v3 时目标点 rs 0→4、dur=1130 到位、
+    ct 20.4→194.1 连播 180s、0 次暂停，点 1 同时安静停在存储位；站点自己发出
+    playingTime/objectId=<目标点> 的进度上报。若页面之后把它暂停，交给已按 objectid
+    绑定目标帧的 R-04 续播（R-04 只管续播，不替它起播）。
+
+    身份判定 = 帧内 <video> 的 src 含该 objectid，绝不去点别人家的播放键；oid 只接受
+    32 位 hex（DOM 属性回注防注入）。
     """
-    if not target_objectid:
+    if not objectid or not re.fullmatch(r"[0-9a-fA-F]{32}", objectid):
         return False
     try:
         frames = page.frames
     except Exception:
         return False
-
-    cur = None   # (frame, oid, duration)
+    navigate_to_video_point(page, objectid)      # 尽力把卡片滚进视口，成败都不拦点击
     for fr in frames:
         try:
-            st = fr.evaluate("""() => {
+            src = fr.evaluate("""() => {
                 const v = document.querySelector('video');
-                if (!v) return null;
-                return {src: v.currentSrc || v.src || '',
-                        duration: (isFinite(v.duration) && v.duration > 0)
-                            ? v.duration : null};
+                return v ? (v.currentSrc || v.src || '') : '';
             }""")
         except Exception:
-            st = None
-        if not st or not st.get("duration"):
             continue
-        src = st["src"]
-        if target_objectid in src:
+        if not frame_is_bound_to(src or "", objectid):
             continue
-        m = re.search(r"[0-9a-fA-F]{32}", src)
-        if not m:
-            continue
-        cur = (fr, m.group(0), st["duration"])
-        break
-    if not cur:
-        return False
-    fr_cur, cur_oid, dur = cur
-
-    finished = None
-    for fr in frames:
-        if "knowledge/cards" not in (fr.url or ""):
-            continue
+        h = fr.query_selector("button[class*='play']")
+        if not h:
+            log(f"[bind] frame bound to {objectid[:8]} but no play button "
+                f"(frame={fr.url[:60]})")
+            return False
         try:
-            finished = fr.evaluate("""(oid) => {
-                const att = document.querySelector(
-                    '.ans-insertvideo-online[objectid="' + oid + '"]');
-                if (!att) return null;
-                const item = att.closest('.ans-attach-ct, .ans-job-item, .ans-item')
-                    || att.parentElement;
-                return item ? item.classList.contains('ans-job-finished') : null;
-            }""", cur_oid)
+            h.scroll_into_view_if_needed(timeout=5000)
+            h.click(timeout=5000)
         except Exception:
-            finished = None
-        break
-    if not should_fastforward_current(cur_oid, target_objectid, finished):
-        log(f"[bind] current point {cur_oid[:8]} finished={finished} —— "
-            f"红线闸门不放行，不 seek")
-        return False
-
-    pos = fastforward_seek_position(dur)
-    if pos is None:
-        return False
-    try:
-        ok = bool(fr_cur.evaluate("""([oid, pos]) => {
-            const v = document.querySelector('video');
-            if (!v) return false;
-            if ((v.currentSrc || v.src || '').indexOf(oid) < 0) return false;
-            if (!isFinite(v.duration) || v.duration <= 0) return false;
-            v.currentTime = Math.min(pos, v.duration - 1);
-            return Math.abs(v.currentTime - pos) < 2;
-        }""", [cur_oid, pos]))
-    except Exception:
-        ok = False
-    if ok:
-        log(f"[bind] fastforward current point {cur_oid[:8]} -> {pos}s "
-            f"(finished 真点，页面将自然 ended 推进)")
-    return ok
+            try:
+                h.evaluate("el => el.click()")
+            except Exception as e:
+                log(f"[bind] click failed: {type(e).__name__}: {e}")
+                return False
+        log(f"[bind] clicked target {objectid[:8]}'s own play button")
+        return True
+    log(f"[bind] no frame bound to {objectid[:8]} yet")
+    return False
 
 
 def enumerate_video_objectids(page) -> list[str]:
@@ -824,14 +772,27 @@ def run_test(args, params: "CourseParams | None" = None):
         # ── E. 注入 v3 脚本 ─────────────────────────────────────────
         log("--- Step E: Inject v3 ---")
         script_src = V3_SCRIPT_PATH.read_text(encoding="utf-8")
-        try:
-            page.add_script_tag(content=script_src)
-            log(f"v3 injected ({len(script_src)} bytes)")
+        # v3 的 resume 循环驱动的是帧里第一个 video（=点 1），而点 1 在播时站点绝不
+        # 让章内目标点起播 —— 投 :videoN 时它正挡在目标点前面（对照实测见
+        # should_inject_v3）。那条路上起播只靠 activate_target_point 的一次点击。
+        # checks["v3_injected"] 记录的是"v3 按本次分派的设计处理好了"，具体走哪条
+        # 路由 evidence["v3_route"] 说明（10 项检查在两条路上都必须可达 10/10）。
+        inject_v3 = should_inject_v3(getattr(params, "video_index", 0))
+        if not inject_v3:
+            evidence["v3_route"] = "skipped-for-in-chapter-target"
             evidence["checks"]["v3_injected"] = True
-        except Exception as e:
-            evidence["checks"]["v3_injected"] = False
-            evidence.setdefault("errors", []).append(f"v3_inject: {e}")
-            log(f"v3 inject failed: {e}")
+            log(f"[v3] skipped by design (video_index="
+                f"{getattr(params, 'video_index', 0)})")
+        else:
+            evidence["v3_route"] = "injected"
+            try:
+                page.add_script_tag(content=script_src)
+                log(f"v3 injected ({len(script_src)} bytes)")
+                evidence["checks"]["v3_injected"] = True
+            except Exception as e:
+                evidence["checks"]["v3_injected"] = False
+                evidence.setdefault("errors", []).append(f"v3_inject: {e}")
+                log(f"v3 inject failed: {e}")
 
         # ── F. 等待视频 metadata（video 帧 flaky → 有界重载恢复）────────
         log("--- Step F: Wait video metadata (with reload recovery) ---")
@@ -886,20 +847,10 @@ def run_test(args, params: "CourseParams | None" = None):
                 nav_attempts += 1
                 last_nav_at = now_f
                 stalled_since = now_f
-                nav_action = nav_action_for_attempt(nav_attempts - 1)
-                if nav_action == "fastforward_finished_current":
-                    # 快进"当前"（轮内）播放器到 90%：页面自己的 ended→推进
-                    # 状态机会把目标点变成名正言顺的当前点（红线闸门在 helper
-                    # 内部：仅 finished 点可 seek）
-                    moved = fastforward_current_player(page, target_objectid)
-                    if moved:
-                        navigate_to_video_point(page, target_objectid)
-                else:
-                    moved = navigate_to_video_point(page, target_objectid)
+                moved = activate_target_point(page, target_objectid)
                 evidence["target_nav_attempts"] = nav_attempts
                 evidence["target_nav_ok"] = moved
-                log(f"[bind] in-page navigate to target #{nav_attempts} "
-                    f"action={nav_action} ok={moved}")
+                log(f"[bind] activate target #{nav_attempts} ok={moved}")
             dur = st.get("duration")
             if st.get("found"):
                 stall_s = 0
@@ -925,7 +876,8 @@ def run_test(args, params: "CourseParams | None" = None):
                         try:
                             page.goto(base, wait_until="domcontentloaded")
                             page.wait_for_timeout(2000)
-                            page.add_script_tag(content=script_src)
+                            if inject_v3:
+                                page.add_script_tag(content=script_src)
                             page.wait_for_timeout(1500)
                         except Exception as re_:
                             log(f"[recover] reload failed: {re_}")

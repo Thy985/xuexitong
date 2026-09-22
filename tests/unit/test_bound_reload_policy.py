@@ -83,70 +83,35 @@ def test_navigation_attempts_are_bounded():
 
 
 # 升级策略实证（4738 第二次 run）：3 次 scrollIntoView 全 ok=True，绑定帧仍
-# dur=None —— 滚动进视口**不足以**激活播放器。第 1 次仍只滚动（最保守），
-# 之后加"可信点击目标帧 <video>"（等同用户按播放键；前序点已服务端完成，
-# 不构成跳播）。
+# 激活通道的对照实证（2026-09-22，evidence/target_activation_{with_v3,no_v3}.log，
+# 同章 4738、同样只点一次目标卡的 .vjs-big-play-button）：
+#   注入 v3   → 目标点只拿到 metadata（rs=4/dur=1130）却被永久钉住：ct 恒 19.8、
+#               paused=True、180s 内 0 次翻转；同时点 1 被 v3 从 0 拽着连播到 262。
+#   不注入 v3 → 目标点 ct 20.4→194.1、89/90 采样在前进、0 次暂停，点 1 安静停在
+#               存储位 227，且站点自己上报 playingTime=198 objectId=<目标点 oid>。
+# ⇒ 抢当前位的一直是我们自己的 v3（它 resume 每个模块帧里的**第一个** video = 点 1）；
+#   点 1 在播时站点绝不让点 2 播。而"播完前一个点让页面自推进"也是死路：真播到 ended
+#   之后整节跳走（chapterId 1217304738 → 1217304740），目标点从未激活。
+# ⇒ 章内 `:videoN` 的形态 = 不注入 v3 + 点目标卡自己的播放键 + 交给已绑定目标帧的
+#   R-04 续播。单视频章与点 1 一律不动 —— 那条路上 v3 仍是必需的播放驱动器。
 
 
-# 激活动作的一次迭代实证（真站）：
-#  ① 滚动进视口 3 次 ok=True 但绑定帧 dur 始终 None —— 滚动不激活。
-#  ② 点目标播放器自己的 .vjs-big-play-button（run 4）：起播成功（rs=4、
-#     ct 爬到 19.6s），但页面的任务状态机不认轮外播放器 —— 每 ~2s 暂停
-#     一次（R-04 救 9 次），最后把整章切走（nextUnit→739），目标点被打断。
-#  ⇒ 正确动作（用户方案）：动**轮内**的当前播放器。当前点若已被服务端
-#     判 finished，站点本就授权用户拖它的进度条（probe v4：0.9×dur 无回钳、
-#     连续播）—— 快进它到附近末尾，让页面自己的"ended→推进"逻辑把目标
-#     点变成名正言顺的当前点。红线闸门：**只快进 finished 有真源佐证的点**；
-#     未完成点绝不 seek。真实鼠标路径（hover→点进度条）实测不可用
-#     （seek-b hover 3s 超时），引擎只用脚本置 currentTime。
+def test_only_the_frame_bound_to_the_target_oid_may_be_clicked():
+    """点击激活仍必须认帧身份 —— 支点 1 的播放键冒认目标点是 P1 的旧病灶。"""
+    from app.e2_headed_gha import frame_is_bound_to
+    tgt = "e79a9a86" + "0" * 24
+    cur = "94382be4" + "0" * 24
+    assert frame_is_bound_to(f"https://s2.cldisk.com/sv-w9/video/{tgt}/sd.mp4?ak_=x", tgt) is True
+    assert frame_is_bound_to(f"https://s2.cldisk.com/sv-w9/video/{cur}/sd.mp4", tgt) is False
+    assert frame_is_bound_to("", tgt) is False
+    assert frame_is_bound_to("https://x/sd.mp4", "") is False
 
 
-def test_first_attempt_scrolls_then_later_attempts_fastforward_current():
-    from app.e2_headed_gha import nav_action_for_attempt
-    assert nav_action_for_attempt(0) == "scroll"
-    assert nav_action_for_attempt(1) == "fastforward_finished_current"
-    assert nav_action_for_attempt(2) == "fastforward_finished_current"
-
-
-def test_finished_current_point_may_be_fast_forwarded():
-    from app.e2_headed_gha import should_fastforward_current
-    assert should_fastforward_current(
-        current_oid="94382be4" + "0" * 24, target_oid="e79a9a86" + "0" * 24,
-        current_finished=True) is True
-
-
-def test_unfinished_point_is_never_seeked():
-    # 红线：拖未完成的进度=跳课。仅服务端已判 finished 的点可快进。
-    from app.e2_headed_gha import should_fastforward_current
-    assert should_fastforward_current(
-        current_oid="94382be4" + "0" * 24, target_oid="e79a9a86" + "0" * 24,
-        current_finished=False) is False
-    assert should_fastforward_current(
-        current_oid="94382be4" + "0" * 24, target_oid="e79a9a86" + "0" * 24,
-        current_finished=None) is False
-
-
-def test_current_equal_target_or_missing_never_seeks():
-    from app.e2_headed_gha import should_fastforward_current
-    same = "e79a9a86" + "0" * 24
-    assert should_fastforward_current(same, same, True) is False
-    assert should_fastforward_current(None, same, True) is False
-    assert should_fastforward_current("", same, True) is False
-
-
-# seek 位置纯函数。前提实证（probe v4，4738 点 1 finished、dur=1062）：
-# 脚本置 currentTime=0.9×dur → +3s/+8s 无回钳、rs=4 连续播 —— 已完成点可自由拖动。
-# 快进让当前点自然播到 ended，由页面自己的状态机推进到目标点；不做 100%。
-
-def test_fastforward_position_is_ninety_percent():
-    from app.e2_headed_gha import fastforward_seek_position
-    assert fastforward_seek_position(1062.0) == 955.8
-    assert fastforward_seek_position(645.0) == 580.5
-
-
-def test_fastforward_position_needs_real_duration():
-    from app.e2_headed_gha import fastforward_seek_position
-    assert fastforward_seek_position(0.0) is None
-    assert fastforward_seek_position(-5.0) is None
-    assert fastforward_seek_position(None) is None
-    assert fastforward_seek_position(float("nan")) is None
+def test_v3_is_not_injected_when_dispatch_targets_a_later_video_point():
+    """v3 会去 resume 帧里第一个 video；投 :videoN 时它替目标点抢走了当前位。"""
+    from app.e2_headed_gha import should_inject_v3
+    assert should_inject_v3(0) is True      # 未指定段 = 点 1 的稳定链路
+    assert should_inject_v3(1) is True
+    assert should_inject_v3(2) is False
+    assert should_inject_v3(3) is False
+    assert should_inject_v3(None) is True
