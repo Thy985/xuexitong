@@ -674,10 +674,25 @@ tvdp.py:1058），不构成站点读数结论 —— 已在此标注，避免下
 1 项（熔断/聚合）。**变异检查已做**：把 `chapters_corrected.append` 改回 `chapters_failed.append`
 后集成测试必须变红（第一次尝试因为 heredoc 没执行、误报通过，重做后才拿到红），还原后全量
 **439 passed, 1 skipped**。
-**尚未做（原方案②）**：把 D13 已有的幻影清理从"冻结章恢复"这一条路扩到正常的 head-candidate
-refine，并规定快照**只在 live 复核成功时**更新 —— ①治的是"撞上了怎么记账"，②治的是"别再从陈旧
-快照里 mint 出来"。另有一条同源缺口：快照只存聚合数（`video_total/video_finished`），不存点列表与
-objectid，所以 9/20 那次为什么读到 2 已经无法复核；要能事后审计就得把点级明细一并存进去。
+**真站复验（run 35684654409，`headSha=9de182b`，2026-09-22 03:4x UTC）—— 已成立**：
+派发前现场 `1217304730:video2` FAILED cf=1、快照 `{video_total: 2}`（9/20）。实读到：
+`TDVP: next_task=1217304730:video2` → 子进程 `runtime_result: FAIL(target video point 2 not on page;
+points=1)` → 父层 `PHANTOM-CORRECTED 1217304730:video2: page has 1 video point(s) -> ledger/snapshot
+repaired, not counted as a playback failure` → 聚合 **`"result": "SUCCESS"`**（这正是让它落盘的开关）→
+workflow 推回 `2b97fe6 chore(state)`。远端账本复跑核对：`1217304730:video2` **已从 tasks.json 消失**
+（该章只剩 COMPLETED 的 `1217304730`），`scheduler.consecutive_failures=0`、课程 ACTIVE、
+`progress.completed` 24→26。
+
+**但复验同时挖出一条不对称（未修）**：`state/**/chapter_points.json` 被 `.gitignore:36` 排除，
+而 `tasks.json` 是跟踪的 —— 所以**账本里的幻影被永久收掉了，纠正后的快照却只存在于 runner 的临时检出里**
+（远端那份快照的 `updated_at` 仍是 9/20 的 `video_total: 2`）。后果分两端：云端每次干净检出没有快照
+⇒ counts 为空 ⇒ 默认 1 点、不再 mint；**本地留着那份陈旧快照 ⇒ 下次本地跑 scheduler 会把 `:video2`
+重新 mint 回本地账本，一旦随 state 提交进 git 就复活**。收口三选一：① 本地按实测把该章快照条目改成
+`video_total: 1`（等价于把纠正函数在本地跑一次，不动 gitignore）；② 把 `chapter_points.json` 纳入跟踪
+（改 `.gitignore` = 授权范围）；③ 让 `:videoN` 的 mint 只信 live 读数（方案②的完整版）。
+
+**尚未做（原方案②）**：把 D13 已有的幻影清理从"冻结章恢复"一条路扩到正常 head-candidate refine，并给快照加"只有 live 复核成功才更新"
+的写入口。
 
 ---
 
