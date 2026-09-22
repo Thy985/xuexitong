@@ -866,11 +866,11 @@
     "chapter_id": "1217304719",
     "title": "点对点协议PPP",
     "task_type": "video",
-    "status": "BLOCKED",
+    "status": "PENDING",
     "priority": 55,
     "attempt_count": 3,
     "attempts": 3,
-    "consecutive_failures": 3,
+    "consecutive_failures": 0,
     "max_attempts": 3,
     "lease": {
       "run_id": null,
@@ -899,7 +899,7 @@
       "occurred_at_utc": "2026-09-09T09:55:39.072480+00:00"
     },
     "created_at_utc": "2026-09-05T12:35:58.027231+00:00",
-    "updated_at_utc": "2026-09-09T09:55:39.072480+00:00",
+    "updated_at_utc": "2026-09-22T02:14:01.420159+00:00",
     "last_run_id": "34336168695",
     "last_run_at_utc": "2026-09-09T09:55:39.072480+00:00",
     "last_started_at": "2026-09-09T07:00:10.158506+00:00",
@@ -1786,9 +1786,9 @@
     "task_type": "video",
     "status": "COMPLETED",
     "priority": 55,
-    "attempt_count": 2,
-    "attempts": 2,
-    "consecutive_failures": 1,
+    "attempt_count": 3,
+    "attempts": 3,
+    "consecutive_failures": 0,
     "max_attempts": 3,
     "lease": {
       "run_id": null,
@@ -1797,37 +1797,39 @@
     },
     "verification": {
       "level": "SERVER_VERIFIED",
-      "verified_at_utc": "2026-09-21T22:52:50.338211+00:00",
-      "run_id": "",
-      "source_detail": "live job points: server marked this point finished"
+      "verified_at_utc": "2026-09-22T02:29:54.223409+00:00",
+      "run_id": "35678657158",
+      "source_detail": "passed_object_ids=1"
     },
     "completion_evidence": {
       "type": "SERVER_VERIFIED",
-      "source": "live job points",
-      "run_id": "",
-      "observed_at_utc": "2026-09-21T22:52:50.338233+00:00",
-      "detail": "server finished marker on the exact point (manual watch / server truth)",
-      "passed_object_ids": []
+      "source": "isPassed",
+      "run_id": "35678657158",
+      "observed_at_utc": "2026-09-22T02:29:54.223409+00:00",
+      "detail": "passed_object_ids=1",
+      "passed_object_ids": [
+        "94382be48a99aae745efd4481afa4af1"
+      ]
     },
     "failure": {
       "stage": "",
-      "run_id": "35614276836",
-      "detail": "FAIL(video metadata not ready in GHA headed)",
-      "consecutive_failures": 1,
-      "occurred_at_utc": "2026-09-21T14:50:15.932483+00:00"
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-22T02:29:54.223419+00:00"
     },
     "created_at_utc": "2026-09-04T11:32:26.160664+00:00",
-    "updated_at_utc": "2026-09-21T14:50:15.932483+00:00",
-    "last_run_id": "35614276836",
-    "last_run_at_utc": "2026-09-21T14:50:15.932483+00:00",
-    "last_started_at": "2026-09-13T18:47:23.656730+00:00",
-    "last_finished_at": "2026-09-21T14:50:15.932483+00:00",
-    "last_success_at_utc": "2026-09-13T18:47:23.656730+00:00",
+    "updated_at_utc": "2026-09-22T02:29:54.223409+00:00",
+    "last_run_id": "35678657158",
+    "last_run_at_utc": "2026-09-22T02:29:54.223409+00:00",
+    "last_started_at": "2026-09-22T02:29:54.223409+00:00",
+    "last_finished_at": "2026-09-22T02:29:54.223409+00:00",
+    "last_success_at_utc": "2026-09-22T02:29:54.223409+00:00",
     "last_failure_at_utc": "2026-09-21T14:50:15.932483+00:00",
     "_ch_idx": 36,
     "_cell_idx": 36,
-    "rollback_count": 2,
-    "last_rollback_at_utc": "2026-09-19T23:00:21.173846+00:00"
+    "rollback_count": 3,
+    "last_rollback_at_utc": "2026-09-22T02:14:51.229261+00:00"
   },
   "1217304739": {
     "task_id": "1217304739",
