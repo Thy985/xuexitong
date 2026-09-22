@@ -578,9 +578,19 @@ L1 全套 `306 passed, 1 skipped`（RED=18 项含新 4 组先红后绿）。
 具体路由 `evidence["v3_route"]` 说明，保证两条路都仍可达 10/10。
 L1 全套 `419 passed, 1 skipped`。
 
-**未竟**：新链路尚未在真站 run 上验证（需逐批授权）。验收判据：绑定帧 metadata→currentTime
-持续增长、`v3_route=skipped-for-in-chapter-target`、`multimedia/log` 出现目标 oid 的上报、
-该点以 `SERVER_VERIFIED` 落 COMPLETED。
+**真站复验（run 35673388111 → 35675040542，2026-09-22）**：新链路第一次让 `4738:video2`
+在 GHA 上拿到 metadata —— `[v3] skipped by design (video_index=2)` → `clicked target
+e79a9a86's own play button` → `Video ready: duration=1130s ct=…` → `★ isPassed=true`。
+第一次（35673388111）播到 ct=1036/1130=92%、服务端已判通过，却被父层静态 900s 墙钟在 901s
+砍成 TIMEOUT（子进程被杀 ⇒ registry 连这次尝试都没记上）；修掉探测缺口后再跑
+（35675040542）**verdict=PASS，10/10 checks，`chapter_completed=True`**，远端账本该点
+**COMPLETED / SERVER_VERIFIED / passed_object_ids=1 / cf=0 / attempts=5** —— P1 的实质缺口闭合。
+
+**仍开着的一处**：`_probe_video_duration_s` 现在会先激活目标点、预算 45s（`duration_probe_policy`），
+但那次探测仍未读到 duration（作业日志里 `看门狗降级 … 45s 内未读到` 照旧，回退静态 900s）。
+本轮无碍（站点已存进度 1006/1130，只差 124s），但**换一个存储进度很低的 `:videoN` 长视频点就会
+再次被 900s 砍**。下一步：让探测像 Step F 那样反复重试激活（而不是只点一次），或让子进程把已读到的
+`video_duration` 回灌父层预算。
 ---
 
 ## 5. 失败 / 回退策略
