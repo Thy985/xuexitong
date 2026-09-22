@@ -34,6 +34,10 @@ TaskPhase = Literal["DISCOVERED", "PENDING", "READY", "RUNNING", "VERIFYING",
                     "COMPLETED", "FAILED", "BLOCKED", "UNKNOWN", "STALE"]
 EvidenceLevel = Literal["NONE", "UI", "SERVER_VERIFIED", "RECHECK", "CONFLICT"]
 
+# 「整章还有别的点没完」这一类降级理由：它对**本点**没有证明力（引擎做不了达标测试/PPT），
+# 所以不得据此把一个服务端已确认的点反复投回队列。判据见 TaskRecord.revoked_by_chapter_reading。
+COARSE_REVOCATION_MARKS = ("chapter has unfinished points",)
+
 
 # ── 数据模型 ───────────────────────────────────────────────────────
 
@@ -308,6 +312,21 @@ class TaskRecord:
         """
         return (getattr(self.verification, "level", "") == "SERVER_VERIFIED"
                 and bool(getattr(self.completion_evidence, "passed_object_ids", None)))
+
+    def revoked_by_chapter_reading(self) -> bool:
+        """该点的「未完成」结论是不是**章级**粗读数下的 —— 而不是这个点自己没过。
+
+        `mark_stale` 把原证据降级成 CONFLICT 但**保留** `passed_object_ids`，所以降级
+        理由就是唯一的分辨依据：只提"整章还有别的点没完"的，对本点没有证明力
+        （那些点是达标测试/PPT —— 引擎永远做不了）。真没过时由点级实时复核写下的
+        理由是另一种（`downgrade_to_pending` / "live status overrides…"），不在此列，
+        所以新鲜点级证据随时能把这个点放回队列。
+        """
+        ev = self.completion_evidence
+        if not ev or getattr(ev, "type", "") != "CONFLICT":
+            return False
+        detail = getattr(ev, "detail", "") or ""
+        return any(mark in detail for mark in COARSE_REVOCATION_MARKS)
 
     def mark_stale(self, detail: str = "") -> None:
         """E6.2 校准：实时状态覆盖历史完成。
@@ -658,6 +677,17 @@ def done_chapter_ids_from_registry(registry: dict[str, TaskRecord]) -> set[str]:
     return done
 
 
+def coarse_parked_verified_points(registry: dict) -> list[str]:
+    """列出「点级已被服务端确认、只是被章级粗读数打下来、且无人承载」的点。
+
+    这些点 `reconcile_queue` 不再投放。纯留痕用 —— 静默停放是 D5 那族归因丢失的来路，
+    调度器必须把它打出来。（判据本体见 `TaskRecord.revoked_by_chapter_reading`。）
+    """
+    return sorted(tid for tid, t in (registry or {}).items()
+                  if t.point_is_server_verified() and t.revoked_by_chapter_reading()
+                  and not t.rollback_count)
+
+
 def reconcile_queue(course_key: str, registry: dict[str, TaskRecord],
                     done_chapter_ids: set[str] | None = None,
                     points_map: Optional[dict] = None) -> ExecutionQueue:
@@ -688,8 +718,14 @@ def reconcile_queue(course_key: str, registry: dict[str, TaskRecord],
     # 兄弟点记录（`<cid>:videoN`）承载，重投已过的第 1 点只会白耗一次投递（第 3 轮 M0
     # 的"不重复 ❌"正是这个：`<cid>` 已 SERVER_VERIFIED，却被后续 run 标成 FAILED 后
     # 以 priority 0 反复回队，`:video2` 永远排在它后面）。
-    # 章内若没有能承载的兄弟点（单视频章真源自相矛盾，如 1217304722），仍按原策略重试
-    # —— 宁可多重投一次，也不许把整章永久搁浅。
+    # 章内若没有能承载的兄弟点，只有当"该点没过"这件事还有点级证据时才重投
+    # —— 宁可多重投一次，也不许把整章永久搁浅。但**章级读数**（"整章还有别的点没完"）
+    # 不算这种证据：run 35706997064 实测，单视频章 1217304731 靠这条被反复重投，
+    # 而它的 objectid 9/11 就被 isPassed 确认过 —— 站点不再给已过的点播放回合
+    # （180s 里 paused=True/readyState=0/ct=0 一次没动），于是每晚白吃一次唯一的
+    # 点位预算，第三晚还会把整章冻成 BLOCKED。
+    # 例外只有一条：`rollback_count>0` 的"回退章"（曾确认完成、又被服务端推翻）走原有的
+    # 优先补齐路径 —— 那是独立信号，不由这条章级读数判据接管（9/20 定案，1217304722）。
     carried_chapters = {
         (t.chapter_id or "") for t in registry.values()
         if (t.task_type or "video") == "video" and not t.point_is_server_verified()
@@ -719,8 +755,13 @@ def reconcile_queue(course_key: str, registry: dict[str, TaskRecord],
             snap = (points_map or {}).get(t.chapter_id)
             if snap and not snap.get("has_video"):
                 continue
-        if (t.chapter_id or "") in carried_chapters and t.point_is_server_verified():
-            continue
+        if t.point_is_server_verified():
+            carried = (t.chapter_id or "") in carried_chapters
+            # 新增的只有一种形状：没人承载 + 只是被章级读数打下来 + 也不是回退章。
+            # 有兄弟承载时按原规则停放；回退章（`rollback_count>0`）在没人承载时
+            # 仍走优先补齐（9/20 定案，1217304722）—— 那独立信号不归这条判据接管。
+            if carried or (t.revoked_by_chapter_reading() and not t.rollback_count):
+                continue
         # 已完成（有证据）→ 跳过
         if t.status == "COMPLETED" and done_chapter_ids and t.chapter_id in done_chapter_ids:
             continue

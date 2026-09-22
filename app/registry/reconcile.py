@@ -564,6 +564,10 @@ def stale_completed_by_points(
     与 stale_completed_by_catalog 互补：catalog 用 job_remaining 计数，
     这里用点级快照（video_total / video_finished）——更精确。
 
+    但快照仍是**章级**读数，且可能陈旧（§4.13 的 TTL 就是为它加的）。所以该点自己带
+    `SERVER_VERIFIED` + `passed_object_ids` 时不降级 —— 与 catalog 腿的
+    `point_is_server_verified` 闸门同一条原则：粗读数不得推翻细读数。
+
     快照是**章级**的，记录是**点级**的：若该章另有未完成的视频兄弟记录（`:videoN`），
     未完成量由它扛，不许把已完成的第 1 点降级重播。兄弟记录不存在时才降级 ——
     这正是 4708「双视频只播 1 个」当年需要的保护。
@@ -575,6 +579,8 @@ def stale_completed_by_points(
     for tid, t in existing.items():
         if t.status != "COMPLETED":
             continue
+        if point_is_server_verified(t):
+            continue          # 章级读数不得推翻该点的服务端确认（与 catalog 腿同一条闸门）
         cid = t.chapter_id
         done_state = chapter_done_from_snapshot(cid, points_map or {})
         if done_state is False:                # 有未 finish 的视频点

@@ -1437,6 +1437,11 @@ def _run_tdvp_probe(course_url: str, course_key: str,
         # 4. Reconcile Queue（派生物）
         queue = reconcile_queue(course_key, existing, done_ids, points_map=pts_map)
         print(f"[scheduler] TDVP: queue has {len(queue.items)} READY tasks", flush=True)
+        from app.registry.task_registry import coarse_parked_verified_points
+        _parked = coarse_parked_verified_points(existing)
+        if _parked:
+            print(f"[scheduler] TDVP: COARSE-PARKED (服务端已确认、只被章级读数回炉，"
+                  f"不再投放): {_parked}", flush=True)
         # [DIAG] 建队时 BLOCKED 集：若 ppp 不在 freeze、却在队列里 → 泄漏在 reconcile1/queue 本身
         _dq4 = existing.get(_dp)
         _dq_frozen = sorted({t.chapter_id for t in existing.values()
