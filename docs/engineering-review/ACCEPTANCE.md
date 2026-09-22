@@ -691,7 +691,24 @@ workflow 推回 `2b97fe6 chore(state)`。远端账本复跑核对：`1217304730:
 `video_total: 1`（等价于把纠正函数在本地跑一次，不动 gitignore）；② 把 `chapter_points.json` 纳入跟踪
 （改 `.gitignore` = 授权范围）；③ 让 `:videoN` 的 mint 只信 live 读数（方案②的完整版）。
 
-**尚未做（原方案②）**：把 D13 已有的幻影清理从"冻结章恢复"一条路扩到正常 head-candidate refine，并给快照加"只有 live 复核成功才更新"
+**已收口（同日，方案＝「陈旧快照不参与 mint」）**：`video_counts_from_points` 加了时效判据 ——
+条目必须带**可解析且新鲜**的 `updated_at`（默认 TTL 1 天，`POINTS_SNAPSHOT_TTL_S`），缺失/畸形/超时一律
+不采信，该章回退默认 1 点，与云端干净检出的行为完全一致。理由与①的 `observed=0 不采信` 同一条原则：
+**没有新鲜的 live 证据，就不宣布某章有多个点**。
+
+选它而不是逐条改缓存的依据：这条不对称的真正病灶是"本地留着已证伪的读数"。实测本地 12 条快照全部
+来自 9/20，且已在说谎 —— 今天对 4730 三路实测都是 1（快照写 2）、对 4738 都是 2（快照写 3，即 D12/D13
+那类错计数被固化进缓存）。逐条手改等于替缓存背书；加时效则一次性把 12 条陈旧读数全部挡在 mint 之外
+（实测：`video_counts_from_points` 对该文件返回 `{}`，12/12 被丢）。也**不碰 `.gitignore`**：把快照纳入
+跟踪反而会让一次错误的 live 读数跨机、跨 run 传播，风险方向相反。
+
+测试：`tests/unit/test_points_snapshot_ttl.py` 6 项（新鲜仍供数、25h 被丢、默认 TTL=1 天、无/坏时间戳
+按陈旧处理、调用方可放宽）；`tests/unit/test_video_point_backfill.py` 的 fixture 改为带 `updated_at`
+（生产写入口 `set_chapter_point_snapshot` 每次都盖时间戳，原 fixture 是不真实形状），并在文件头补注：
+**这批 9/20 读数已被实测推翻，"用快照补兄弟记录"只在快照新鲜时成立**。变异检查：把时效判据改成
+`if False` 后 6 项里 4 项变红。全量 **445 passed, 1 skipped**。
+
+**仍未做（原方案②）**：把 D13 已有的幻影清理从"冻结章恢复"一条路扩到正常 head-candidate refine，并给快照加"只有 live 复核成功才更新"
 的写入口。
 
 ---

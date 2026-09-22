@@ -527,16 +527,46 @@ def chapter_done_from_snapshot(cid: str, points: dict) -> Optional[bool]:
     return fin >= total
 
 
-def video_counts_from_points(points_map: dict) -> dict:
+POINTS_SNAPSHOT_TTL_S = 24 * 3600     # 点级快照参与拆分的时效上限（1 天）
+
+
+def _snapshot_is_fresh(snap: dict, now, ttl_s: int) -> bool:
+    """该条快照还在时效内吗？时间戳缺失/畸形/无时区 → 一律算不新鲜。
+
+    没有 `updated_at` 就无法证明它是谁在什么时候读的，宁可当作没有信息（下游回退到
+    默认 1 点），也不能拿它去宣布某章有多个视频点。
+    """
+    raw = str((snap or {}).get("updated_at") or "")
+    if not raw:
+        return False
+    try:
+        ts = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    return (now - ts).total_seconds() <= ttl_s
+
+
+def video_counts_from_points(points_map: dict, *, now=None,
+                             ttl_s: int = POINTS_SNAPSHOT_TTL_S) -> dict:
     """点级快照 → discovery 需要的 `{chapter_id: video_total}`。
 
-    只收"确实有视频、数量已知"的章。读不到或无视频的章**不进** counts：传 0 等于
+    只收"确实有视频、数量已知**且新鲜**"的章。读不到或无视频的章**不进** counts：传 0 等于
     宣布该章没有视频点，会被下游当成非视频章处理 —— 那正是 §4.2 那类误降的来路。
+
+    为什么要时效（#23）：这文件被 gitignore，云端每次干净检出都没有它，本地却可能留着几天前
+    那批 —— 同一段代码在两端看到的真源不一样。实测本地 9/20 那批已在说谎（4730 写 2、今天三路
+    实测 1；4738 写 3、真站与探测都是 2），拿它当拆分数就会把已经收掉的幻影 `:videoN` 重新 mint
+    回账本。陈旧条目在此被丢掉后，行为与云端一致：按默认 1 点走，等一次新的 live 复核再补计数。
     """
+    moment = now or datetime.now(timezone.utc)
     out = {}
     for cid, snap in (points_map or {}).items():
         snap = snap or {}
         if not snap.get("has_video"):
+            continue
+        if not _snapshot_is_fresh(snap, moment, ttl_s):
             continue
         total = int(snap.get("video_total") or 0)
         if total > 0:

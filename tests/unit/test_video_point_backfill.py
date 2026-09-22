@@ -9,7 +9,14 @@
 
 后果：章级快照说"还有视频点没做完"，但没有承载它的记录 → 只能反复重播第 1 点。
 所以补齐兄弟记录才是 D1 的正解，前面的"兄弟承载"判据要等它落地才真正生效。
+
+**2026-09-22 补注**：上面那批 9/20 读数本身已被实测推翻 —— 今天对 `1217304730` 三路（引擎枚举 /
+cards DOM 标记 / 服务端 live 点读）都是 **1** 个视频点、对 `1217304738` 都是 **2** 个，而快照写着
+2 和 3（D12/D13 那类错计数被固化进了缓存）。因此"用快照补兄弟记录"必须**只在快照新鲜时**成立，
+见 `video_counts_from_points` 的时效判据与 `tests/unit/test_points_snapshot_ttl.py`。本文件的 fixture
+因此一律带 `updated_at`（生产写入口 `set_chapter_point_snapshot` 每次都盖时间戳）。
 """
+from datetime import datetime, timezone
 
 from app.registry.reconcile import reconcile_registry
 from app.registry.task_registry import TaskRecord, video_counts_from_points
@@ -20,7 +27,8 @@ CID = "1217304730"
 
 def _snap(total, finished=1, cid=CID, has_video=True):
     return {cid: {"video_total": total, "video_finished": finished,
-                  "has_video": has_video}}
+                  "has_video": has_video,
+                  "updated_at": datetime.now(timezone.utc).isoformat()}}
 
 
 # ── video_counts_from_points ─────────────────────────────────────
@@ -36,8 +44,7 @@ def test_chapters_without_video_are_omitted_not_zeroed():
 
 
 def test_unread_chapters_are_omitted():
-    points = {"1217304700": {"video_total": 3, "video_finished": 3, "has_video": True},
-              "1217304701": {}}
+    points = {**_snap(3, finished=3, cid="1217304700"), "1217304701": {}}
     assert video_counts_from_points(points) == {"1217304700": 3}
 
 
