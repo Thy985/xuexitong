@@ -754,6 +754,62 @@ stdout 重定向进 `chapter_<slug>.scheduler.stdout.log`。于是 `_run_one_cha
 **同日行号刷新**：本次改动使 scheduler.py 下移 +42/+24 行，`REVERSE_ARCHITECTURE.md` §3/§5/§7/§8/§11 与
 本文件 §4.7/§4.12/§4.13 的 `file:line` 已逐条 grep 重钉（漂移史见该文档 §11 末）。
 
+### 4.15 章级粗读数不得把一个服务端已确认的点长期留在投递队列里（2026-09-22，run 166 实证 + L1）
+
+**触发**：第一次跑在**已推送的新代码**上的 schedule 轮次 #166（run 35706997064，sha `0d02f14`，
+08:50Z 落地 —— 也顺带证明 `0 4 * * *` 那条腿是活的、比名义时刻晚 4h50m）判红。
+判红本身是设计行为：step 10 `Run Scheduler` 成功，step 15 `Final verdict` 见 `result=FAILED` 即 `exit 1`。
+
+**因果链（每条都有日志/账本出处）**：
+1. 唯一事件：投给 `1217304731`（子网划分）的子进程 214.3s 后 `exit_code=1`，`timed_out=False`
+   —— 与看门狗无关（也没需要扩预算，子进程从未播报时长）。
+2. 子进程自述 `FAIL(video metadata not ready in GHA headed)`；父进程 25s 探测留下的帧状态是决定性的：
+   `currentTime=0 / paused=True / readyState=0 / duration=None`，`src` 指向目标 objectid 的正常 CDN 地址。
+   **`paused` 始终为 True ⇒ 连 `play()` 都没被调用过**；页面只有这一个 video，绑到的 objectid 就是它。
+3. 为什么没人点：第 1 点（`<cid>`）路径按 9/21 定的闸门**不启用** `activate_target_point`
+   （`e2_headed_gha.py:602`），寄望 v3；而"无视频帧 reload 恢复"只在 `found=False` 分支里 → 日志
+   `reloads=0`，180s 纯空等。**这条路径不设 `failure_stage`、也不采 console**，所以父层只能填
+   `UNREPORTED_BY_RUNTIME`，"v3 当时为什么没动手"事后无从证明（→ 方案①仍开着）。
+4. 真根因：这个 objectid **9/11 就被 isPassed 确认过**（账本 `verification.level=SERVER_VERIFIED` +
+   `passed_object_ids=[478ca072…]`，run 34601190420），它之所以还在队列里，是因为 9/11 被
+   **章级**读数降级（`completion_evidence.type=CONFLICT`、detail「chapter has unfinished points」）。
+   `reconcile_queue` 的"已确认点不再重投"有条 9/20 的例外：章内没有能承载剩余工作的兄弟点时
+   「宁可多重投一次」—— 4731 是单视频章，于是每晚被重投一次。按 `max_attempts=3`，明晚后晚各再吃
+   一次**当晚唯一**的点位预算，第三晚把整章冻成 BLOCKED。
+5. 实测影响面（把 `TASKS_DIR` 改到临时目录重算队列，**不碰真实账本**）：队列 26 项，6 条
+   "已确认未回队"记录里**只有 4731 在列**；其余 4 条 UNKNOWN 记录由章内 `:videoN` 兄弟承载，本就被停放。
+
+**修法（三处，同一条原则：粗读数不得推翻点级细读数）**：
+- `TaskRecord.revoked_by_chapter_reading()`（task_registry.py:316）—— 判"降级理由只提整章"，
+  与点级实时复核写的理由严格区分（`COARSE_REVOCATION_MARKS` 只含章级那句）。
+- `reconcile_queue`（:763）新增停放形状：**点级已确认 + 只是章级读数回炉 + 无人承载 + 不是回退章**。
+  其余一律按原规则；`rollback_count>0` 的回退章保留 9/20 的优先补齐（`test_verified_point_without_carrier_is_still_queued`
+  钉住 —— 第一版我把这条闸门写宽，一次放行了 4 条本有兄弟承载的记录，被这条旧测试当场抓住）。
+- `stale_completed_by_points`（reconcile.py:561）补上与 catalog 腿 :549 同一条闸门：章级快照
+  （还可能陈旧，见 §4.13 TTL）不得推翻该点的服务端确认。
+
+**明确不做的两件事**：不手改账本、也不新写一条"完成"入口 —— 这 5 条记录仍是 CONFLICT 态，
+把它们翻回 COMPLETED 仍只有一条路：`scripts/diag_video_points_ledger.py` 那点级快照证据齐备的
+CLI 修复（§4.13 的「没有点级快照就不动账」）。这里只停止**投放**。
+
+**回程（保护强度不超过最新那份点级证据）**：任何一次点级实时复核把这个点自己判成未完成
+（`downgrade_to_pending` 会把 verification 写成 CONFLICT → `point_is_server_verified()` 变假），
+它立刻重新入队 —— 由 `test_fresh_point_level_conflict_brings_it_back` 钉住。
+
+**验证**：`tests/unit/test_coarse_revocation_parking.py` 10 项。先跑 RED：4 failed（判据缺失 +
+停放行为 + points 腿闸门）/ **5 passed**（不放水的四条护栏 + BLOCKED 归熔断管），实现后 10 项全绿；
+全量 **462 passed, 1 skipped**。真实账本复算：队列 26 → **25**，走开的正是 `1217304731`，
+队首变成 `1217304719` / `…:video2` 这些真没学的点。
+
+**未证的一条（诚实登记）**：「站点不再给已判过的点播放回合」是从今晚 180s 零起播 + §6 I9 串行化
+**推**出来的，没做对照探测。它只影响"为什么重投一定失败"的解释强度，不影响本次修法的正确性 ——
+判据用的是"该点自己带 isPassed 证据"这一条账本事实，不依赖这个假设。
+
+**仍开放**：① Step F 早退补 `failure_stage` + 采 console（方案①）；② 第 1 点在
+`found=True 且 readyState=0` 停滞时是否放宽激活（方案③，9/21 闸门）；③ `1217304705` 这类
+FAILED 且**无章级回炉标记**的点该怎么判（它不在本次形状里）；④ 队列头部残留的
+`1217304730:video2`（无账本记录）—— 见 §4.13 未修的方案②那一半。
+
 ---
 
 ## 5. 失败 / 回退策略
