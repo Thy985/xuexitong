@@ -13,6 +13,9 @@ This fake `app` package is injected onto PYTHONPATH *before* the real one so
                    evidence -> 写一份真实形状的 --output 产物后按 verdict 退出
                                （配 FAKE_RUN_VERDICT / FAKE_RUN_STAGE / FAKE_RUN_TITLE；
                                 FAKE_RUN_CORRUPT=1 写一份截断产物）
+             slow_announced -> 像真引擎那样先自报视频时长再跑完
+                               （配 FAKE_RUN_ANNOUNCE=0 静默、FAKE_RUN_DURATION_S、
+                                FAKE_RUN_SLEEP_S；R5 看门狗交接回归用）
   FAKE_RUN_DELAY_S         -> optional npop/emprec delay before acting
 
 No real site is touched; no credentials are used.
@@ -72,6 +75,26 @@ def _write_evidence():
     sys.exit(0 if verdict == "PASS" else 1)
 
 
+def _slow_announced():
+    """behavior=slow_announced：复刻真引擎的 Step F——自报时长后继续播。
+
+    真 app 打的是 `Video ready: duration=1130s currentTime=... paused=False`
+    （`app/e2_headed_gha.py` 的 `log()`，`flush=True`），看门狗读的正是这一行，
+    所以这里的字面形状必须和真站一致，否则测的是解析器自己的想象。
+    """
+    dur = os.environ.get("FAKE_RUN_DURATION_S", "6")
+    try:
+        sleep_s = float(os.environ.get("FAKE_RUN_SLEEP_S", "4"))
+    except Exception:
+        sleep_s = 4.0
+    if os.environ.get("FAKE_RUN_ANNOUNCE", "1") != "0":
+        print(f"fake app.run Video ready: duration={dur}s currentTime=0.0 "
+              f"paused=False", flush=True)
+    time.sleep(sleep_s)
+    print("fake app.run OK", flush=True)
+    sys.exit(0)
+
+
 def main():
     b = _behavior()
     delay = _delay()
@@ -83,6 +106,8 @@ def main():
             time.sleep(1)
     elif b == "evidence":
         _write_evidence()
+    elif b == "slow_announced":
+        _slow_announced()
     elif b == "exit1":
         print("fake app.run FAIL", flush=True)
         sys.exit(1)

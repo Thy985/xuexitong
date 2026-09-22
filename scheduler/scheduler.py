@@ -397,7 +397,9 @@ def _run_one_chapter(course_url: str, chapter_id: str, task_id: str = "",
     cmd_run 内部的永久阻塞（browser 还活着）。因此：
 
       * 把每次 cmd_run 放进独立**子进程**（app.run --action run）。
-      * 用 subprocess.wait(timeout=max_s) 提供**墙钟硬上限**。
+      * 用分片 `subprocess.wait(timeout=...)` 提供**墙钟硬上限**；每片之间回读
+        子进程日志，读到它自己播报的视频时长就把预算按 `_adaptive_video_watch_s`
+        扩一次（时长只能在这儿拿到 —— 父进程侧的探测跑在起播之前）。
       * 超时 → 杀进程树（不再可能泄漏 Chromium）→ 标记 TIMEOUT（区别于 FAIL）。
 
     返回:
@@ -444,15 +446,54 @@ def _run_one_chapter(course_url: str, chapter_id: str, task_id: str = "",
     t0 = time.time()
     exit_code = 1
     timed_out = False
+    budget_s = int(max_s)
+    # 看门狗轮询片长：够短（能在子进程播报后十几秒内扩预算），又不至于把日志
+    # 读成热路径。真正的判定权在 deadline，不在这个数。
+    watch_tick_s = 15.0
     stdout_fh = open(stdout_path, "w", encoding="utf-8", errors="replace")
     try:
         try:
             proc = sp.Popen(cmd, stdout=stdout_fh, stderr=sp.STDOUT,
                         start_new_session=True)  # 独立进程组 → killpg 可连 browser 一并清理
-            exit_code = proc.wait(timeout=max_s)
+            # 墙钟预算改成分片轮询：只有轮询才能在子进程还活着时读到它自己
+            # 播报的视频时长，把静态 base 扩成自适应预算（R5/#20 —— 父进程
+            # 侧的时长探测跑在起播之前，结构上永远读不到 duration）。
+            # 每片重读整份日志：解析器不认半行，所以截断无副作用，
+            # 下一片会读到这行的完整内容。
+            deadline = t0 + budget_s
+            extended = False
+            while True:
+                remaining = deadline - time.time()
+                if remaining <= 0:
+                    raise sp.TimeoutExpired(cmd, budget_s)
+                try:
+                    exit_code = proc.wait(timeout=min(watch_tick_s, remaining))
+                    break
+                except sp.TimeoutExpired:
+                    pass
+                if extended:
+                    continue
+                try:
+                    with open(stdout_path, encoding="utf-8",
+                              errors="replace") as _logf:
+                        _child_log = _logf.read()
+                except Exception:
+                    _child_log = ""
+                dur = child_reported_duration(_child_log)
+                if not dur:
+                    continue
+                new_budget = _adaptive_video_watch_s(budget_s, dur)
+                if new_budget <= budget_s:
+                    continue
+                budget_s = new_budget
+                deadline = t0 + budget_s
+                extended = True
+                print(f"[scheduler] chapter {chapter_id} watchdog extended: "
+                      f"child reported duration={dur:.0f}s -> budget "
+                      f"{int(max_s)}s -> {budget_s}s", flush=True)
         except sp.TimeoutExpired:
             timed_out = True
-            print(f"[scheduler] chapter {chapter_id} exceeded {max_s}s "
+            print(f"[scheduler] chapter {chapter_id} exceeded {budget_s}s "
                   f"(watchdog), killing pid {proc.pid}", flush=True)
             _kill_proc_tree(proc.pid)
             try:
@@ -955,6 +996,30 @@ def poll_video_duration(read_state, *, deadline_s: float = 25.0,
             return None, (f"{deadline_s:.0f}s 内未读到 video.duration"
                           f"（最后 st={last}）—— 可能没进播放器/无视频/登录未通过")
         nap(sleep_s)
+
+
+def child_reported_duration(text: str) -> Optional[float]:
+    """从子进程自己的 stdout 里读出它正在播的视频时长（秒）；读不到返回 None。
+
+    父进程侧的时长探测在结构上就赢不了：它跑在子进程起播**之前**，那会儿页面上
+    还没有激活的播放器（真站两个 run 的子日志实证：点 1 轮询 25s、点 ≥2 先激活
+    再轮询 45s，都只读到 `duration=None`）→ 自适应看门狗从未生效。而这个数子进程
+    一直有，就在它的 Step F `Video ready: duration=NNNs ...` 行里。
+
+    取**最后一次**播报：引擎会重绑/重载播放器，最后报的那段才是它真正在播的。
+    截断/半行一律不认（结尾那个 `s` 是必需项）—— 把 `duration=113` 读成 113s
+    比回退 base 预算危险得多：真值可能是 1130s。
+    """
+    import re
+    if not text:
+        return None
+    found = re.findall(r"Video ready:.*?duration=(\d+(?:\.\d+)?)s(?![\w.])", text)
+    if not found:
+        return None
+    try:
+        return float(found[-1])
+    except ValueError:
+        return None
 
 
 def _adaptive_video_watch_s(base_max_s: int,
