@@ -826,7 +826,7 @@ SERVER_VERIFIED / passed_object_ids=1`，兄弟 `DISCOVERED / ver=NONE / pids=0 
 **修法**：E6.2 live refine 本来就已经把该章的**点列表**读回来了（`verify["points"]`），
 所以把收口挪到读数的当下 —— 新纯函数 `prune_phantom_points_after_refine`
 （reconcile.py:694），在 `reconcile_registry` 之后、`save_registry` 与重建队列之前调用
-（scheduler.py:1530-1536，命中时打印 `TDVP: REFINE-PRUNED …`）。判据**复用**撞上清理那条
+（scheduler.py:1568-1576，命中时打印 `TDVP: REFINE-PRUNED …`）。判据**复用**撞上清理那条
 （`prune_phantom_video_points`：删 `seq > observed`、`observed<1` 不动、COMPLETED 不删），
 只是证据从"引擎枚举到的页面点数"换成"这次服务端点列表数出来的视频点数"。
 
@@ -848,7 +848,7 @@ SERVER_VERIFIED / passed_object_ids=1`，兄弟 `DISCOVERED / ver=NONE / pids=0 
 现有集成测试是把这个函数整体打桩的，所以"调用位置对不对"只能由真站那一班给答案（#27）。
 
 **仍未做的另一半（原方案②）**：refine 读到 `video_total=0` 且点列表也没证明"无视频"时，
-scheduler.py:1517 依然会写一份**新鲜但不可信**的 0 值快照 —— 加时效只挡住 mint，
+scheduler.py:1556 依然会写一份**新鲜但不可信**的 0 值快照 —— 加时效只挡住 mint，
 done 判定侧照旧会读到它。
 
 ---
@@ -896,6 +896,40 @@ done 判定侧照旧会读到它。
 `Path.write_text` 与 `os.fdopen`（本机实测 `os.linesep` 改不动翻译，只有显式 `newline` 有效），
 所以漏写 `newline` 在 Linux CI 上同样会变红。逐点变异：回退 registry 写入器 → 3 红 1 绿；
 回退 course_state 两处 → 1 红 3 绿；恢复 → 4 绿。
+
+---
+
+### 4.18 投递侧证据闸门：把判据搬到"决定投谁"的那一问（2026-09-22，#31）
+
+§4.17 留下的结论是"闸门要么钉在决策点，要么让决策点自己带上证据"。本批做的就是后者。
+
+**判据**（`app/registry/reconcile.py:725-787`，四条纯函数，全部 L1）：
+
+| 分支 | 条件 | 动作 |
+|---|---|---|
+| 免读 | `index<=1`（章自己的记录）或记录自带证据（`point_is_server_verified` / `attempts` / `consecutive_failures`） | 直接投，**一次额外深读都不花** |
+| `ALLOW` | 本轮新鲜读数 ≥ N | 投 |
+| `PRUNE` | 1 ≤ 新鲜读数 < N | 走生产原语 `prune_phantom_video_points` 收掉，落盘、重建队列、换下一个候选 |
+| `UNKNOWN` | 读不到（`observed` 缺失或 `<1`） | **照投** —— 投错只损失一晚，饿死一个真点是不可逆的（§4.17 实测的 `1217304741:video2` 就是 2 点章里那个未完成的真点） |
+
+**位置**：`scheduler.py:1300` 的 `_dispatch_evidence_gate`，调用点在 `scheduler.py:1672` ——
+即 `_apply_excluded` 与 `_drop_frozen_candidates` 之后、`next_item = candidates[0]` 之前。
+读数由调用方注入（`read_points` / `rebuild`），所以判据与 I/O 分家：闸门循环本身可单测。
+
+**成本上限**：一晚最多 2 次额外 L2 深读（`_gate_reads`）；同一章 memoize；refine 刚读过该章
+就直接复用它的 `verify`，不再开浏览器。
+
+**已知不足（有意为之，说清）**：若 refine 恰好读过这一章但**读空**，闸门会复用这份 0 值 →
+`UNKNOWN` → 照投 → 仍会撞墙（退化成 §4.13 的撞后纠正）。选择在闸门里重读一次大概率还是 0，
+却要额外吃掉深读预算，所以不重读。
+
+**验证**：`tests/unit/test_dispatch_evidence_gate.py` 16 项（自带证据者免读、章自己的点免读、
+三分支裁决、收掉后换候选、读空照投且日志说明）。四组变异逐条咬住：去掉"先问要不要读"→ 2 红；
+UNKNOWN 当 PRUNE → 1 红；反驳成立却不删账 → 1 红；自带证据短路失效 → 2 红。
+**动态接线**：用一次性驱动脚本把真 `_run_tdvp_probe`（真 `reconcile_registry` / `reconcile_queue`）
+推到位 —— `DISPATCH-GATE … 照投` 在生产位置打印出来过，§4.16 的 `REFINE-PRUNED` 也实测生效
+（那一晚的投递预算被转到真章 1217304719 上）。**唯一没被动态覆盖的是 `_rebuild_after_prune`
+函数体**（收掉之后重建队列那 6 行）—— 合成的队列排序到不了那一行，只能等真站那一班。
 
 ---
 

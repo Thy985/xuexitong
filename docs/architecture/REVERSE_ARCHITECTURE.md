@@ -193,13 +193,13 @@ run_scheduler(course_url?, chapter_id?, trigger, run_id, max_chapters)   :554
  │    │    允许同章下一视频段接着被选中）
  │    │    无显式章且探测为空 → 诚实 NOOP，不臆测选章
  │    │    └─ _run_tdvp_probe :1300              浏览器探针：
- │    │         fetch_course_detail_and_verify（:1344）→ reconcile_registry
- │    │         → stale_completed_by_catalog / _by_points（L1 廉价校准，:1417/:1418）
- │    │         → mark_stale_with_source（降级腿名写进 detail，判据 :943 / 调用 :1419）
- │    │         → merge_done_with_points（done 剔除「快照显示未完」章，:1432）
- │    │         → reconcile_queue（:1438）
- │    │         → heal_blocked_by_live（冻结章服务端真源恢复，:1453-1462）
- │    │         → live_verify_chapter（:1501）→ set_chapter_point_snapshot（写点级快照，:1517）
+ │    │         fetch_course_detail_and_verify（:1384）→ reconcile_registry
+ │    │         → stale_completed_by_catalog / _by_points（L1 廉价校准，:1456/:1457）
+ │    │         → mark_stale_with_source（降级腿名写进 detail，判据 :943 / 调用 :1458）
+ │    │         → merge_done_with_points（done 剔除「快照显示未完」章，:1471）
+ │    │         → reconcile_queue（:1477）
+ │    │         → heal_blocked_by_live（冻结章服务端真源恢复，:1506）
+ │    │         → live_verify_chapter（:1540）→ set_chapter_point_snapshot（写点级快照，:1556）
  │    │         → 重建 discovery/registry/queue → 无视频章降级 other（points_prove_no_video 守卫 :916）
  │    ├─ _task_is_blocked 兜底：本轮中途才跨阈值的点直接 skip 并换下一候选 :707
  │    └─ [每章] _run_one_chapter :389
@@ -287,9 +287,14 @@ run_scheduler(course_url?, chapter_id?, trigger, run_id, max_chapters)   :554
    `candidates[0]`（:1590），两者不同章 ⇒ prune 拿不到被投递那一章的证据。判据没错，**位置错了：
    闸门要钉在决策点，而不是证据到达处**（ACCEPTANCE §4.16 → §4.17）。
    本批实际清账走的是"带正对照的一次性只读探针"（`_probe_phantom_batch.py`，§4.17）。
-   **未修**：投递侧仍没有证据闸门（无新鲜点级证据的 `:videoN` 照投）；done 判定侧仍读陈旧快照；
+   ④ **闸门搬到决策点**（2026-09-22，#31）：选 `candidates[0]` 之前就地要证据
+   （`_dispatch_evidence_gate`，scheduler.py:1300，调用点 :1672；判据 `dispatch_gate_decision`，
+   reconcile.py:778）。免读条件是"这条记录自己被看见过"；新鲜读数反驳 → 当场收并换候选；
+   **读不到 → 照投**（ACCEPTANCE §4.18）。
+   **未修**：refine 恰好读过该章但读空时，闸门复用那份 0 值 → 仍会撞（退化成撞后纠正）；
+   done 判定侧仍读陈旧快照；
    refine 读到 `video_total=0` 且点列表也没证明"无视频"时，
-   scheduler.py:1517 仍会写一份**新鲜但不可信**的 0 值快照；缓存只存聚合数、不存点列表与
+   scheduler.py:1556 仍会写一份**新鲜但不可信**的 0 值快照；缓存只存聚合数、不存点列表与
    objectid，事后无从复核"当时为什么读到 3"。
 
 8. **L1 廉价校准会把服务器已判完成的章降级回炉**（R6，2026-09-22 同一 run 实证）：
@@ -316,9 +321,9 @@ run_scheduler(course_url?, chapter_id?, trigger, run_id, max_chapters)   :554
 | # | 原不确定点 | 核验结果（证据） |
 |---|---|---|
 | 1 | **L6 服务器真接受点端到端证明** | **仍未做**（维持 `PROGRESS_OUTCOME_DATAFLOW` §2「谨慎保留，不拍板」定位）；代码中无对应检查点。**注**：单个任务点的 `isPassed=true` → `mark_completed(SERVER_VERIFIED)` 已有真站实例（4738:video2），但「服务器进度与本地账整体一致」这门课级对账仍未做。 |
-| 2 | `merge_done / stale_completed_by_*` 精确判定 | **已证（逻辑+触发链）**：真名 `merge_done_with_points`（task_registry.py:596，剔除快照显示未完成章）；`stale_completed_by_catalog`（reconcile.py:521，目录 job_remaining>0 且无点级服务端确认且无快照兜底）与 `stale_completed_by_points`（reconcile.py:557，快照有未 finish 视频点且无兄弟点）。生产调用点（2026-09-22 看门狗改动后重钉）：stale 两腿 + 归因 scheduler.py:1413-1419，`merge_done_with_points` :1332/:1432/:1475/:1544/:1567，`reconcile_queue` :1214/:1334/:1438/:1477/:1546/:1570/:1613/:1639，`heal_blocked_by_live` :1458-1467，`live_verify_chapter` :1461/:1501。**剩余未验**：「语义与服务器判定一致」——只证了本地逻辑与触发。**2026-09-22 出现首个反向实例**：判据偏保守（把 live 已 finished 的章降级回炉），见 §7.2#8。 |
+| 2 | `merge_done / stale_completed_by_*` 精确判定 | **已证（逻辑+触发链）**：真名 `merge_done_with_points`（task_registry.py:598，剔除快照显示未完成章）；`stale_completed_by_catalog`（reconcile.py:521，目录 job_remaining>0 且无点级服务端确认且无快照兜底）与 `stale_completed_by_points`（reconcile.py:557，快照有未 finish 视频点且无兄弟点）。生产调用点（2026-09-22 看门狗改动后重钉）：stale 两腿 + 归因 scheduler.py:1456-1458，`merge_done_with_points` :1371/:1471/:1514/:1583/:1606/:1664，`reconcile_queue` :1214/:1373/:1477/:1516/:1585/:1609/:1667/:1699/:1725，`heal_blocked_by_live` :1506，`live_verify_chapter` :1500/:1540/:1645。**剩余未验**：「语义与服务器判定一致」——只证了本地逻辑与触发。**2026-09-22 出现首个反向实例**：判据偏保守（把 live 已 finished 的章降级回炉），见 §7.2#8。 |
 | 3 | `resolve_course` 标题退化的影响面 | **已证**：生产三处调用皆默认 `verify_via_browser=False`（run.py:90/115、scheduler.py:587），title 恒 `course_<course_id>`（真实 state 文件实证）。**影响窄**：identity 键只取 course_id+clazz_id（`CourseIdentity.key()`，models.py:30），title 仅存留痕/展示，不进调度路径。 |
-| 4 | `chapter_points.json` 过期/刷新策略 | **已证 + 2026-09-22 部分修**：生产唯一写点 = `set_chapter_point_snapshot`（定义 task_registry.py:510，唯一调用 scheduler.py:1517，对队首候选章 L2 复核后落盘）；**无删除路径**，且**陈旧章不刷新**（除非再次成为候选+复核成功）。实证：4738:video2 于 9/22 完成后，该文件 mtime 仍是 **9/20 18:04** 未动。**mint 侧已加时效**（`video_counts_from_points`，`POINTS_SNAPSHOT_TTL_S` 默认 1 天：`updated_at` 缺失/畸形/超时一律不采信 → 该章回退默认 1 点，见 §7.2#9）；**done 判定侧（`merge_done_with_points` / `chapter_done_from_snapshot`）仍无时效** —— 方向是保守的（可能把已完成章判成未完），但同一份陈旧缓存也会让 `stale_completed_by_*` 拿着旧点数去降级（R6 的实测现场即此）。 |
+| 4 | `chapter_points.json` 过期/刷新策略 | **已证 + 2026-09-22 部分修**：生产唯一写点 = `set_chapter_point_snapshot`（定义 task_registry.py:512，唯一调用 scheduler.py:1556，对队首候选章 L2 复核后落盘）；**无删除路径**，且**陈旧章不刷新**（除非再次成为候选+复核成功）。实证：4738:video2 于 9/22 完成后，该文件 mtime 仍是 **9/20 18:04** 未动。**mint 侧已加时效**（`video_counts_from_points`，`POINTS_SNAPSHOT_TTL_S` 默认 1 天：`updated_at` 缺失/畸形/超时一律不采信 → 该章回退默认 1 点，见 §7.2#9）；**done 判定侧（`merge_done_with_points` / `chapter_done_from_snapshot`）仍无时效** —— 方向是保守的（可能把已完成章判成未完），但同一份陈旧缓存也会让 `stale_completed_by_*` 拿着旧点数去降级（R6 的实测现场即此）。 |
 | 5 | Windows 冒号 ADS 文件名覆盖范围 | **已证全覆盖**：全仓库以 task_id 拼文件名的位置仅 scheduler.py:420-422，且经 `artifact_slug`（:378）单一入口（`:→_`）；单元测试 `test_artifact_paths.py` 与回归 `test_regression_p2_evidence_attribution.py` 锁死格式。`{cid}:video2` 只作账本 key，不出现在文件名。 |
 | 6 | （复核新发现）`progress.total` 语义 | **已证**：见 §7.2#4 —— `total` 只在 `is None` 时写一次，永不重算；无 TTL 语义。 |
 | 7 | （原 §2/§I9 悬案）章内多视频点「怎么才学得到」 | **已定案（2026-09-22，三次只读探测 + 一次真 run）**：既不是 seek 前点（页面会跳章）、也不是 v3 连播（v3 抢回合、目标点被钉 paused）；唯一可用通道 = **不注入 v3 + 点击目标点自己的播放键**。落为 `should_inject_v3`/`activate_target_point` 两条腿，见 §2 e2e 引擎与 §6 I9。 |
@@ -334,7 +339,7 @@ run_scheduler(course_url?, chapter_id?, trigger, run_id, max_chapters)   :554
 **证据链（已闭合）**：
 1. `grep -r "reconcile_queue\|builder" state tests`：调用方只有 `scheduler`（生产）与 `tests/unit/test_rollback_priority.py`（测试）。
 2. `tests/unit/test_rollback_priority.py:23/:35`：`reconcile_queue("k", {"X": unknown, "Y": far}, done_ids(...))` —— **使用密钥 "k" 并期望 Y 入队**。
-3. `app/registry/task_registry.py:429` `TASKS_DIR = _REPO_ROOT / "state" / "registry"`；`:691` `reconcile_queue()` 末端 `:817` 调 `save_queue(course_key, q)` → **直接写 `<TASKS_DIR>/k/execution_queue.json`**。
+3. `app/registry/task_registry.py:429` `TASKS_DIR = _REPO_ROOT / "state" / "registry"`；`:693` `reconcile_queue()` 末端 `:819` 调 `save_queue(course_key, q)` → **直接写 `<TASKS_DIR>/k/execution_queue.json`**。
 4. `state/registry/k/` 实测产物（**mtime 2026-09-22 09:11**，即本仓库当日跑完 `pytest` 之后）：
    ```json
    {"items": [{"task_id": "Y", "chapter_id": "chY", "priority": 0, "state": "READY", "course_key": "k"}], "reconciled_at_utc": "2026-09-22T01:11:24Z"}
@@ -410,11 +415,15 @@ run_scheduler(course_url?, chapter_id?, trigger, run_id, max_chapters)   :554
    mutation-check 的做法 —— 本文 §3.3/§8 只写到"测试污染 state"这一面。
 
 另有一类**结构性弱点**：本文所有 `:1234` 行号是快照，仓库里没有任何测试或 CI 守它们。§7.3 的行号
-**同一天内已漂过三次**：① 本轮复核自己刷新；② §7.2#7 的看门狗改动（`_run_one_chapter` 内 +42 行、
+**同一天内已漂过五次**：① 本轮复核自己刷新；② §7.2#7 的看门狗改动（`_run_one_chapter` 内 +42 行、
 `child_reported_duration` 又 +24 行 → :512→:554、:962→:1067、:1195→:1300 这种整片位移）；
 ③ ACCEPTANCE §4.15 的投放侧停放（task_registry 一处 +19、两处 +30/+41 不等地往上抬，
-`TASKS_DIR` :410→:429、`reconcile_queue` :661→:691、`video_total_from_observation` :789→:830）。
-今天靠人工逐条 grep 重钉；若要长期可用，得改成"符号名 + 少量锚点"，或加一个校验脚本
+`TASKS_DIR` :410→:429、`reconcile_queue` :661→:691、`video_total_from_observation` :789→:830）；
+④ §4.16 的 refine 侧 prune（scheduler.py +9、reconcile.py +30）；
+⑤ §4.18 的投递闸门（scheduler.py 一次 +86：`_dispatch_evidence_gate` 落在 :1300，把它后面所有
+调用点整片推下去；reconcile.py +66；task_registry.py 因 §4.17 的 newline 修复 +2，:447 之后全体上移）。
+今天靠人工逐条 grep 重钉（第五次是 25 处一次改完，脚本断言每处只命中一次）；
+若要长期可用，得改成"符号名 + 少量锚点"，或加一个校验脚本
 （把本文的 `file:line` 全抽出来，逐条断言该行仍是所引符号的定义/调用点）。
 
 ---
@@ -423,12 +432,12 @@ run_scheduler(course_url?, chapter_id?, trigger, run_id, max_chapters)   :554
 
 | 主题 | 文件 |
 |---|---|
-| run_scheduler 编排 | `scheduler/scheduler.py`（1681 行；`run_scheduler` :554，Step 注释 :590/:632/:645/:649/:666） |
+| run_scheduler 编排 | `scheduler/scheduler.py`（1767 行；`run_scheduler` :554，Step 注释 :590/:632/:645/:649/:666） |
 | TDVP 探针/模型 | `tvdp/tdvp.py`（注意目录名 `tvdp`、模块名 `tdvp`；`build_tasks_from_discovery` :818、`read_chapter_job_points` :960、`live_verify_chapter` :1062） |
-| 任务注册表/对账 | `app/registry/task_registry.py`（859 行；`TASKS_DIR` :429、`set_chapter_point_snapshot` :510、`_snapshot_is_fresh` :552、`video_counts_from_points` :570、`merge_done_with_points` :596、`reconcile_queue` :691-817、`coarse_parked_verified_points` :680、`TaskRecord.revoked_by_chapter_reading` :316、`video_total_from_observation` :830、`TaskRecord.restore_for_manual_retry` :291） |
-| 对账覆盖正确性 | `app/registry/reconcile.py`（721 行；`downgrade_to_unknown` :119、`heal_blocked_by_live` :371、`restore_blocked_for_manual` :439、`stale_completed_by_catalog` :521、`stale_completed_by_points` :557、`phantom_correction_policy` :641、`prune_phantom_video_points` :660、`prune_phantom_points_after_refine` :694） |
+| 任务注册表/对账 | `app/registry/task_registry.py`（861 行；`TASKS_DIR` :429、`set_chapter_point_snapshot` :512、`_snapshot_is_fresh` :554、`video_counts_from_points` :572、`merge_done_with_points` :598、`reconcile_queue` :693-819、`coarse_parked_verified_points` :682、`TaskRecord.revoked_by_chapter_reading` :316、`video_total_from_observation` :832、`TaskRecord.restore_for_manual_retry` :291） |
+| 对账覆盖正确性 | `app/registry/reconcile.py`（787 行；`downgrade_to_unknown` :119、`heal_blocked_by_live` :371、`restore_blocked_for_manual` :439、`stale_completed_by_catalog` :521、`stale_completed_by_points` :557、`phantom_correction_policy` :641、`prune_phantom_video_points` :660、`prune_phantom_points_after_refine` :694、投递闸门判据 `dispatch_gate_decision` :778） |
 | 播放引擎 | `app/e2_headed_gha.py`（1435 行；`should_auto_resume` :187、`resume_paused_video` :211、`should_inject_v3` :253、`activate_target_point` :310、`get_video_state` :383、`bind_video_state` :567、`run_test` :624、v3 路由留痕 :779-787、`Video ready: duration=` :867） |
-| 课程状态持久化 | `state/course_state.py`（495 行） |
+| 课程状态持久化 | `state/course_state.py`（496 行） |
 | 课程身份/URL 规约 | `models.py`（`CourseIdentity` :21 / `key()` :30 / `CourseParams` :43） |
 | 解析错误兜底 | `resolvers/course_resolver.py`（`verify_via_browser` 默认 False 在 :113） |
 | 登录 cookie | `utils/cookie_store.py`（251 行） |
