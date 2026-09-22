@@ -20,6 +20,7 @@ import pytest
 import app.registry.task_registry as tr
 from app.registry.reconcile import (
     phantom_correction_policy,
+    prune_phantom_points_after_refine,
     prune_phantom_video_points,
 )
 from app.registry.task_registry import (
@@ -152,3 +153,68 @@ def test_discovery_stops_minting_the_phantom_after_correction(tmp_state):
         chapters, video_counts=video_counts_from_points(load_chapter_points(KEY)))
 
     assert [t.task_id for t in after] == [CID]
+
+
+# ── 5) E6.2 live refine：在**投递之前**收掉幻影（#26，2026-09-22）─────
+# 上面整条链路都要等引擎撞上才收（run 35727783405 实测：17.1s 判
+# `target video point 2 not on page; points=1`）。撞一次并不贵，贵的是**那一晚
+# 再没投第二次的预算** —— 而账本里当时还压着 6 条同形记录（4733/4734/4737/4741:video2、
+# 4741:video3、4750/4751:video2），每晚撞掉一个就是每晚白过。
+# E6.2 refine 本来就已经把该章的点列表读回来了，所以收口挪到读数的当下：
+# 证据来源换一下，判据与撞后清理是同一条。
+
+def _vp(n_finished=0, n_total=1):
+    return [{"type": "video", "isFinished": bool(i < n_finished)}
+            for i in range(n_total)]
+
+
+def test_refine_prunes_beyond_the_fresh_point_list():
+    existing = {CID: _rec(CID, status="COMPLETED"),
+                f"{CID}:video2": _rec(f"{CID}:video2"),
+                f"{CID}:video3": _rec(f"{CID}:video3")}
+    gone = prune_phantom_points_after_refine(
+        existing, chapter_id=CID, verify={"points": _vp(n_total=1)})
+    assert sorted(gone) == sorted([f"{CID}:video2", f"{CID}:video3"])
+    assert CID in existing, "该章自己的记录不受影响"
+
+
+def test_refine_trusts_the_point_list_over_the_aggregate():
+    """点列表是枚举本体，`video_total` 是它的派生物 —— 打架时按列表收。"""
+    existing = {CID: _rec(CID, status="COMPLETED"), f"{CID}:video2": _rec(f"{CID}:video2")}
+    assert prune_phantom_points_after_refine(
+        existing, chapter_id=CID,
+        verify={"points": _vp(n_total=1), "video_total": 2}) == [f"{CID}:video2"]
+
+
+def test_refine_falls_back_to_video_total_without_a_point_list():
+    existing = {CID: _rec(CID, status="COMPLETED"),
+                f"{CID}:video2": _rec(f"{CID}:video2"),
+                f"{CID}:video3": _rec(f"{CID}:video3")}
+    assert prune_phantom_points_after_refine(
+        existing, chapter_id=CID, verify={"video_total": 2}) == [f"{CID}:video3"]
+
+
+def test_refine_never_prunes_without_a_trustworthy_read():
+    """`video_total=0` 有两种含义（真无视频 / 根本没读到）—— 没读到就不许删。
+    与"没有新鲜证据就不 mint"（§4.13 的 TTL）是同一条保守方向。"""
+    for verify in (None, {}, {"video_total": 0}, {"points": []},
+                   {"points": [], "video_total": 0}):
+        existing = {CID: _rec(CID, status="COMPLETED"), f"{CID}:video2": _rec(f"{CID}:video2")}
+        assert prune_phantom_points_after_refine(
+            existing, chapter_id=CID, verify=verify) == [], verify
+        assert f"{CID}:video2" in existing, verify
+
+
+def test_refine_keeps_completed_points():
+    existing = {CID: _rec(CID, status="COMPLETED"),
+                f"{CID}:video2": _rec(f"{CID}:video2", status="COMPLETED")}
+    assert prune_phantom_points_after_refine(
+        existing, chapter_id=CID, verify={"points": _vp(n_total=1)}) == []
+
+
+def test_refine_prunes_a_point_that_already_hit_the_wall():
+    """撞过墙不配拿豁免权 —— 4730:video2 当年正是这样赖在账本里的。"""
+    existing = {CID: _rec(CID, status="COMPLETED"),
+                f"{CID}:video2": _rec(f"{CID}:video2", status="FAILED", cf=2)}
+    assert prune_phantom_points_after_refine(
+        existing, chapter_id=CID, verify={"points": _vp(n_total=1)}) == [f"{CID}:video2"]

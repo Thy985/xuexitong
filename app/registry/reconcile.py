@@ -689,3 +689,33 @@ def prune_phantom_video_points(existing, *, chapter_id, observed) -> list:
         del existing[tid]
         pruned.append(tid)
     return pruned
+
+
+def prune_phantom_points_after_refine(existing, *, chapter_id, verify) -> list:
+    """E6.2 live refine 之后收幻影：拿**这一次**新鲜读数判定该章实际有几个视频点。
+
+    与"撞上才收"（`app/run.py` 见 TARGET_NOT_ON_PAGE 后调 `prune_phantom_video_points`）
+    同一条判据，只是证据换成服务端点列表 —— 于是收口发生在**投递之前**：撞一次的代价
+    本身只有十几秒，贵的是那一晚再没有第二次投递预算（run 35727783405 实测）。
+
+    闸门只有一条：**这次真看见过视频点**才动手。`video_total=0` 有两种含义（该章确实
+    无视频 / 复核根本没读到），历史事故几乎全是后者 —— 没有新鲜证据就不许删，正如没有
+    新鲜证据就不 mint（§4.13 的快照 TTL）。COMPLETED 记录一律不删，交给降级路径处理。
+    """
+    if not isinstance(verify, dict):
+        return []
+    points = verify.get("points") or []
+    if points:
+        try:
+            from tvdp.tdvp import chapter_video_summary
+            observed = int(chapter_video_summary(points)[0] or 0)
+        except Exception:
+            return []            # 读数残缺/形状意外 —— 一律按"没读到"处理
+    else:
+        try:                     # 没有点列表时（独立复核只回聚合数）退回用聚合数
+            observed = int(verify.get("video_total") or 0)
+        except (TypeError, ValueError):
+            return []
+    if observed < 1:
+        return []
+    return prune_phantom_video_points(existing, chapter_id=chapter_id, observed=observed)

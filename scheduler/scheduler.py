@@ -1525,6 +1525,15 @@ def _run_tdvp_probe(course_url: str, course_key: str,
                     tasks2 = build_tasks_from_discovery(chapters_raw, video_counts=video_counts)
                     existing2, report2 = reconcile_registry(
                         course_key, existing, tasks2, dom_status, live_pending=live_pending)
+                    # 幻影 :videoN 在**投递之前**收掉：同一次 live 读数既给了该章真实的
+                    # 点列表，就没有理由再让引擎花一整晚的唯一次投递去撞它（#26）。
+                    from app.registry.reconcile import prune_phantom_points_after_refine
+                    _phantom = prune_phantom_points_after_refine(
+                        existing2, chapter_id=head_cid, verify=verify)
+                    if _phantom:
+                        print(f"[scheduler] TDVP: REFINE-PRUNED {head_cid}: "
+                              f"{sorted(_phantom)} —— 这次 live 读数里没有这些点，"
+                              f"不等引擎撞上才收", flush=True)
                     save_registry(course_key, existing2)
                     existing = existing2
                     # [DIAG] E6.2 二次 reconcile 后该章 BLOCKED 是否存活
