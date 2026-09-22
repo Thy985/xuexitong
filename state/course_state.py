@@ -302,7 +302,7 @@ def save_course_state(state: CourseState) -> None:
         suffix=".tmp", prefix="course_state_", dir=COURSES_DIR
     )
     try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as f:
             json.dump(state.to_dict(), f, ensure_ascii=False, indent=2)
         shutil.move(tmp_path, str(state_file))
         state_file.chmod(_STATE_FILE_MODE)
@@ -329,7 +329,8 @@ def activate_course(identity: CourseIdentity) -> None:
                    "activated_at_utc": datetime.now(timezone.utc).isoformat()}
     fd, tmp_path = tempfile.mkstemp(suffix=".tmp", dir=STATE_DIR)
     try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
+        # newline 显式：见 save_course_state —— 被 git 跟踪的状态文件不许按平台换行。
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as f:
             json.dump(active_data, f, ensure_ascii=False, indent=2)
         shutil.move(tmp_path, str(ACTIVE_FILE))
         ACTIVE_FILE.chmod(_STATE_FILE_MODE)

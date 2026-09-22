@@ -444,7 +444,9 @@ def _atomic_write_text(path: Path, text: str) -> None:
     """原子写文本：先写同目录临时文件再 os.replace，避免半写文件。"""
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(text, encoding="utf-8")
+    # newline 必须显式：tasks.json 是 CI(Linux) 写的 LF 且被 git 跟踪，Windows 的文本
+    # 模式默认会把 \n 翻成 \r\n —— 一次落盘就让整本账显示为"全文件重写"。
+    tmp.write_text(text, encoding="utf-8", newline="\n")
     os.replace(str(tmp), str(path))
 
 
