@@ -4094,11 +4094,11 @@
     "chapter_id": "1217304738",
     "title": "IPV6",
     "task_type": "video",
-    "status": "FAILED",
+    "status": "COMPLETED",
     "priority": 0,
-    "attempt_count": 4,
-    "attempts": 4,
-    "consecutive_failures": 1,
+    "attempt_count": 5,
+    "attempts": 5,
+    "consecutive_failures": 0,
     "max_attempts": 3,
     "lease": {
       "run_id": null,
@@ -4106,33 +4106,35 @@
       "expires_at_utc": null
     },
     "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
+      "level": "SERVER_VERIFIED",
+      "verified_at_utc": "2026-09-22T01:20:53.069799+00:00",
+      "run_id": "35675040542",
+      "source_detail": "passed_object_ids=1"
     },
     "completion_evidence": {
-      "type": "NONE",
-      "source": "",
-      "run_id": "",
-      "observed_at_utc": "2026-09-20T09:07:53.282729+00:00",
-      "detail": "",
-      "passed_object_ids": []
+      "type": "SERVER_VERIFIED",
+      "source": "isPassed",
+      "run_id": "35675040542",
+      "observed_at_utc": "2026-09-22T01:20:53.069799+00:00",
+      "detail": "passed_object_ids=1",
+      "passed_object_ids": [
+        "e79a9a86eba1ccf65ceefb925d771fa4"
+      ]
     },
     "failure": {
       "stage": "",
-      "run_id": "35669129208",
-      "detail": "FAIL(video metadata not ready in GHA headed)",
-      "consecutive_failures": 1,
-      "occurred_at_utc": "2026-09-21T23:52:18.563257+00:00"
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-09-22T01:20:53.069808+00:00"
     },
     "created_at_utc": "2026-09-20T09:07:53.282729+00:00",
-    "updated_at_utc": "2026-09-21T23:52:18.563257+00:00",
-    "last_run_id": "35669129208",
-    "last_run_at_utc": "2026-09-21T23:52:18.563257+00:00",
-    "last_started_at": "2026-09-21T04:49:42.228115+00:00",
-    "last_finished_at": "2026-09-21T23:52:18.563257+00:00",
-    "last_success_at_utc": null,
+    "updated_at_utc": "2026-09-22T01:20:53.069799+00:00",
+    "last_run_id": "35675040542",
+    "last_run_at_utc": "2026-09-22T01:20:53.069799+00:00",
+    "last_started_at": "2026-09-22T01:20:53.069799+00:00",
+    "last_finished_at": "2026-09-22T01:20:53.069799+00:00",
+    "last_success_at_utc": "2026-09-22T01:20:53.069799+00:00",
     "last_failure_at_utc": "2026-09-21T23:52:18.563257+00:00",
     "_ch_idx": 36,
     "_cell_idx": 36,
