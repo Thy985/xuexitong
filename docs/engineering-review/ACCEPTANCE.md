@@ -812,6 +812,47 @@ FAILED 且**无章级回炉标记**的点该怎么判（它不在本次形状里
 
 ---
 
+### 4.16 幻影 `:videoN` 的收口挪到投递之前：E6.2 refine 批量清理（2026-09-22，#26）
+
+**代价被实测量化过一次**：run 35727783405 撞上 `1217304732:video2` —— **17.1 秒**判
+`FAIL(target video point 2 not on page; points=1)`。撞本身不贵，贵的是 schedule 腿
+`max_chapters=1`：**那一晚就此不再投第二次**，账面零推进。而当时账本里还压着 6 条同形记录
+（`1217304733/4734/4737/4741:video2`、`1217304741:video3`、`1217304750/4751:video2`），
+"每晚撞掉一个"就是每晚白过。其中 `1217304733:video2` 由操作者真站直接确认为**已完成**
+（该章只有一个视频点且已过），账本形状与 4732 收口前完全一致：父点 `COMPLETED /
+SERVER_VERIFIED / passed_object_ids=1`，兄弟 `DISCOVERED / ver=NONE / pids=0 / att=0`，
+而 `video_total=2` 这个说法只来自 9/20 那份陈旧快照（`{"video_total": 2, "video_finished": 1}`）。
+
+**修法**：E6.2 live refine 本来就已经把该章的**点列表**读回来了（`verify["points"]`），
+所以把收口挪到读数的当下 —— 新纯函数 `prune_phantom_points_after_refine`
+（reconcile.py:694），在 `reconcile_registry` 之后、`save_registry` 与重建队列之前调用
+（scheduler.py:1530-1536，命中时打印 `TDVP: REFINE-PRUNED …`）。判据**复用**撞上清理那条
+（`prune_phantom_video_points`：删 `seq > observed`、`observed<1` 不动、COMPLETED 不删），
+只是证据从"引擎枚举到的页面点数"换成"这次服务端点列表数出来的视频点数"。
+
+**闸门（这条改动唯一危险的地方就是删记录）**：
+- 只信**这次**读数。点列表存在就用它数（列表是枚举本体，`video_total` 是它的派生物，
+  打架时按列表）；没带列表才退回 `video_total`。
+- `observed < 1` 一律不删 —— `video_total=0` 有两种含义（真无视频 / 根本没读到），
+  历史事故几乎全是后者。与"没有新鲜证据就不 mint"（§4.13 的 TTL）是同一条保守方向。
+- COMPLETED 记录不删（那是证据问题，交给降级路径）；**撞过墙照删**（4730:video2 当年
+  正是靠 cf>0 拿到豁免权赖在账本里）。
+
+**验证**：`tests/unit/test_phantom_point_correction.py` 新增 7 项（列表数与聚合数打架时按列表、
+无列表时回落、五种"没读到"形状一律不删、COMPLETED 保留、FAILED+cf=2 照删）。
+**变异检查**：只弱化外层闸门时测试**不变红** —— 因为 `prune_phantom_video_points` 自己还有
+一条 `obs<1` 护栏；把**两层同时**去掉，"空读数不许删记录"那条立刻变红，恢复两层即绿。
+全量 **468 passed, 1 skipped**（collect 469 条，数目对得上）。
+
+**边界要说清**：判据本体有 L1；**接线没有** —— `_run_tdvp_probe` 里这段需要真浏览器，
+现有集成测试是把这个函数整体打桩的，所以"调用位置对不对"只能由真站那一班给答案（#27）。
+
+**仍未做的另一半（原方案②）**：refine 读到 `video_total=0` 且点列表也没证明"无视频"时，
+scheduler.py:1517 依然会写一份**新鲜但不可信**的 0 值快照 —— 加时效只挡住 mint，
+done 判定侧照旧会读到它。
+
+---
+
 ## 5. 失败 / 回退策略
 
 - **L1 失败**：阻断合并，必须修测试。

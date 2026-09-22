@@ -279,8 +279,13 @@ run_scheduler(course_url?, chapter_id?, trigger, run_id, max_chapters)   :554
    E6.2 live refine 读到 2/2 —— 降级判据与自己随后的读数矛盾，其实矛盾的是**新旧两份读数**。
    已修：① 撞上了不再记播放失败（判据 `phantom_correction_policy` +
    `prune_phantom_video_points` + `video_total_from_observation`，真站 35684654409 复验通过）；
-   ② 陈旧不再参与 mint（TTL 1 天）。**未修**：done 判定侧仍读陈旧快照，且缓存只存聚合数、
-   不存点列表与 objectid，事后无从复核"当时为什么读到 3"。
+   ② 陈旧不再参与 mint（TTL 1 天）；③ **投递之前批量收幻影**（2026-09-22，#26）：E6.2 refine
+   拿这次读到的点列表直接删掉 `seq > 实际点数` 的记录（`prune_phantom_points_after_refine`，
+   reconcile.py:694），不再等引擎撞 17s 才收 —— 撞一次的真正代价不是那 17 秒，而是那一晚
+   `max_chapters=1` 就此不再投第二次（ACCEPTANCE §4.16）。
+   **未修**：done 判定侧仍读陈旧快照；refine 读到 `video_total=0` 且点列表也没证明"无视频"时，
+   scheduler.py:1517 仍会写一份**新鲜但不可信**的 0 值快照；缓存只存聚合数、不存点列表与
+   objectid，事后无从复核"当时为什么读到 3"。
 
 8. **L1 廉价校准会把服务器已判完成的章降级回炉**（R6，2026-09-22 同一 run 实证）：
    `TDVP: stale=1 chapters re-queued: ['1217304738']` —— 而同一轮 E6.2 live refine 读到的是
@@ -306,7 +311,7 @@ run_scheduler(course_url?, chapter_id?, trigger, run_id, max_chapters)   :554
 | # | 原不确定点 | 核验结果（证据） |
 |---|---|---|
 | 1 | **L6 服务器真接受点端到端证明** | **仍未做**（维持 `PROGRESS_OUTCOME_DATAFLOW` §2「谨慎保留，不拍板」定位）；代码中无对应检查点。**注**：单个任务点的 `isPassed=true` → `mark_completed(SERVER_VERIFIED)` 已有真站实例（4738:video2），但「服务器进度与本地账整体一致」这门课级对账仍未做。 |
-| 2 | `merge_done / stale_completed_by_*` 精确判定 | **已证（逻辑+触发链）**：真名 `merge_done_with_points`（task_registry.py:596，剔除快照显示未完成章）；`stale_completed_by_catalog`（reconcile.py:521，目录 job_remaining>0 且无点级服务端确认且无快照兜底）与 `stale_completed_by_points`（reconcile.py:557，快照有未 finish 视频点且无兄弟点）。生产调用点（2026-09-22 看门狗改动后重钉）：stale 两腿 + 归因 scheduler.py:1413-1419，`merge_done_with_points` :1332/:1432/:1475/:1535/:1558，`reconcile_queue` :1214/:1334/:1438/:1477/:1537/:1561/:1604/:1630，`heal_blocked_by_live` :1458-1467，`live_verify_chapter` :1461/:1501。**剩余未验**：「语义与服务器判定一致」——只证了本地逻辑与触发。**2026-09-22 出现首个反向实例**：判据偏保守（把 live 已 finished 的章降级回炉），见 §7.2#8。 |
+| 2 | `merge_done / stale_completed_by_*` 精确判定 | **已证（逻辑+触发链）**：真名 `merge_done_with_points`（task_registry.py:596，剔除快照显示未完成章）；`stale_completed_by_catalog`（reconcile.py:521，目录 job_remaining>0 且无点级服务端确认且无快照兜底）与 `stale_completed_by_points`（reconcile.py:557，快照有未 finish 视频点且无兄弟点）。生产调用点（2026-09-22 看门狗改动后重钉）：stale 两腿 + 归因 scheduler.py:1413-1419，`merge_done_with_points` :1332/:1432/:1475/:1544/:1567，`reconcile_queue` :1214/:1334/:1438/:1477/:1546/:1570/:1613/:1639，`heal_blocked_by_live` :1458-1467，`live_verify_chapter` :1461/:1501。**剩余未验**：「语义与服务器判定一致」——只证了本地逻辑与触发。**2026-09-22 出现首个反向实例**：判据偏保守（把 live 已 finished 的章降级回炉），见 §7.2#8。 |
 | 3 | `resolve_course` 标题退化的影响面 | **已证**：生产三处调用皆默认 `verify_via_browser=False`（run.py:90/115、scheduler.py:587），title 恒 `course_<course_id>`（真实 state 文件实证）。**影响窄**：identity 键只取 course_id+clazz_id（`CourseIdentity.key()`，models.py:30），title 仅存留痕/展示，不进调度路径。 |
 | 4 | `chapter_points.json` 过期/刷新策略 | **已证 + 2026-09-22 部分修**：生产唯一写点 = `set_chapter_point_snapshot`（定义 task_registry.py:510，唯一调用 scheduler.py:1517，对队首候选章 L2 复核后落盘）；**无删除路径**，且**陈旧章不刷新**（除非再次成为候选+复核成功）。实证：4738:video2 于 9/22 完成后，该文件 mtime 仍是 **9/20 18:04** 未动。**mint 侧已加时效**（`video_counts_from_points`，`POINTS_SNAPSHOT_TTL_S` 默认 1 天：`updated_at` 缺失/畸形/超时一律不采信 → 该章回退默认 1 点，见 §7.2#9）；**done 判定侧（`merge_done_with_points` / `chapter_done_from_snapshot`）仍无时效** —— 方向是保守的（可能把已完成章判成未完），但同一份陈旧缓存也会让 `stale_completed_by_*` 拿着旧点数去降级（R6 的实测现场即此）。 |
 | 5 | Windows 冒号 ADS 文件名覆盖范围 | **已证全覆盖**：全仓库以 task_id 拼文件名的位置仅 scheduler.py:420-422，且经 `artifact_slug`（:378）单一入口（`:→_`）；单元测试 `test_artifact_paths.py` 与回归 `test_regression_p2_evidence_attribution.py` 锁死格式。`{cid}:video2` 只作账本 key，不出现在文件名。 |
@@ -413,10 +418,10 @@ run_scheduler(course_url?, chapter_id?, trigger, run_id, max_chapters)   :554
 
 | 主题 | 文件 |
 |---|---|
-| run_scheduler 编排 | `scheduler/scheduler.py`（1672 行；`run_scheduler` :554，Step 注释 :590/:632/:645/:649/:666） |
+| run_scheduler 编排 | `scheduler/scheduler.py`（1681 行；`run_scheduler` :554，Step 注释 :590/:632/:645/:649/:666） |
 | TDVP 探针/模型 | `tvdp/tdvp.py`（注意目录名 `tvdp`、模块名 `tdvp`；`build_tasks_from_discovery` :818、`read_chapter_job_points` :960、`live_verify_chapter` :1062） |
 | 任务注册表/对账 | `app/registry/task_registry.py`（859 行；`TASKS_DIR` :429、`set_chapter_point_snapshot` :510、`_snapshot_is_fresh` :552、`video_counts_from_points` :570、`merge_done_with_points` :596、`reconcile_queue` :691-817、`coarse_parked_verified_points` :680、`TaskRecord.revoked_by_chapter_reading` :316、`video_total_from_observation` :830、`TaskRecord.restore_for_manual_retry` :291） |
-| 对账覆盖正确性 | `app/registry/reconcile.py`（691 行；`downgrade_to_unknown` :119、`heal_blocked_by_live` :371、`restore_blocked_for_manual` :439、`stale_completed_by_catalog` :521、`stale_completed_by_points` :557、`phantom_correction_policy` :641、`prune_phantom_video_points` :660） |
+| 对账覆盖正确性 | `app/registry/reconcile.py`（721 行；`downgrade_to_unknown` :119、`heal_blocked_by_live` :371、`restore_blocked_for_manual` :439、`stale_completed_by_catalog` :521、`stale_completed_by_points` :557、`phantom_correction_policy` :641、`prune_phantom_video_points` :660、`prune_phantom_points_after_refine` :694） |
 | 播放引擎 | `app/e2_headed_gha.py`（1435 行；`should_auto_resume` :187、`resume_paused_video` :211、`should_inject_v3` :253、`activate_target_point` :310、`get_video_state` :383、`bind_video_state` :567、`run_test` :624、v3 路由留痕 :779-787、`Video ready: duration=` :867） |
 | 课程状态持久化 | `state/course_state.py`（495 行） |
 | 课程身份/URL 规约 | `models.py`（`CourseIdentity` :21 / `key()` :30 / `CourseParams` :43） |
