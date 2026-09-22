@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status": "ACTIVE",
-  "run_count": 123,
-  "success_count": 79,
+  "run_count": 124,
+  "success_count": 80,
   "failure_count": 0,
   "course_identity": {
     "course_id": "265997861",
@@ -15,21 +15,14 @@
   "progress": {
     "completed": 30,
     "total": 4,
-    "last_completed_task": "1217304736",
+    "last_completed_task": "1217304740",
     "active_task": null
   },
-  "last_run": "2026-09-22T22:16:46.336718+00:00",
-  "last_success": "2026-09-22T22:16:46.336718+00:00",
+  "last_run": "2026-09-22T22:57:28.082286+00:00",
+  "last_success": "2026-09-22T22:57:28.082286+00:00",
   "last_failure": "2026-09-22T13:29:29.861171+00:00",
-  "last_completed_task": "1217304736",
+  "last_completed_task": "1217304740",
   "history": [
-    {
-      "run_at_utc": "2026-09-11T12:12:17.381519+00:00",
-      "timing_s": 239.1,
-      "passed": false,
-      "verdict": "FAIL",
-      "chapter_id": "1217304719"
-    },
     {
       "run_at_utc": "2026-09-11T12:22:00.113483+00:00",
       "timing_s": 236.3,
@@ -372,18 +365,25 @@
       "passed": true,
       "verdict": "PASS",
       "chapter_id": "1217304736"
+    },
+    {
+      "run_at_utc": "2026-09-22T22:57:28.082286+00:00",
+      "timing_s": 640.9,
+      "passed": true,
+      "verdict": "PASS",
+      "chapter_id": "1217304740"
     }
   ],
   "scheduler": {
-    "last_scheduled_at": "2026-09-22T22:16:46.411860+00:00",
-    "last_started_at": "2026-09-22T22:16:46.411860+00:00",
-    "last_finished_at": "2026-09-22T22:16:46.412058+00:00",
+    "last_scheduled_at": "2026-09-22T22:57:28.168662+00:00",
+    "last_started_at": "2026-09-22T22:57:28.168662+00:00",
+    "last_finished_at": "2026-09-22T22:57:28.168918+00:00",
     "last_result": "SUCCESS",
-    "last_run_id": "35790607422",
+    "last_run_id": "35793996259",
     "last_trigger": "manual",
     "consecutive_failures": 0,
-    "execution_id": "35790607422",
-    "attempt": 103,
+    "execution_id": "35793996259",
+    "attempt": 104,
     "blocked_since": null,
     "blocked_hits": 0,
     "blocked_retry_interval": 0
