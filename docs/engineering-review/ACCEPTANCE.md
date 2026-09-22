@@ -613,6 +613,26 @@ L1：`tests/unit/test_stale_source_attribution.py` 5 项 RED→GREEN，全套 **
 other 点把整章回炉、而引擎只会重播视频"，属系统性浪费（每个含 other 点的章在视频完成后都会被反复回炉）；
 若 `stale_by=points`，则是点级快照与 live 读数的口径冲突。两种修法不同，所以先测再改。
 
+**复现结果（run 35681460999，`headSha=81c16b1`，03:00–03:01 UTC）**：
+
+- **R6 没有复发**：整份日志里 `TDVP: stale=` 出现 **0 次**，`1217304738` 没被再次降级 —— 上一轮那次
+  PASS 把「点级服务端确认」补上了。⇒ R6 的代价是**每章一次性学费**（已经付掉一晚一个点位），不是每夜
+  复发；严重性下调一档。腿名这次没机会打出（判据未触发），归因代码留在链路上等下一次降级。
+- **但拿到了更有价值的一条**：`:videoN` 第一次在**自然队列**下被投递（`TDVP: next_task=1217304730:video2`），
+  却在 **15.9s** 就 `verdict=FAIL`，理由 `FAIL(target video point 2 not on page; points=1)`。子进程时间线：
+  Step C 登录 6.4s → Step D 预态 7.3s → `[v3] skipped by design (video_index=2)`（Step E 正常）→
+  Step F 起手 1s 即失败。也就是说**4738 那套"点目标播放键"链路还没轮到出手，页面枚举就已经只有 1 个点**；
+  同刻 `sidebar_before={"unfinish":null,"points":null,"row_text":"Previous Next to learn"}` 提示 cards 帧
+  当时尚未挂全。代码形态：`e2_headed_gha.py:824-833` 对"点不在页面上"是**一次性判定 + 立刻收尾**，
+  没有 reload 后重枚举的恢复路（而 metadata 那条路是有 reload recovery 的）。账本据此记
+  `1217304730:video2` FAILED cf=1/3。
+- 附带读数：上轮解冻的 `1217304719` 本轮 live refine `video_total=0`（服务端视角该章没有视频点），
+  队列在 26/27 READY 之间波动。
+
+**下一步（先便宜后贵）**：本地只读探测 4730 —— 记录 cards 帧内 `[objectid]` 视频模块数量随时间的曲线
+（是否 lazy-mount、第 2 个点在什么时刻才出现），确认是"渲染时机"而非"账本幻影"（D13 那一类）之后，
+再决定给 Step F 加「重载入 + 重枚举」恢复路。
+
 ---
 
 ## 5. 失败 / 回退策略
