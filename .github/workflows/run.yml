@@ -50,10 +50,14 @@ on:
     # 每次尝试计数，所以一轮最多 1 次失败 → 一晚最多 2 次，够不到 failure_count>=3
     # 的课程熔断阈值）。两条都走 scheduler 一条腿：MVP learn 步只在手动
     # action=run 时跑（2026-09-21 之前 schedule 会同时触发 scheduler + MVP 两条腿）。
-    # GitHub cron 是 UTC：16:00 = 北京 00:00，04:00 = 北京 12:00，相隔 12h，
-    # 避开 concurrency group (xuexitong-active-course, cancel-in-progress:false) 排队。
-    - cron: '0 16 * * *'
-    - cron: '0 4 * * *'
+    # GitHub cron 是 UTC：16:07 = 北京 00:07，18:07 = 北京 02:07。
+    # 分钟取 7 不取 0：GitHub 文档称整点是 schedule 队列最拥塞的时刻。本仓库历次
+    # :00 cron 实测晚 3h35m–4h50m 才建 run（2026-09-22/23 两条腿各观测一次），
+    # :07 即对该拥塞假设的对照观察 —— 延迟照旧则说明名义时刻不可对表。
+    # 两条腿名义只差 2h，撞上会进 concurrency group (xuexitong-active-course,
+    # cancel-in-progress:false, job timeout 50min) 排队 —— 只延后，不丢也不取消。
+    - cron: '7 16 * * *'
+    - cron: '7 18 * * *'
 
 permissions:
   contents: write  # 允许将 state/ 持久化回仓库
