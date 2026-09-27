@@ -250,12 +250,20 @@ def cmd_run(args) -> int:
         break
 
     total = time.time() - t0
-    passed = ev.get("passed_count") == 10 if ev is not None else False
+    # P0-1（issue #2）：业务 PASS 只认【服务端 isPassed 真源】，不再用「10/10 UI 自检」
+    # 当业务判据。旧逻辑 `passed = passed_count == 10` 会让「服务器判过、UI 没看到信号」
+    # 误译成 FAIL → mark_failed → 熔断 BLOCKED。UI 观测(passed_count)仅作诊断展示。
+    _biz = (ev or {}).get("business_verdict")
+    _server_passed = _biz == "SERVER_CONFIRMED_PASS" or bool(
+        (ev or {}).get("passed_object_ids"))
+    passed = _server_passed
     exit_code = 0 if passed else 1
-    verdict_str = (
-        "PASS" if passed
-        else ("DEGRADED" if ev and ev.get("passed_count", 0) >= 6 else "FAIL")
-    )
+    verdict_str = ("PASS" if passed
+                   else ("DEGRADED" if _biz == "INCONCLUSIVE" and ev
+                         and ev.get("passed_count", 0) >= 6 else "FAIL"))
+    if ev is not None:
+        print(f"[run] business_verdict={_biz} passed_object_ids={len((ev or {}).get('passed_object_ids') or ())} "
+              f"passed_count={ev.get('passed_count')}/10(obs) -> passed={passed}", flush=True)
 
     # 【E6.1】Postflight: 把 run 结果**写回 registry**（成功/失败都必须写，绝不静默丢失）。
     #   - PASS → mark_completed（必须带证据）

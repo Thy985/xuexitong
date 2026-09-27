@@ -63,6 +63,9 @@ class TestP04IsPassedMarker:
     def test_true_marker_detected(self):
         assert has_is_passed_marker('{"isPassed":true}') is True
         assert has_is_passed_marker('{"result":{"isPassed":true},"code":200}') is True
+        # P0-0：空白容忍（键/值之间空格）不得漏判真实通过
+        assert has_is_passed_marker('{"isPassed": true}') is True
+        assert has_is_passed_marker('{"result": {"isPassed" : true }, "code": 200}') is True
 
     def test_false_or_none_not_detected(self):
         assert has_is_passed_marker('{"isPassed":false}') is False
@@ -71,3 +74,6 @@ class TestP04IsPassedMarker:
         assert has_is_passed_marker("") is False
         # 字段名漂移 / 别名字段（超星若改名）→ 不得被误判为已完成
         assert has_is_passed_marker('{"passed":true}') is False
+        # P0-0：值不是 JSON boolean true → 不得误命中（防把 false/字符串当通过）
+        assert has_is_passed_marker('{"isPassed":"true"}') is False
+        assert has_is_passed_marker('{"isPassed":True}') is False  # JS 字面量大写 true
