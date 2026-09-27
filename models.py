@@ -10,26 +10,76 @@
 
 from __future__ import annotations
 
+import hashlib
+import os
 import re
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from typing import Optional
 from urllib.parse import parse_qs, urlparse
 
+# ── P0-2：账号隔离 namespace ────────────────────────────────────────
+# 存储 identity 从「course_id_clazz_id」升级为「account_id / course_id_clazz_id」。
+# 关键 invariant：same course + different account ≠ same state。
+#
+# account_id 来源（方案 B）：当前登录账号 CX_USER（超星手机号/账号，对同一账号恒定）。
+# 使用确定性哈希做 namespace/key 规范（不是安全机制），保证稳定、一致、跨会话不变。
+# 一旦将来拿到服务端稳定 uid（方案 A），只需替换 _resolve_account_id() 单点实现。
+_ACCOUNT_ID_TEST_HOOK = None  # 测试注入：callable() -> str|None，优先于 env
+
+
+def _resolve_account_id(cx_user: str) -> str:
+    """保序的 16 进制短哈希：稳定、无碰撞即可用于目录命名（非安全）。"""
+    return hashlib.sha256(cx_user.strip().encode("utf-8")).hexdigest()[:16]
+
+
+def resolve_account_id(cx_user: Optional[str] = None) -> str:
+    """返回当前登录账号的稳定 namespace id。
+
+    优先级：测试 hook > 显式 cx_user > 环境变量 CX_USER。
+    未设置任何账号（测试/本地无登录）→ 空串（legacy unscoped 存根），保持确定性。
+    """
+    global _ACCOUNT_ID_TEST_HOOK
+    if _ACCOUNT_ID_TEST_HOOK is not None:
+        got = _ACCOUNT_ID_TEST_HOOK()
+        if got:
+            return got
+    cx = cx_user if cx_user is not None else os.environ.get("CX_USER")
+    if not cx:
+        return ""
+    return _resolve_account_id(cx)
+
+
+def set_account_id_hook(fn) -> None:
+    """测试/工具注入：callable() -> str|None；None 则回退到 env。传 None 清除。"""
+    global _ACCOUNT_ID_TEST_HOOK
+    _ACCOUNT_ID_TEST_HOOK = fn
+
 
 @dataclass
 class CourseIdentity:
-    """课程稳定身份，不随 URL 中普通参数变化而改变。"""
+    """课程统一身份，不随 URL 中普通参数变化而改变。"""
     course_id: str
     clazz_id: str
     cpi: str
     title: str
     raw_url: str
     resolved_at_utc: str
+    account_id: str = ""
 
     def key(self) -> str:
-        """生成稳定内部 key: course_id_clazz_id。"""
+        """生成稳定内部 key: course_id_clazz_id（课程级引用，不带账号）。"""
         return f"{self.course_id}_{self.clazz_id}"
+
+    def scoped_key(self, account_id: Optional[str] = None) -> str:
+        """生成**存储** key: account_id/course_id_clazz_id（P0-2 隔离边界）。
+
+        未提供 account_id 时用当前登录账号；无登录（测试/legacy）→ 前缀为空，
+        落回旧裸路径（离线诊断兼容）。"""
+        acc = account_id if account_id is not None else resolve_account_id()
+        if not acc:
+            return self.key()
+        return f"{acc}/{self.key()}"
 
     def to_dict(self) -> dict:
         return asdict(self)

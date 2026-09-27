@@ -3,12 +3,23 @@
 E5 状态管理层。所有状态持久化到仓库 state/ 目录，通过 Git commit 实现
 跨 Run 持久化。
 
-状态文件结构:
+状态文件结构（P0-2 账号隔离，issue #4）:
     state/
-    ├── active_course.json      # 当前活跃课程 identity key
-    └── courses/
-        ├── <course_id>_<clazz_id>.json   # 每个课程的完整状态
-        └── ...
+    ├── active_course.json              # 无登录时的 legacy 活跃课程（离线/诊断）
+    ├── courses/                        #   （legacy，无账号时落回）
+    │   └── <course_id>_<clazz_id>.json
+    └── accounts/
+        └── <account_id>/               # 有登录账号时的隔离命名空间
+            ├── active_course.json
+            ├── courses/
+            │   └── <course_id>_<clazz_id>.json
+            └── registry/               # （task_registry 也锚到同一 <account_id> 子树）
+
+invariant：same course + different account ≠ same state。
+旧版本无账号时直接写 state/courses/ 与 state/registry/<key>/；有账号后全部
+落到 accounts/<account_id>/ 下，旧 legacy 数据**不会被自动绑定成任何账号的 state**
+（操作只在该账号 namespaced 路径，legacy 保持原封不动，仅作为未登录/诊断可见）。
+"account_id" 由登录账号 CX_USER 经确定性哈希得出（models.resolve_account_id）。
 
 安全要求:
     - 禁止写入 Secrets / Cookie / Session / token
@@ -33,6 +44,34 @@ REPO_ROOT = Path(__file__).parent.parent.resolve()
 STATE_DIR = REPO_ROOT / "state"
 COURSES_DIR = STATE_DIR / "courses"
 ACTIVE_FILE = STATE_DIR / "active_course.json"
+
+# ── P0-2：账号隔离 namespace ────────────────────────────────────────
+# 登录账号 CX_USER 存在时，状态按「accounts/<account_id>/」隔离，兑现
+# 「same course + different account ≠ same state」。无登录（测试/离线诊断）→
+# 空 account → 回退旧裸路径（legacy unscoped，向后兼容，既有测试不破）。
+from models import resolve_account_id  # noqa: E402
+
+
+def _account_suffix() -> str:
+    """返回账号子目录名；无账号则为 ''（落回 legacy 裸路径）。"""
+    acc = resolve_account_id()
+    return acc if acc else ""
+
+
+def _courses_root() -> Path:
+    """课程状态目录：有账号 → state/accounts/<acc>/courses，否则 legacy state/courses。"""
+    suffix = _account_suffix()
+    if not suffix:
+        return COURSES_DIR
+    return STATE_DIR / "accounts" / suffix / "courses"
+
+
+def _active_file_path() -> Path:
+    """活跃课程文件：有账号 → state/accounts/<acc>/active_course.json。"""
+    suffix = _account_suffix()
+    if not suffix:
+        return ACTIVE_FILE
+    return STATE_DIR / "accounts" / suffix / "active_course.json"
 
 # 状态目录默认权限（仅当前用户可读写）
 _STATE_DIR_MODE = 0o700
@@ -72,7 +111,7 @@ class _course_lock:  # noqa: N801 — 头等上下文管理器
 
     def __init__(self, identity_key: str, lock_root: Optional[Path] = None):
         _ensure_dirs()
-        self._path = (lock_root or COURSES_DIR) / f"{identity_key}.lock"
+        self._path = (lock_root or _courses_root()) / f"{identity_key}.lock"
         self._fh = None
 
     def __enter__(self):
@@ -225,7 +264,11 @@ def _ensure_dirs():
     Windows 上 Path.mkdir 忽略 mode（测试已 skipif win32）。
     """
     STATE_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
-    COURSES_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
+    root = _courses_root()
+    root.mkdir(parents=True, exist_ok=True, mode=0o700)
+    if root != COURSES_DIR:
+        # 有账号：确保 account 活跃文件所在目录存在
+        _active_file_path().parent.mkdir(parents=True, exist_ok=True, mode=0o700)
 
 
 def load_active_course() -> Optional[CourseIdentity]:
@@ -235,10 +278,10 @@ def load_active_course() -> Optional[CourseIdentity]:
         CourseIdentity 或 None（无活跃课程）
     """
     _ensure_dirs()
-    if not ACTIVE_FILE.exists():
+    if not _active_file_path().exists():
         return None
     try:
-        data = json.loads(ACTIVE_FILE.read_text(encoding="utf-8"))
+        data = json.loads(_active_file_path().read_text(encoding="utf-8"))
         key = data.get("active_identity")
         if not key:
             return None
@@ -273,7 +316,7 @@ def load_course_state(identity_key: str) -> Optional[CourseState]:
         CourseState 或 None（状态不存在）
     """
     _ensure_dirs()
-    state_file = COURSES_DIR / f"{identity_key}.json"
+    state_file = _courses_root() / f"{identity_key}.json"
     if not state_file.exists():
         return None
     try:
@@ -295,11 +338,12 @@ def save_course_state(state: CourseState) -> None:
         raise ValueError("Cannot save state without course_identity")
 
     key = state.course_identity.key()
-    state_file = COURSES_DIR / f"{key}.json"
+    save_dir = _courses_root()
+    state_file = save_dir / f"{key}.json"
 
     # 原子写入：先写临时文件再 rename
     fd, tmp_path = tempfile.mkstemp(
-        suffix=".tmp", prefix="course_state_", dir=COURSES_DIR
+        suffix=".tmp", prefix="course_state_", dir=save_dir
     )
     try:
         with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as f:
@@ -325,15 +369,16 @@ def activate_course(identity: CourseIdentity) -> None:
     new_key = identity.key()
 
     # 写活跃标记
+    active_file = _active_file_path()
     active_data = {"active_identity": new_key,
                    "activated_at_utc": datetime.now(timezone.utc).isoformat()}
-    fd, tmp_path = tempfile.mkstemp(suffix=".tmp", dir=STATE_DIR)
+    fd, tmp_path = tempfile.mkstemp(suffix=".tmp", dir=active_file.parent)
     try:
         # newline 显式：见 save_course_state —— 被 git 跟踪的状态文件不许按平台换行。
         with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as f:
             json.dump(active_data, f, ensure_ascii=False, indent=2)
-        shutil.move(tmp_path, str(ACTIVE_FILE))
-        ACTIVE_FILE.chmod(_STATE_FILE_MODE)
+        shutil.move(tmp_path, str(active_file))
+        active_file.chmod(_STATE_FILE_MODE)
     except Exception:
         Path(tmp_path).unlink(missing_ok=True)
         raise
@@ -438,7 +483,7 @@ def get_courses_list() -> list[dict]:
     active = load_active_course()
     active_key = active.key() if active else None
 
-    for f in sorted(COURSES_DIR.glob("*.json")):
+    for f in sorted(_courses_root().glob("*.json")):
         try:
             state = CourseState.from_dict(
                 json.loads(f.read_text(encoding="utf-8"))

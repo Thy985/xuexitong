@@ -429,13 +429,26 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 TASKS_DIR = _REPO_ROOT / "state" / "registry"
 
 
+def _registry_dir() -> Path:
+    """P0-2账号隔离：登录账号 CX_USER 存在 → <state_base>/accounts/<acc>/registry；
+    无账号（测试/离线诊断）→ 回退 legacy TASKS_DIR（向后兼容）。
+    state_base = TASKS_DIR 的父目录（默认 <repo>/state）；测试 override TASKS_DIR 时
+    账号 namespace 也随 tmp 走，绝不写真实仓库 state/。"""
+    from models import resolve_account_id
+    acc = resolve_account_id()
+    if not acc:
+        return Path(TASKS_DIR)
+    state_base = Path(TASKS_DIR).parent
+    return state_base / "accounts" / acc / "registry"
+
+
 def _queue_file(course_key: str) -> Path:
     """每个课程的队列文件独立，避免多课程互相覆盖。"""
-    return Path(TASKS_DIR) / course_key / "execution_queue.json"
+    return _registry_dir() / course_key / "execution_queue.json"
 
 
 def _ensure_dir(course_key: str) -> Path:
-    d = Path(TASKS_DIR) / course_key
+    d = _registry_dir() / course_key
     d.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -490,7 +503,7 @@ def save_queue(course_key: str, q: ExecutionQueue) -> None:
 # 供后续 done 推导与多视频拆分复用，避免每轮重新开浏览器重扫。
 
 def _points_file(course_key: str) -> Path:
-    return Path(TASKS_DIR) / course_key / "chapter_points.json"
+    return _registry_dir() / course_key / "chapter_points.json"
 
 
 def load_chapter_points(course_key: str) -> dict:
