@@ -89,6 +89,12 @@ gh secret set CX_PASS -b "你的密码"
 
 初始化完成后，`state/active_course.json` 和 `state/courses/<course_id>_<clazz_id>.json` 会自动提交到 main 分支。
 
+> **账号隔离（P0-2）**：从工作目录里登录账号 `CX_USER` 起，本机 run/switch/scheduler 的
+> 全部状态都落到 `state/accounts/<account_id>/` 命名空间（account_id = 对 `CX_USER` 的确定性
+> 哈希），同一课程的**不同账号互不可见**。无登录（离线/诊断）时仍写旧的 `state/courses/`
+> 与 `state/registry/<key>/`。fork 原作者的未 scoped 旧账本**不会被自动绑定成你的账号状态**，
+> 首次使用请对新账号的地址做 `initialize`（服务端重建见后续 P0-3）；旧账本仅作 legacy 参考。
+
 ### 4. Scheduler（自动学习，内置 TDVP 探针）
 
 **手动触发（一次）**：
