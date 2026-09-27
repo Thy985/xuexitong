@@ -469,10 +469,25 @@ def cmd_scheduler(args) -> int:
     # 写入 evidence 文件
     _write_output(args.output, out)
 
-    # 如果是 RUN 且需要实际执行学习
+    # ── 退出语义（issue #3）：不能把 NOOP / BLOCKED 一律当成功（绿）。────
+    #   decision=RUN 且实际执行：按下层 success 判定给 0/1（现有逻辑不变）。
+    #   NOOP：确无剩余可推进工作（课程已完成 / 无 active 课程）→ 0（绿）。
+    #   BLOCKED：调度器主动停摆（连续失败达阈值熔断 / 需人工介入恢复）→ 1（红），
+    #            不得静默绿——CI 需要能从颜色识别"卡死 / 熔断"，而非与 SUCCESS 同色。
+    #   ERROR：解析 / 调度级异常 → 1（红）。
+    # 无论红绿，均已把 reason（result.verdict）与 error 写入上方 out JSON，供人工诊断。
+    print(f"[scheduler] EXIT decision={result.decision} "
+          f"result={result.result} passed={bool(result.passed)} "
+          f"verdict={result.verdict or ''} error={result.error or ''}", flush=True)
+
     if result.decision == "RUN" and result.result in ("SUCCESS", "FAILED"):
         return 0 if result.passed else 1
-    return 0  # NOOP/BLOCKED 不算失败
+    if result.decision == "NOOP":
+        return 0  # 确实无可推进工作（课程已完成 / 未配置 active 课程）——绿
+    # BLOCKED / ERROR：非成功状态，返回非 0（红），避免 CI 全绿掩盖"未推进 / 已熔断 / 异常"。
+    print(f"[scheduler] EXIT non-zero for {result.decision} "
+          f"(reason: {result.verdict or result.error or 'unknown'})", flush=True)
+    return 1
 
 
 if __name__ == "__main__":
