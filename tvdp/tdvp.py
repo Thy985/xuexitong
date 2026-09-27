@@ -824,10 +824,11 @@ def build_tasks_from_discovery(chapters_raw: list[dict],
       旧实现把「每个目录节点（.posCatalog_select）」当作一个 task 直接映射，
       task_type 恒为 video，没有把 chapter 内部可能存在的多个 job/task 拆开。
 
-    现在：每个 chapter 默认产出 1 个 video Task（runtime 支持）。
-      若该章还有「待完成任务点」剩余（job_remaining > 0 / 非完成态），
-      再补 1 个 other(unsupported) Task：用于告知 reconcile——
-      「video 即使完成，也不能让 chapter 聚合为完成」（§9），且不会被 Queue 选中。
+    现在：只有确定有视频（video_counts[cid] > 0）才产 video Task（1 个/视频点）。
+      已知「0 个视频」或**未知**（无快照证据，如「线上学习任务」任务集合）一律不臆测视频
+      —— 修复 issue#1（未知被默认成 1 个 video，非视频章被投递后空等 metadata 而失败）。
+      未完成的非「已确认视频」章产 1 个 other(unsupported)/PENDING Task：用于告知
+      reconcile——不当作 video 投进 Queue，也不让 slot 彻底消失。
 
     chapter_raw = {chapter_id, title, status, text, cell_index, chapter_index, job_remaining}
     """
@@ -851,32 +852,40 @@ def build_tasks_from_discovery(chapters_raw: list[dict],
         cell_idx = ch.get("cell_index", 0)
         task_id = cid if cid else f"_gi{ch_idx}"
 
-        # 1) video task —— 每个真实视频点一个 Task；默认当视频点数量未知时视为 1 个。
-        n_videos = int(video_counts.get(cid, 1) or 0)
-        known_count = cid in video_counts   # 已知真实视频点数量
-        if not known_count:
-            n_videos = 1
-        total_points = n_videos
-        for vi in range(n_videos):
-            vtid = task_id if vi == 0 else f"{task_id}:video{vi + 1}"
-            v_detail = detail if vi == 0 else f"{vtid} 视频点 {vi + 1}/{n_videos}"
-            tasks.append(TaskInfo(
-                task_id=vtid,
-                chapter_id=cid if cid else "",
-                title=title,
-                task_type="video",
-                status=status,
-                confidence=conf,
-                source_detail=v_detail,
-                evidence=TaskEvidence(status, conf, v_detail),
-                _ch_idx=ch_idx,
-                _cell_idx=cell_idx,
-            ))
+        # 1) video task —— 只有 确定有视频（video_counts[c] > 0，来自 chapter_points 快照的
+        #    实时复核）才产，1 个视频点 1 个。已知「0 个视频」或**未知**（不在快照，如未复核的
+        #    「线上学习任务」任务集合）一律不产 video —— 这是 issue#1 根因：旧实现把未知默认成
+        #    1 个 video 点，非视频章 1217304710 被 mint 成假 video，scheduler 投递后在 headed
+        #    模式空等 metadata 造成 FAIL(video metadata not ready)。缺省不变量：
+        #    无视频证据 ≈ 非 video——>未完成章走下方 other(unsupported) 兜底，不进视频队列。
+        n_videos = int(video_counts.get(cid, 0) or 0)
+        known_video = n_videos > 0
+        if known_video:
+            for vi in range(n_videos):
+                vtid = task_id if vi == 0 else f"{task_id}:video{vi + 1}"
+                v_detail = detail if vi == 0 else f"{vtid} 视频点 {vi + 1}/{n_videos}"
+                tasks.append(TaskInfo(
+                    task_id=vtid,
+                    chapter_id=cid if cid else "",
+                    title=title,
+                    task_type="video",
+                    status=status,
+                    confidence=conf,
+                    source_detail=v_detail,
+                    evidence=TaskEvidence(status, conf, v_detail),
+                    _ch_idx=ch_idx,
+                    _cell_idx=cell_idx,
+                ))
 
-        # 2) 残余非 video task —— 当该章还有「非视频待完成任务点」
+        # 2) 非 video（other/unsupported）task —— 未完成章里除已计为 video 的点之外的点；
+        #    或根本无已确认视频点的章（未知/0）若未完成，也给 1 个 other 兜底：
+        #    - 有 N 个 video + 剩余任务点 → 余数 other；
+        #    - 无 video 或计数未知 → 整章以 other(unsupported) 记录，不当作 video 投递，
+        #      既不空等 metadata（issue#1），也不让章节在账上凭空消失（reconcile 仍可见）。
         not_all_done = (status_raw != "completed") or (job_remaining > 0)
-        non_video_remain = job_remaining - total_points
-        if cid and not_all_done and non_video_remain > 0:
+        non_video_remain = job_remaining - n_videos
+        emit_other = (non_video_remain > 0) or (not known_video)
+        if cid and not_all_done and emit_other:
             tasks.append(TaskInfo(
                 task_id=f"{cid}:other",
                 chapter_id=cid,
@@ -884,9 +893,13 @@ def build_tasks_from_discovery(chapters_raw: list[dict],
                 task_type="other",          # 非 video → unsupported/pending
                 status="PENDING",           # §6: 非 video 先记 pending/unsupported
                 confidence="UI",
-                source_detail=f"余 {non_video_remain} 个非视频任务点",
+                source_detail=(f"余 {non_video_remain} 个非视频点"
+                               if known_video
+                               else "无已确认视频点（uncertain，不按 video 投递）"),
                 evidence=TaskEvidence("PENDING", "UI",
-                                      f"uncategorised; {non_video_remain} 待完成"),
+                                      (f"uncategorised; {non_video_remain} 待完成"
+                                       if known_video
+                                       else "uncertain: no confirmed video point")),
                 _ch_idx=ch_idx,
                 _cell_idx=cell_idx,
             ))
