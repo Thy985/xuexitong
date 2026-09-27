@@ -27,25 +27,48 @@ def tmp_registry(tmp_path):
 
 # ── 1) 为什么旧 discovery 只生成 1 个 TaskInfo（E6.2 §1）──────────────
 
-def test_discovery_emits_video_plus_residual_task(tmp_registry):
-    """E6.2 §3: 从章节 raw 生成 chapter 内多个 task：video + 非视频残留(other)。"""
+def test_unknown_video_count_chapter_is_other_not_fake_video(tmp_registry):
+    """E6.2 修复（issue #1）: 无已确认视频证据的章（未知计数）不得被默认 mint 成 video。
+
+    - 旧逻辑：`build_tasks_from_discovery` 对 `video_counts` 里没有的章默认按 1 个 video 点
+      → 1217304710「线上学习任务」这种非视频章被注册成假 video，scheduler 投递后空等
+      metadata 而 FAIL。
+    - 新逻辑：未知（不在 video_counts）= 无视频证据 ≈ 非 video → 产 `:other`(unsupported)/PENDING，
+      既不被当作 video 投递，也不让章节凭空消失。
+    """
     from tvdp.tdvp import build_tasks_from_discovery
-    # 章节有 2 个未完成点，默认按 1 个视频点 → 剩 1 个非视频残留
+    chapter = {"chapter_id": "1217304710", "title": "线上学习任务",
+               "status": "pending", "job_remaining": 0,
+               "chapter_index": 7, "cell_index": 7, "text": "1.8 线上学习任务"}
+    tasks = build_tasks_from_discovery([chapter])   # 未传 video_counts（无视频证据）
+    by_id = {t.task_id: t for t in tasks}
+    assert "1217304710" not in by_id, "没有 video 证据的章不得产出 video task"
+    assert by_id["1217304710:other"].task_type == "other"
+    assert by_id["1217304710:other"].status == "PENDING"
+
+
+def test_discovery_emits_video_plus_residual_task(tmp_registry):
+    """E6.2 §3 + issue#1: 已知 2 个视频点 + 1 个非视频残留 → video×2 + other。
+
+    显式传 `video_counts` 明确 2 个视频 → 2 个 video task；job_remaining=3 → 余 1 个非视频 → `:other`。
+    """
+    from tvdp.tdvp import build_tasks_from_discovery
     chapter = {"chapter_id": "1217304708", "title": "数据通信的基础知识",
-               "status": "pending", "job_remaining": 2,
-               "chapter_index": 11, "cell_index": 11, "text": "2.2 2待完成"}
-    tasks = build_tasks_from_discovery([chapter])
+               "status": "pending", "job_remaining": 3,
+               "chapter_index": 11, "cell_index": 11, "text": "2.2 3待完成"}
+    tasks = build_tasks_from_discovery([chapter], video_counts={"1217304708": 2})
     infos = {t.task_id: t for t in tasks}
-    assert "1217304708" in infos                       # video task
     assert infos["1217304708"].task_type == "video"
-    assert "1217304708:other" in infos            # 非视频残留
+    assert infos["1217304708:video2"].task_type == "video"
+    assert "1217304708:other" in infos                     # 余 1 个非视频残留
     assert infos["1217304708:other"].task_type == "other"
     assert infos["1217304708:other"].status == "PENDING"
-    # 恰 1 个未完成点（纯 1 个视频）→ 不再发 :other
+    # 恰 1 个视频点（job_remaining=1）→ 不再发 other（全部归入那个 video）
     tasks1 = build_tasks_from_discovery(
         [{"chapter_id": "1217304708", "title": "数据通信",
           "status": "pending", "job_remaining": 1,
-          "chapter_index": 11, "cell_index": 11}])
+          "chapter_index": 11, "cell_index": 11}],
+        video_counts={"1217304708": 1})
     ids1 = {t.task_id for t in tasks1}
     assert "1217304708" in ids1
     assert "1217304708:other" not in ids1
@@ -68,13 +91,13 @@ def test_discovery_multi_video_chapter_emits_video_tasks(tmp_registry):
 
 
 def test_discovery_done_chapter_no_residual(tmp_registry):
-    """已整体完成章节：只有 video task，不产出 other。"""
+    """已整体完成章节：不产任何投递任务（不再默认 mint 1 个 video）。"""
     from tvdp.tdvp import build_tasks_from_discovery
     tasks = build_tasks_from_discovery(
         [{"chapter_id": "1217304700", "title": "互联网概述",
           "status": "completed", "job_remaining": 0}])
     ids = [t.task_id for t in tasks]
-    assert "1217304700" in ids
+    assert "1217304700" not in ids       # 未完成章才需要任务；完成章不再产 video
     assert "1217304700:other" not in ids
 
 
