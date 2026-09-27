@@ -137,13 +137,24 @@ def is_session_kicked(url: str) -> bool:
 # 提取为纯函数，便于离线回归保护 —— 若超星改字段名/大小写导致判定失效，
 # 本 helper 的回归会红，而不是在真站/CI 里才暴露（二次 fetch / 误判）。
 _IS_PASSED_PATTERNS = ('"isPassed":true',)
+# P0-0：isPassed 布尔解析容忍 whitespace（`"isPassed": true` 带空格），避免超星返回体
+# 排版变化就把真实通过漏判成未测到 → mark_failed → 熔断。key 仍须字面 `isPassed`、
+# 值仍须 JSON boolean `true`（字段漂移如 `{"passed":true}`、`"isPassed":false` 不误命中）。
+_IS_PASSED_RE = re.compile(r'"isPassed"\s*:\s*true')
 
 
 def has_is_passed_marker(body: "str|None") -> bool:
-    """返回体 JSON 是否标 isPassed=true。当前规则：包含 `"isPassed":true`。"""
+    """返回体 JSON 是否标 isPassed=true。
+
+    读取的就是"当前运行"首次真实响应（read_event_body，服务端真源），
+    且绑定到本次会话/当前账号的 account（见 P0-1 判定）。判定容忍键/值之间空白。
+    """
     if not body:
         return False
-    return any(p in body for p in _IS_PASSED_PATTERNS)
+    # 兼容旧精确字面 + 空格容忍；两者同义，保持不外扩字段名/值域。
+    if any(p in body for p in _IS_PASSED_PATTERNS):
+        return True
+    return _IS_PASSED_RE.search(body) is not None
 
 
 def ml_probe_records(events: list) -> list:
@@ -536,6 +547,41 @@ def next_unit_decision(nextunit_seen: bool, has_passed: bool, max_ct: float,
         # 死等 900s 看门狗 TIMEOUT（run 34573528666 已实测）。
         return "exit_complete"
     return "exit_switch"
+
+
+# ── P0-1：业务结果 vs 观测结果 ─────────────────────────────────────
+# 旧实现用「10/10 全命中」当 PASS（verification_10 把 server isPassed 与 UI 的
+# ended/nextUnit 用 and 绑死），于是「服务器已判过、UI 没看到某个信号」会被误译成
+# FAIL → mark_failed → consecutive_failures++ → BLOCKED（issue #2 根因）。
+# 新判定：业务结果由**服务端 isPassed 真源**主导；UI 观察（ended/nextUnit/时长/ml）
+# 只作诊断、**不参与** server verdict 是否 PASS。
+SERVER_CONFIRMED_PASS = "SERVER_CONFIRMED_PASS"
+SERVER_CONFIRMED_FAIL = "SERVER_CONFIRMED_FAIL"
+INCONCLUSIVE = "INCONCLUSIVE"
+EXECUTION_ERROR = "EXECUTION_ERROR"
+
+
+def business_verdict_from_checks(checks: dict,
+                                 passed_object_ids,
+                                 exec_broken: bool = False) -> str:
+    """P0-1 纯函数：由本轮检查项给出「业务结果」（可离线测，不触发浏览器）。
+
+    语义化结果（与用户 #2 的方案一致）：
+      - server 真源确认通过（本轮真实 isPassed → passed_object_ids 非空 或
+        isPassed_seen）→ SERVER_CONFIRMED_PASS（最高优先级，propagates）。
+      - 否则若执行层基线崩塌（登录/卡片/根本没起播）→ EXECUTION_ERROR。
+      - 否则有执行事实但 server 端未给 isPassed → INCONCLUSIVE
+        （不把「没看到 UI 信号」译成失败）。
+
+    UI 的 ended_seen / nextunit_triggered / banner / 时长 **不进**本判定——它们只属于
+    「我们还观察到了哪些执行证据」，不能覆盖 server verdict。
+    """
+    server_passed = bool(passed_object_ids) or bool((checks or {}).get("isPassed_seen"))
+    if server_passed:
+        return SERVER_CONFIRMED_PASS
+    if exec_broken:
+        return EXECUTION_ERROR
+    return INCONCLUSIVE
 
 
 def target_segment_done(target_vi: int, video_count: int, ended_seen: bool) -> bool:
@@ -1277,6 +1323,20 @@ def run_test(args, params: "CourseParams | None" = None):
     evidence["passed_count"] = passed_count
     evidence["total_checks"] = 10
 
+    # ── P0-1 业务结果（server 真源主导）──
+    # 判定依据只取服务端 isPassed 真源；UI 观测(ended/nextUnit/时长/ml)不进业务判定。
+    exec_broken = not (
+        checks.get("login_ok") and checks.get("cards_iframe_loaded")
+        and checks.get("cards_has_video")
+    )
+    business = business_verdict_from_checks(
+        checks, evidence.get("passed_object_ids") or (), exec_broken=exec_broken)
+    evidence["business_verdict"] = business
+    log(f"[P0-1] business_verdict={business} "
+        f"server_passed_obj={len(evidence.get('passed_object_ids') or ())} "
+        f"isPassed_seen={checks.get('isPassed_seen')} "
+        f"ended={checks.get('ended_seen')} nextUnit={checks.get('nextunit_triggered')}")
+
     # ── 诊断：失败阶段推导（截图已在 close() 前采集）──
     if passed_count < 10:
         evidence["failure_stage"] = _derive_failure_stage(evidence)
@@ -1285,26 +1345,22 @@ def run_test(args, params: "CourseParams | None" = None):
         evidence["failure_stage"] = None
         # 成功终态已在 at_end 截图中采集，无需再访问 page（已 close）
 
-    if passed_count == 10:
+    # verdict 字符串仅作 **观测/诊断** 呈现（保留给 CI/人看），不再决定业务 PASS。
+    # 业务 PASS 只看 `business_verdict == SERVER_CONFIRMED_PASS`（见 app/run.py）。
+    if business == SERVER_CONFIRMED_PASS:
         evidence["verdict"] = (
-            f"PASS (headed GHA) — {passed_count}/10 checks passed. "
-            f"isPassed=true, nextUnit={'triggered' if nextunit_seen else 'not observed'}, "
-            f"chapter_completed={chapter_completed}, "
-            f"banner_up={banner_up}, sidebar_down={sidebar_down}"
-        )
-    elif isPassed_seen and nextunit_seen:
-        evidence["verdict"] = (
-            f"PARTIAL(headed GHA) — isPassed=true + nextUnit triggered "
-            f"but {10 - passed_count} checks failed"
+            f"PASS (server-confirmed isPassed) — "
+            f"business_verdict={business}, passed_count={passed_count}/10(obs), "
+            f"isPassed=true, nextUnit={'triggered' if nextunit_seen else 'not observed'}"
         )
     elif isPassed_seen:
         evidence["verdict"] = (
-            f"PARTIAL(headed GHA) — isPassed=true but nextUnit not triggered "
-            f"({10 - passed_count} checks failed)"
+            f"PARTIAL(headed GHA) — isPassed=true but UI signal(s) missed "
+            f"({10 - passed_count} obs checks failed)"
         )
     else:
         evidence["verdict"] = (
-            f"FAIL(headed GHA) — {passed_count}/10 checks passed, "
+            f"{business} — passed={passed_count}/10(obs), "
             f"isPassed_seen={isPassed_seen}, max_ct={max_ct:.0f}s"
         )
 
