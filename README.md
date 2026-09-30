@@ -75,9 +75,14 @@ gh secret set CX_USER -b "你的手机号"
 gh secret set CX_PASS -b "你的密码"
 ```
 
-### 3. Initialize（创建课程状态）
+### 3. 初始化 / 自检（通常「可选」）
 
-仓库 → **Actions** → 选中 `run` → **Run workflow**：
+**想直接跑起来**：仓库已带一条演示默认课程（`state/active_course.json` 已提交）。设好两个
+secret 后，**跑一次 `scheduler`（或等定时）即可** —— 调度内置 P0-3 **服务端真源 bootstrap**：
+账号首次进入该课程时，自动从服务端 catalog 材料化 work 列表并写 `progress.completed`，无需
+你先手动初始化。所以一般场景「Fork + Secrets」两步就够了。
+
+**切到自己想学的课程**（才会用到 `initialize`）：仓库 → **Actions** → 选中 `run` → **Run workflow**：
 
 - `action`: **initialize**
 - `course_url`（必填）：学习通**章节 studentstudy URL**，需含
@@ -86,6 +91,10 @@ gh secret set CX_PASS -b "你的密码"
   ```
   https://mooc1.chaoxing.com/mycourse/studentstudy?chapterId=1217304708&courseId=265997861&clazzid=151695658&cpi=506830460&enc=1bc1bd778f9e00d924fe97b3c63f76f4&mooc2=1&hidetype=0&openc=9b5661be6351e4d46bc29bfa2d69236a
   ```
+
+**只想先自检「这门课我能不能跑」**：`action: **bootstrap**` + 同一 `course_url`。只做一次服务端
+材料化并打印 `server_completed` / 任务数（幂等：该账号该课程已材料化过 → `NOOP`），不触发完整
+调度。低门槛自检入口。
 
 初始化完成后，`state/active_course.json` 和 `state/courses/<course_id>_<clazz_id>.json` 会自动提交到 main 分支。
 
@@ -98,8 +107,9 @@ gh secret set CX_PASS -b "你的密码"
 > **服务端真源（P0-3）**：账号首次进入课程（该账号命名空间里该课程 registry 为空）时，
 > `bootstrap_registry_from_server` 从**服务端 catalog** 一次性材料化 work 列表，并把
 > `progress.completed` 写成**服务端已完成章数**（而非本地 registry 的 done 数——旧行为会让
-> `completed` 只反映“本地做过几次”）。任何遇到该课程已非空就不会跑（幂等，不覆盖）。
-
+> `completed` 只反映“本地做过次数”）。任一已非空不重跑（幂等，不覆盖）。scheduler 首次进入
+> 自动触发；`action=bootstrap` 可单独自检。注意：fork 账号**必须能进入**你要跑的那门课
+> （学习通按账号鉴权，代码无法绕过）。
 ### 4. Scheduler（自动学习，内置 TDVP 探针）
 
 **手动触发（一次）**：
