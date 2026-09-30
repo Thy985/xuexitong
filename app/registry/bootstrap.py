@@ -103,7 +103,8 @@ def bootstrap_registry_from_server(
 
     server_completed = _server_completed_from_catalog(chapters)
     if persist_progress:
-        _set_progress_completed(course_key, server_completed, len(chapters))
+        _set_progress_completed(course_key, course_url, server_completed,
+                                len(chapters))
 
     return BootstrapReport(
         course_key, mode="bootstrap", status="ok",
@@ -114,19 +115,71 @@ def bootstrap_registry_from_server(
     )
 
 
-def _set_progress_completed(course_key: str, server_completed: int,
-                            total: int) -> None:
+def _set_progress_completed(course_key: str, course_url: str,
+                            server_completed: int, total: int) -> None:
     """把 `course_state.progress.completed` 设为服务端完成数（per-account, lock+RMW）。"""
-    from state.course_state import update_course_state, CourseProgress
+    from state.course_state import update_course_state
 
-    update_course_state(course_key, lambda state: _apply_server_progress(
-        state, server_completed, total))
+    def updater(state):
+        return _apply_server_progress(state, course_key, course_url,
+                                      server_completed, total)
+
+    update_course_state(course_key, updater)
 
 
-def _apply_server_progress(state, server_completed: int, total: int):
-    from state.course_state import CourseProgress
+def _apply_server_progress(state, course_key, course_url,
+                           server_completed: int, total: int):
+    """把 service 真源完成数写进该账号命名空间的 course_state；account 首次时创建它。
+
+    bootstrap 是「账号首次进入课程」的**创建性质**动作（registry 空 = 已由 NOOP 护栏保证），
+    因此这里允许在账号命名空间里尚无 course_state 时新建一个最小实例（status=ACTIVE），
+    首跑即把 `progress.completed` 写成服务端完成数 —— 这样「progress 真源」才能落盘，
+    而不是因为此前无状态文件而静默跳过。
+    """
+    from state.course_state import CourseProgress, CourseState
     if state is None:
-        return None  # 无课程状态，不新建（保持最小侵入）
+        state = CourseState(status="ACTIVE",
+                            course_identity=_identity_from(course_key, course_url))
+    if state.progress is None:
+        state.progress = CourseProgress(completed=server_completed, total=total)
+    else:
+        state.progress.completed = server_completed
+        if state.progress.total is None:
+            state.progress.total = total
+    return state
+
+
+def _identity_from(course_key: str, course_url: str):
+    """由课程级 key（`course_id_clazz`）与 URL 构造 course_identity。
+
+    `save_course_state` 用 `identity.key()` 作文件名，因此 identity 的 course_id/clazz_id
+    必须与 course_key 一致（否则会存成错位文件）。URL 里有显式参数优先，否则从 course_key
+    拆分（形如 `<course_id>_<clazz_id>`）。
+    """
+    from models import CourseIdentity
+    from datetime import datetime, timezone as _tz
+
+    c_id, cl_id, cpi = "", "", ""
+    try:
+        from resolvers.course_resolver import _parse_url_params
+        _p = _parse_url_params(course_url)
+        c_id = _p.get("course_id") or ""
+        cl_id = _p.get("clazz_id") or ""
+        cpi = _p.get("cpi") or ""
+    except Exception:
+        pass
+    if not c_id and "_" in course_key:
+        head, _, tail = course_key.partition("_")
+        if head:
+            c_id, cl_id = head, tail
+    return CourseIdentity(
+        course_id=c_id,
+        clazz_id=cl_id,
+        cpi=cpi,
+        title=f"course_{c_id}",
+        raw_url=course_url,
+        resolved_at_utc=datetime.now(_tz.utc).isoformat(),
+    )
     if state.progress is None:
         state.progress = CourseProgress(completed=server_completed, total=total)
     else:

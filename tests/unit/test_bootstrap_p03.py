@@ -84,6 +84,30 @@ class TestBootstrap:
         assert st is not None and st.progress is not None
         assert st.progress.completed == 2
 
+    def test_materialize_creates_account_state_when_absent(self, storage_dirs,
+                                                          monkeypatch):
+        """账号命名空间尚无 course_state 时，bootstrap 应**新建**状态并写入服务端完成数。"""
+        from app.registry import bootstrap as BS
+        from app.registry.task_registry import load_registry
+        from state import course_state as cs
+        id_ = _identity()
+        _set_account("acc-fresh")
+        course_key = id_.key()
+        # 不调用 _activate —— 刻意制造「无 account course_state」的首次场景
+        chapters = [_ch("1217304706", "completed", "已完成章"),
+                    _ch("1217304708", "pending", "待学章")]
+        monkeypatch.setattr("tvdp.tdvp.fetch_course_detail_and_verify",
+                            lambda *a, **k: {"chapters": chapters, "points": []})
+        rep = BS.bootstrap_registry_from_server(course_key, "http://x")
+        assert rep.status == "ok"
+        assert rep.server_completed == 1
+        # 关键：即使事先无状态，也聊建了 account course_state，progress 落盘服务端真源
+        st = cs.load_course_state(course_key)
+        assert st is not None, "bootstrap 应创建 account course_state"
+        assert st.progress is not None
+        assert st.progress.completed == 1
+        assert load_registry(course_key)
+
     def test_noop_when_account_registry_present(self, storage_dirs, monkeypatch):
         from app.registry import task_registry as tr
         from app.registry.bootstrap import bootstrap_registry_from_server
