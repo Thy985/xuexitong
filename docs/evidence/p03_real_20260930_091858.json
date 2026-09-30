@@ -1,0 +1,15 @@
+{
+  "run_at_utc": "2026-09-30T01:19:04.639580+00:00",
+  "course_url": "https://mooc1.chaoxing.com/mycourse/studentstudy?chapterId=1217304706&courseId=265997861&clazzid=151695658&cpi=506830460&enc=1bc1bd778f9e00d924fe97b3c63f76f4&mooc2=1&hidetype=0&openc=9b5661be6351e4d46bc29bfa2d69236a",
+  "course_key": "265997861_151695658",
+  "report": {
+    "course_key": "265997861_151695658",
+    "mode": "bootstrap",
+    "reason": "materialized from server (55 chapters, 29 tasks, server_completed=26)",
+    "status": "ok",
+    "server_completed": 26,
+    "total_tasks": 29,
+    "at_utc": "2026-09-30T01:19:04.639580+00:00"
+  },
+  "account_state_dir_exists": true
+}
