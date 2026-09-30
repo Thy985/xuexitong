@@ -629,6 +629,12 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
         identity_key = active.key()
         course_url = active.raw_url  # 使用 state 中保存的 URL
 
+    # ── Step 1.5: 账号首次进入课程 → 服务端真源 bootstrap（P0-3，幂等）──────
+    # 该账号命名空间里此课程 registry 为空（首次进）时，用服务端 catalog 一次性
+    # 材料化 work 列表并写 progress（服务端完成数），避免"空账 → 探针无 pending →
+    # NOOP"的鸡生蛋困境。registry 已非空则内部 NOOP，不打服务器、不覆盖。
+    _ensure_bootstrap_on_start(course_url, identity_key, run_id)
+
     # ── Step 2: 决定 action（含 BLOCKED cooldown/retry）──────────
     decision, reason = determine_action(identity_key, trigger)
 
@@ -889,6 +895,39 @@ def _try_sync_progress(course_key: str) -> None:
         _sync_progress_from_registry(course_key)
     except Exception as _sync_err:
         print(f"[scheduler] progress sync skipped: {_sync_err}", file=sys.stderr)
+
+
+def _ensure_bootstrap_on_start(course_url: str, identity_key: str,
+                               run_id: str) -> None:
+    """账号首次进入课程时，调度开始前做一次服务端真源 bootstrap（P0-3）。
+
+    - 触发：该账号命名空间（`resolve_account_id` 映射非空账号）里，本课程 registry
+      为空/不存在 → 用服务端 catalog 材料化 work 列表 + 写 `progress.completed`。
+      这正是"空账 → 探针 NOOP"的鸡生蛋困境的解。
+    - 幂等：registry 已非空 → 内部 NOOP，绝不覆盖、不打服务器（真机已验二次 run=noop）。
+    - 失败仅记日志，不阻断本轮调度主流程（下轮再试）。
+    """
+    import os as _os
+    _cx = _os.environ.get("CX_USER")
+    if not _cx:
+        # 无登录账号：account 命名空间不存在，回到 legacy/离线路径，不做服务端 bootstrap。
+        return
+    try:
+        from app.registry.task_registry import load_registry
+        # 只在账号命名空间 registry 为空时值得起一次真实服务端会话
+        if load_registry(identity_key):
+            return
+        from app.registry.bootstrap import bootstrap_registry_from_server
+        rep = bootstrap_registry_from_server(
+            identity_key, course_url,
+            cx_user=_cx,
+            cx_pass=_os.environ.get("CX_PASS"),
+        )
+        print(f"[scheduler] P0-3 bootstrap: mode={rep.mode} status={rep.status} "
+              f"server_completed={rep.server_completed} "
+              f"tasks={rep.total_tasks} reason={rep.reason}", flush=True)
+    except Exception as _bse:
+        print(f"[scheduler] bootstrap skipped: {_bse}", file=sys.stderr)
 
 
 def head_chapter_id(head: Optional[dict],

@@ -137,3 +137,55 @@ class TestBootstrap:
                             lambda *a, **k: None)
         rep = bootstrap_registry_from_server(course_key, "http://x")
         assert rep.status == "error"
+
+
+class TestSchedulerHook:
+    """调度 Step 1.5 钩子 `_ensure_bootstrap_on_start`。
+
+    护栏：无 CX_USER → 不触发；account registry 非空 → 不触发；首次(空 registry)→ 触发并落盘。
+    """
+    def test_skips_when_no_cx_user(self, storage_dirs, monkeypatch):
+        from scheduler.scheduler import _ensure_bootstrap_on_start
+        calls = {"n": 0}
+        def _boom(*a, **k):
+            calls["n"] += 1
+            raise AssertionError("must not bootstrap without account")
+        monkeypatch.setattr("app.registry.bootstrap.bootstrap_registry_from_server", _boom)
+        monkeypatch.delenv("CX_USER", raising=False)
+        _ensure_bootstrap_on_start("http://x", _identity().key(), "r1")
+        assert calls["n"] == 0
+
+    def test_skips_when_registry_nonempty(self, storage_dirs, monkeypatch):
+        from scheduler.scheduler import _ensure_bootstrap_on_start
+        from app.registry import task_registry as tr
+        _set_account("acc-sk")
+        key = _identity().key()
+        tr.save_registry(key, {"existing": TaskRecord(
+            task_id="existing", chapter_id="c", title="t", status="PENDING")})
+        calls = {"n": 0}
+        def _boom(*a, **k):
+            calls["n"] += 1
+            raise AssertionError("must not re-bootstrap a non-empty registry")
+        monkeypatch.setenv("CX_USER", "u")
+        monkeypatch.setattr("app.registry.bootstrap.bootstrap_registry_from_server", _boom)
+        _ensure_bootstrap_on_start("http://x", key, "r1")
+        assert calls["n"] == 0
+
+    def test_bootstraps_on_empty_account_with_cx(self, storage_dirs, monkeypatch):
+        from scheduler.scheduler import _ensure_bootstrap_on_start
+        from app.registry import bootstrap as BS
+        from app.registry.task_registry import load_registry
+        from state import course_state as cs
+        _set_account("acc-boot")
+        key = _identity().key()
+        monkeypatch.setenv("CX_USER", "u")
+        monkeypatch.setattr(
+            "tvdp.tdvp.fetch_course_detail_and_verify",
+            lambda *a, **k: {"chapters": [
+                _ch("1217304706", "completed", "已完成章"),
+                _ch("1217304708", "pending", "待学章")], "points": []})
+        _ensure_bootstrap_on_start("http://x", key, "r1")
+        assert load_registry(key), "首次空账应被 bootstrap 材料化"
+        st = cs.load_course_state(key)
+        assert st is not None and st.progress is not None
+        assert st.progress.completed == 1
