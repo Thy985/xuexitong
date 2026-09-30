@@ -64,6 +64,7 @@ def main() -> int:
         "course_key": course_key,
         "report": rep.to_dict(),
         "account_state_dir_exists": (ROOT / "state" / "accounts").exists(),
+        "action": "bootstrap",
     }
     print(json.dumps(dump, ensure_ascii=False, indent=2))
     if args.out:

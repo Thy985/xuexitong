@@ -150,7 +150,7 @@ class TestSchedulerHook:
         def _boom(*a, **k):
             calls["n"] += 1
             raise AssertionError("must not bootstrap without account")
-        monkeypatch.setattr("app.registry.bootstrap.bootstrap_registry_from_server", _boom)
+        monkeypatch.setattr("app.registry.bootstrap.materialize_from_common", _boom)
         monkeypatch.delenv("CX_USER", raising=False)
         _ensure_bootstrap_on_start("http://x", _identity().key(), "r1")
         assert calls["n"] == 0
@@ -167,11 +167,12 @@ class TestSchedulerHook:
             calls["n"] += 1
             raise AssertionError("must not re-bootstrap a non-empty registry")
         monkeypatch.setenv("CX_USER", "u")
-        monkeypatch.setattr("app.registry.bootstrap.bootstrap_registry_from_server", _boom)
+        monkeypatch.setattr("app.registry.bootstrap.materialize_from_common", _boom)
         _ensure_bootstrap_on_start("http://x", key, "r1")
         assert calls["n"] == 0
 
     def test_bootstraps_on_empty_account_with_cx(self, storage_dirs, monkeypatch):
+        from scheduler import scheduler as SCH
         from scheduler.scheduler import _ensure_bootstrap_on_start
         from app.registry import bootstrap as BS
         from app.registry.task_registry import load_registry
@@ -184,8 +185,14 @@ class TestSchedulerHook:
             lambda *a, **k: {"chapters": [
                 _ch("1217304706", "completed", "已完成章"),
                 _ch("1217304708", "pending", "待学章")], "points": []})
+        SCH._PROBE_FETCH_CACHE.clear()
         _ensure_bootstrap_on_start("http://x", key, "r1")
         assert load_registry(key), "首次空账应被 bootstrap 材料化"
         st = cs.load_course_state(key)
         assert st is not None and st.progress is not None
         assert st.progress.completed == 1
+        # 关键：本次抓取结果已被缓存，供紧随其后的 probe 复用（不再二次登录/双登踢会话）
+        assert key in SCH._PROBE_FETCH_CACHE, "bootstrap 应把 fetch 结果缓存给 probe 复用"
+        assert SCH._PROBE_FETCH_CACHE[key]["chapters"]  # 缓存含 catalog
+        # probe 消费后应清缓存
+        SCH._PROBE_FETCH_CACHE.pop(key, None)

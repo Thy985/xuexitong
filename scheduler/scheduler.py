@@ -897,35 +897,49 @@ def _try_sync_progress(course_key: str) -> None:
         print(f"[scheduler] progress sync skipped: {_sync_err}", file=sys.stderr)
 
 
+# 进程内缓存：本轮 bootstrap 刚抓实网 fetch 的 combined，供紧随其后的
+# `_run_tdvp_probe` 复用——避免「首轮 bootstrap 一次登录 + probe 又一次登录」
+# 造成超星同账号并发登录互相踢会话。key=course_key；probe 消费后即清除。
+_PROBE_FETCH_CACHE: dict[str, dict] = {}
+
+
 def _ensure_bootstrap_on_start(course_url: str, identity_key: str,
                                run_id: str) -> None:
-    """账号首次进入课程时，调度开始前做一次服务端真源 bootstrap（P0-3）。
+    """账号首次进入课程时，调度开始前材料化课表（P0-3），且**只开一次**浏览器。
 
-    - 触发：该账号命名空间（`resolve_account_id` 映射非空账号）里，本课程 registry
-      为空/不存在 → 用服务端 catalog 材料化 work 列表 + 写 `progress.completed`。
-      这正是"空账 → 探针 NOOP"的鸡生蛋困境的解。
-    - 幂等：registry 已非空 → 内部 NOOP，绝不覆盖、不打服务器（真机已验二次 run=noop）。
-    - 失败仅记日志，不阻断本轮调度主流程（下轮再试）。
+    - 触发：该账号命名空间（有 CX_USER）里本课程 registry 为空/不存在 → 从服务端
+      catalog 材料化 work 列表并写 `progress.completed`（服务端完成落实情况）。
+      这是「空表 → 探针 NOOP」鸡生蛋困境的解法。
+    - **只开一次**：把本次抓取的响应存进 `_PROBE_FETCH_CACHE`，随后 `_run_tdvp_probe`
+      直接复用（它本就依赖同一分根据 reconcile/选章），不二次登录、不会冲撞会话。
+    - 幂等：registry 已非空 → 内部 NOOP，不覆盖、不重新抓（实际二次 run 已验证=NOOP）。
+    - 异常只告日志，不阻碍本轮回调度主流程（下轮再试）。
     """
     import os as _os
     _cx = _os.environ.get("CX_USER")
     if not _cx:
-        # 无登录账号：account 命名空间不存在，回到 legacy/离线路径，不做服务端 bootstrap。
-        return
+        return  # 无账号：account 命名空间不存在，维持原离线/legacy 路径
     try:
         from app.registry.task_registry import load_registry
-        # 只在账号命名空间 registry 为空时值得起一次真实服务端会话
-        if load_registry(identity_key):
+        if load_registry(identity_key):          # 非空 → 幂等 NOOP
             return
-        from app.registry.bootstrap import bootstrap_registry_from_server
-        rep = bootstrap_registry_from_server(
-            identity_key, course_url,
-            cx_user=_cx,
-            cx_pass=_os.environ.get("CX_PASS"),
-        )
+        from tvdp.tdvp import fetch_course_detail_and_verify
+        from resolvers.course_resolver import _parse_url_params
+        from app.registry.bootstrap import materialize_from_common
+        _p = _parse_url_params(course_url)
+        _tgt = _p.get("chapter_id") or ""        # 与 `_run_tdvp_probe` 首轮默认对齐
+        combined = fetch_course_detail_and_verify(
+            course_url, _tgt, cx_user=_cx,
+            cx_pass=_os.environ.get("CX_PASS"))
+        if not combined:
+            print("[scheduler] P0-3 bootstrap: fetch returned None; skip", flush=True)
+            return
+        _PROBE_FETCH_CACHE[identity_key] = combined  # 本轮 probe 复用，免二次登录
+        rep = materialize_from_common(identity_key, course_url, combined,
+                                      persist_progress=True)
         print(f"[scheduler] P0-3 bootstrap: mode={rep.mode} status={rep.status} "
-              f"server_completed={rep.server_completed} "
-              f"tasks={rep.total_tasks} reason={rep.reason}", flush=True)
+              f"server_completed={rep.server_completed} tasks={rep.total_tasks} "
+              f"reason={rep.reason}", flush=True)
     except Exception as _bse:
         print(f"[scheduler] bootstrap skipped: {_bse}", file=sys.stderr)
 
@@ -1418,9 +1432,10 @@ def _run_tdvp_probe(course_url: str, course_key: str,
             except Exception:
                 pass
 
-        combined = None
-        from tvdp.tdvp import fetch_course_detail_and_verify
-        combined = fetch_course_detail_and_verify(course_url, _pred_head)
+        combined = _PROBE_FETCH_CACHE.pop(course_key, None)
+        if combined is None:
+            from tvdp.tdvp import fetch_course_detail_and_verify
+            combined = fetch_course_detail_and_verify(course_url, _pred_head)
         if combined is not None:
             chapters_raw = combined.get("chapters") or []
             _combined_points = combined.get("points") or []

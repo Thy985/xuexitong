@@ -63,11 +63,8 @@ def bootstrap_registry_from_server(
     Returns:
         BootstrapReport（败则 status="error"）。
     """
-    from app.registry.task_registry import load_registry, save_registry
-    from app.registry.reconcile import reconcile_registry
-    from tvdp.tdvp import (fetch_course_detail_and_verify,
-                           build_tasks_from_discovery,
-                           build_live_finished)
+    from app.registry.task_registry import load_registry
+    from tvdp.tdvp import fetch_course_detail_and_verify
     from state.course_state import update_course_state, CourseProgress
 
     # ── 幂等：该账号命名空间已有该课程任何记录 → 不覆盖、不打服务器 ──
@@ -81,8 +78,34 @@ def bootstrap_registry_from_server(
     if not _fetch:
         return BootstrapReport(course_key, mode="bootstrap",
                                reason="server fetch failed (None)", status="error")
-    chapters = _fetch.get("chapters") or []
-    points = _fetch.get("points") or []
+    return _materialize_from(course_key, course_url, _fetch,
+                             persist_progress=persist_progress)
+
+
+def materialize_from_common(course_key: str, course_url: str, combined,
+                            persist_progress: bool = True) -> BootstrapReport:
+    """用一次已抓取的服务端响应材料化（供调度首轮复用同一浏览器，避免双登踢会话）。
+
+    `combined` = `fetch_course_detail_and_verify` 的返回（`{"chapters":[...], "points":[...]}`），
+    由外部（如 scheduler）抓好后传入；本函数只做 reconcile 材料化 + 写 progress，不碰网络。
+    已存在 registry 时仍幂等 NOOP。
+    """
+    from app.registry.task_registry import load_registry
+    if load_registry(course_key):
+        return BootstrapReport(course_key, mode="noop", status="ok",
+                               reason="registry already present; not touched")
+    return _materialize_from(course_key, course_url, combined,
+                             persist_progress=persist_progress)
+
+
+def _materialize_from(course_key, course_url, combined,
+                      persist_progress: bool = True) -> BootstrapReport:
+    from app.registry.task_registry import save_registry
+    from app.registry.reconcile import reconcile_registry
+    from tvdp.tdvp import build_tasks_from_discovery, build_live_finished
+
+    chapters = combined.get("chapters") or []
+    points = combined.get("points") or []
     live_done = build_live_finished(points)
 
     discovery_tasks = build_tasks_from_discovery(chapters)
@@ -180,10 +203,3 @@ def _identity_from(course_key: str, course_url: str):
         raw_url=course_url,
         resolved_at_utc=datetime.now(_tz.utc).isoformat(),
     )
-    if state.progress is None:
-        state.progress = CourseProgress(completed=server_completed, total=total)
-    else:
-        state.progress.completed = server_completed
-        if state.progress.total is None:
-            state.progress.total = total
-    return state

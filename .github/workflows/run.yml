@@ -19,7 +19,7 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: "操作模式: initialize/run/scheduler/switch/probe"
+        description: "操作模式: initialize/run/scheduler/switch/bootstrap/probe"
         required: false
         default: "run"
         type: choice
@@ -28,6 +28,7 @@ on:
           - run
           - scheduler
           - switch
+          - bootstrap
           - probe
       course_url:
         description: "学习通课程/章节 studentstudy URL"
@@ -145,6 +146,21 @@ jobs:
           echo ">> python app/probe_catalog.py $ARGS"
           eval "python app/probe_catalog.py $ARGS"
           echo "probe-complete"
+
+      # ── Bootstrap 模式: 账号首次进该课程，从服务端真源材料化 + 写 progress（P0-3）──
+      # 轻量自检：不开完整 scheduler，只做一次服务端材料化并打印 server_completed/任务数。
+      # 幂等：该账号该课程已材料化过 → NOOP。用于新 fork 者一键确认该课程可被本账号访问。
+      - name: Bootstrap course (P0-3)
+        if: github.event.inputs.action == 'bootstrap'
+        continue-on-error: true
+        run: |
+          Xvfb :99 -screen 0 1440x900x24 -ac &
+          export DISPLAY=:99
+          sleep 2
+          python scripts/bootstrap_p03_real.py \
+            --course-url "$COURSE_URL" --out ./evidence/result.json \
+            || true
+          echo "bootstrap-complete"
 
       # ── Scheduler 模式: 自动决定并执行（内置 TDVP 探针）────────────
       - name: Run Scheduler
@@ -323,7 +339,7 @@ jobs:
           try:
               r = json.load(open(files[0]))
               action = r.get("action", "run")
-              if action in ("initialize", "switch", "probe"):
+              if action in ("initialize", "switch", "probe", "bootstrap"):
                   print("0", end="")
               elif action == "scheduler":
                   sched_result = r.get("result", "FAILED")
