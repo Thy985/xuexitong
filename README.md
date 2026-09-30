@@ -93,7 +93,12 @@ gh secret set CX_PASS -b "你的密码"
 > 全部状态都落到 `state/accounts/<account_id>/` 命名空间（account_id = 对 `CX_USER` 的确定性
 > 哈希），同一课程的**不同账号互不可见**。无登录（离线/诊断）时仍写旧的 `state/courses/`
 > 与 `state/registry/<key>/`。fork 原作者的未 scoped 旧账本**不会被自动绑定成你的账号状态**，
-> 首次使用请对新账号的地址做 `initialize`（服务端重建见后续 P0-3）；旧账本仅作 legacy 参考。
+> 首次使用请对新账号的地址做 `initialize`；旧账本仅作 legacy 参考。
+>
+> **服务端真源（P0-3）**：账号首次进入课程（该账号命名空间里该课程 registry 为空）时，
+> `bootstrap_registry_from_server` 从**服务端 catalog** 一次性材料化 work 列表，并把
+> `progress.completed` 写成**服务端已完成章数**（而非本地 registry 的 done 数——旧行为会让
+> `completed` 只反映“本地做过几次”）。任何遇到该课程已非空就不会跑（幂等，不覆盖）。
 
 ### 4. Scheduler（自动学习，内置 TDVP 探针）
 
