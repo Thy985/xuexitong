@@ -392,6 +392,29 @@ def cmd_run(args) -> int:
     return exit_code
 
 
+def validate_action_secrets(action: str, *, github_actions: bool | None = None) -> "str | None":
+    """run/scheduler 的账号前置校验；返回错误说明（拒绝运行）或 None（放行）。
+
+    fork 审查（2026-10-02）：无 CX_USER 时账号隔离失效，全部读写落到 legacy 裸
+    路径 —— 那是原作者随仓库提交的未 scoped 账本。fork 者忘配 Secrets 会让引擎
+    在原作者的账上跑、失败，还随「Commit state update」提交回去。因此 CI
+    （GITHUB_ACTIONS=true）上 run/scheduler 缺 Secrets 一律拒绝；本地 run 维持
+    既有拒绝，本地 scheduler 放行（离线诊断的合法用途走 legacy 路径）。
+    """
+    missing = ("CX_USER" not in os.environ or "CX_PASS" not in os.environ)
+    if action not in ("run", "scheduler") or not missing:
+        return None
+    if github_actions is None:
+        github_actions = os.environ.get("GITHUB_ACTIONS") == "true"
+    if github_actions:
+        return ("缺少 Secrets CX_USER / CX_PASS —— 请到仓库 Settings → Secrets and "
+                "variables → Actions 配置（见 README「快速开始」）。无账号时引擎会"
+                "读写仓库自带的 legacy 账本（原作者数据），CI 上拒绝运行。")
+    if action == "run":
+        return "缺少环境变量 CX_USER / CX_PASS。请在 env 或 GitHub Secrets 中设置。"
+    return None
+
+
 def main():
     ap = argparse.ArgumentParser(
         description="xuexitong MVP E5: Initialize / Run / Switch course learning"
@@ -417,10 +440,10 @@ def main():
                     help="GitHub run ID（用于记录）")
     args = ap.parse_args()
 
-    # 校验 Secrets（run 模式需要）
-    if args.action == "run" and ("CX_USER" not in os.environ or
-                                 "CX_PASS" not in os.environ):
-        print("[!] 缺少环境变量 CX_USER / CX_PASS。请在 env 或 GitHub Secrets 中设置。")
+    # 校验 Secrets（run/scheduler 需要账号；CI 上缺账号直接拒绝，见函数 docstring）
+    _secret_err = validate_action_secrets(args.action)
+    if _secret_err:
+        print(f"[!] {_secret_err}", file=sys.stderr)
         sys.exit(2)
 
     if args.action == "initialize":

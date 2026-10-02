@@ -35,6 +35,9 @@ def main() -> int:
                     help="完整 studentstudy URL（含 courseId/clazzid/cpi/enc 等）")
     ap.add_argument("--course-key", default="",
                     help="课程级 key（course_id_clazz）；缺省由 URL 推导")
+    ap.add_argument("--force", action="store_true",
+                    help="清空当前账号本课程的 registry 后按服务端真源重建"
+                         "（账号对齐，issue #4 建议 1）。用于账本疑似污染/陈旧的显式恢复。")
     ap.add_argument("--out", default="",
                     help="证据 JSON 文件路径（如 docs/evidence/p03_<ts>.json）")
     args = ap.parse_args()
@@ -57,11 +60,13 @@ def main() -> int:
     from app.registry.bootstrap import bootstrap_registry_from_server
     rep = bootstrap_registry_from_server(
         course_key, args.course_url,
-        cx_user=creds["CX_USER"], cx_pass=creds["CX_PASS"])
+        cx_user=creds["CX_USER"], cx_pass=creds["CX_PASS"],
+        force=args.force)
     dump = {
         "run_at_utc": datetime.now(timezone.utc).isoformat(),
         "course_url": args.course_url,
         "course_key": course_key,
+        "force": args.force,
         "report": rep.to_dict(),
         "account_state_dir_exists": (ROOT / "state" / "accounts").exists(),
         "action": "bootstrap",

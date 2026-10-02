@@ -75,14 +75,13 @@ gh secret set CX_USER -b "你的手机号"
 gh secret set CX_PASS -b "你的密码"
 ```
 
-### 3. 初始化 / 自检（通常「可选」）
+### 3. 初始化 / 自检
 
-**想直接跑起来**：仓库已带一条演示默认课程（`state/active_course.json` 已提交）。设好两个
-secret 后，**跑一次 `scheduler`（或等定时）即可** —— 调度内置 P0-3 **服务端真源 bootstrap**：
-账号首次进入该课程时，自动从服务端 catalog 材料化 work 列表并写 `progress.completed`，无需
-你先手动初始化。所以一般场景「Fork + Secrets」两步就够了。
+> **fork 后第一步**：仓库 → **Actions** 页签，如提示 Workflows 被禁用请手动 **Enable**。
+> GitHub 默认不对 fork 启用 Actions；启用后 `test` 工作流随 push/PR 自动跑（离线测试，
+> 不需要 secrets）。
 
-**切到自己想学的课程**（才会用到 `initialize`）：仓库 → **Actions** → 选中 `run` → **Run workflow**：
+**标准流程（推荐）**：仓库 → **Actions** → 选中 `run` → **Run workflow**：
 
 - `action`: **initialize**
 - `course_url`（必填）：学习通**章节 studentstudy URL**，需含
@@ -92,17 +91,38 @@ secret 后，**跑一次 `scheduler`（或等定时）即可** —— 调度内�
   https://mooc1.chaoxing.com/mycourse/studentstudy?chapterId=1217304708&courseId=265997861&clazzid=151695658&cpi=506830460&enc=1bc1bd778f9e00d924fe97b3c63f76f4&mooc2=1&hidetype=0&openc=9b5661be6351e4d46bc29bfa2d69236a
   ```
 
+initialize 只激活课程；随后再跑一次 `action: **scheduler**`，调度内置 P0-3
+**服务端真源 bootstrap**：该账号命名空间里课程账为空时，自动从**你账号的**服务端
+catalog 材料化全部未完成章的 work 列表并写 `progress.completed`，之后每轮自选一个
+视频任务点推进。
+
+> 为什么 fork 用户**必须先 initialize**：账号隔离（P0-2）后，你的活跃课程存放在
+> `state/accounts/<你的账号哈希>/active_course.json` —— 它不随 fork 存在。仓库里
+> 那份 `state/active_course.json` 是原作者的 legacy 数据，你的登录账号读不到它；
+> 直接跑 `scheduler` 会得到 NOOP（"No active course configured, run initialize
+> first"），这是预期行为，不是故障。
+
 **只想先自检「这门课我能不能跑」**：`action: **bootstrap**` + 同一 `course_url`。只做一次服务端
 材料化并打印 `server_completed` / 任务数（幂等：该账号该课程已材料化过 → `NOOP`），不触发完整
 调度。低门槛自检入口。
 
-初始化完成后，`state/active_course.json` 和 `state/courses/<course_id>_<clazz_id>.json` 会自动提交到 main 分支。
+**账本对齐 / 恢复**：若账本疑似被污染或陈旧（如早期版本误继承过他人 legacy 账），
+可显式以服务器为准重建（仅清**当前账号本课程**的 registry，不影响其他账号/课程）：
+本地 `python scripts/bootstrap_p03_real.py --course-url "<同上>" --force`。
+
+初始化完成后，你的账号命名空间下的 `active_course.json` 和
+`courses/<course_id>_<clazz_id>.json` 会自动提交到 main 分支。
 
 > **账号隔离（P0-2）**：从工作目录里登录账号 `CX_USER` 起，本机 run/switch/scheduler 的
 > 全部状态都落到 `state/accounts/<account_id>/` 命名空间（account_id = 对 `CX_USER` 的确定性
-> 哈希），同一课程的**不同账号互不可见**。无登录（离线/诊断）时仍写旧的 `state/courses/`
-> 与 `state/registry/<key>/`。fork 原作者的未 scoped 旧账本**不会被自动绑定成你的账号状态**，
-> 首次使用请对新账号的地址做 `initialize`；旧账本仅作 legacy 参考。
+> 哈希），同一课程的**不同账号互不可见**；cookie 缓存同样按账号隔离
+> （`.cache/cookies-<account_id>.json`，同机切换账号不会误用他人会话）。
+> 无登录（离线/诊断）时仍写旧的 `state/courses/` 与 `state/registry/<key>/`。
+> **fork 原作者的旧账本（legacy 裸路径 + 原作者账号命名空间）不会被绑定成你的状态**：
+> legacy 自动继承默认**关闭**（原作者本机迁移可显式 `XUE_INHERIT_LEGACY=1` 打开），
+> fork 用户一律走服务端真源 bootstrap，从自己账号的真实完成度出发。
+> **CI 上未配置 Secrets 时 scheduler/run 会拒绝运行**（exit 2），而不是落到原作者
+> legacy 账本上跑并提交污染。
 >
 > **服务端真源（P0-3）**：账号首次进入课程（该账号命名空间里该课程 registry 为空）时，
 > `bootstrap_registry_from_server` 从**服务端 catalog** 一次性材料化 work 列表，并把

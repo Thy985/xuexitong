@@ -1,12 +1,18 @@
 """Cookie 持久化：保存/加载登录凭证，跳过重复登录。
 
 借鉴 Autovisor 的 cookie 管理模式：
-  - 登录成功后自动保存 cookie 到 .cache/cookies.json
+  - 登录成功后自动保存 cookie 到 .cache/cookies[-<account>].json
   - 下次启动先加载 cookie，验证是否有效
   - 无效则重新登录并更新 cookie
 
 安全：cookie 是登录会话凭证，绝不写入 git 追踪的 state/ 目录，
 仅保存在本地不可追踪的 .cache/（见 .gitignore），避免随仓库/artifact 泄露。
+
+多账号（P0-2 配套，2026-10-02 fork 审查）：cookie 文件按账号命名空间隔离
+（`.cache/cookies-<account_id>.json`，account_id 来自 CX_USER 的确定性哈希）。
+共享单文件时，同一台机器切换 CX_USER 会拿**上一个账号**的 cookie 静默登录成
+错误账号 —— state 按 env 账号隔离、会话却是别人的，两套真源直接错位。
+无账号（离线/诊断）回退旧文件名 `cookies.json`。
 """
 
 from __future__ import annotations
@@ -19,15 +25,26 @@ from typing import Optional
 
 # 保存在 git 不追踪的本地缓存目录，绝不入库、绝不上传 artifact
 COOKIE_DIR = Path(__file__).resolve().parent.parent / ".cache"
-COOKIE_FILE = COOKIE_DIR / "cookies.json"
+COOKIE_FILE = COOKIE_DIR / "cookies.json"   # legacy（无账号）文件名，保持兼容
+
+
+def _cookie_file() -> Path:
+    """当前账号的 cookie 文件：有 CX_USER → cookies-<account_id>.json。"""
+    try:
+        from models import resolve_account_id
+        acc = resolve_account_id()
+    except Exception:
+        acc = ""
+    return COOKIE_DIR / f"cookies-{acc}.json" if acc else COOKIE_FILE
 
 
 def load_cookies() -> Optional[list[dict]]:
-    """从 .cache/cookies.json 加载已保存的 cookies。"""
-    if not COOKIE_FILE.exists():
+    """从当前账号的 cookie 文件加载已保存的 cookies。"""
+    path = _cookie_file()
+    if not path.exists():
         return None
     try:
-        data = json.loads(COOKIE_FILE.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8"))
         if isinstance(data, list) and len(data) > 0:
             return data
     except Exception:
@@ -36,12 +53,12 @@ def load_cookies() -> Optional[list[dict]]:
 
 
 def save_cookies(context) -> None:
-    """从 Playwright BrowserContext 提取 cookies 并保存。"""
+    """从 Playwright BrowserContext 提取 cookies 并保存（按账号隔离）。"""
     try:
         cookies = context.cookies()
         if cookies:
             COOKIE_DIR.mkdir(parents=True, exist_ok=True)
-            COOKIE_FILE.write_text(
+            _cookie_file().write_text(
                 json.dumps(cookies, ensure_ascii=False, indent=2),
                 encoding="utf-8",
             )
@@ -50,9 +67,9 @@ def save_cookies(context) -> None:
 
 
 def clear_cookies() -> None:
-    """删除已保存的 cookies（强制下次重新登录）。"""
+    """删除当前账号已保存的 cookies（强制下次重新登录）。"""
     try:
-        COOKIE_FILE.unlink(missing_ok=True)
+        _cookie_file().unlink(missing_ok=True)
     except Exception:
         pass
 
