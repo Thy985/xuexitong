@@ -52,7 +52,7 @@ def test_combined_verify_carries_live_finished():
     assert v["video_total"] == 2 and v["video_finished"] == 2
     assert v["live_finished"] == {"1217304741", "1217304741:video2"}
     assert v["live_pending"] == set()
-    assert v["points"] is pts
+    assert v["points"] == pts   # 过滤后返回新列表（多章点级需按章过滤），内容一致
 
 
 def test_combined_verify_rejects_points_from_another_chapter():
