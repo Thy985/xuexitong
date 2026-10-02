@@ -21,6 +21,7 @@
 """
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
@@ -66,6 +67,15 @@ class InheritReport:
 def inherit_from_legacy(course_key: str) -> InheritReport:
     """P0-2 继承：把 legacy 命名空间的真实工作历史合并进当前账号命名空间。
 
+    **默认关闭（2026-10-02 fork 审查定案）**：legacy 账（`state/registry/<key>/`）
+    是仓库提交里的**原作者**未 scoped 旧账，随 fork 一起被复制。若对新 fork 账号
+    （namespace 为空）自动继承，会把原作者的完成/失败历史整本搬进 fork 账本，
+    且幂等护栏（registry 非空 → NOOP）从此挡住 P0-3 服务端真源 bootstrap ——
+    fork 用户看到的"已完成"是原作者的，自己没看的视频永远排不进队列。
+    所以默认**不继承**：fork 用户走 README 记载的 bootstrap 路径，从自己账号的
+    服务端真源材料化。确属原作者本机迁移（legacy 账与账号同主）时，显式设
+    `XUE_INHERIT_LEGACY=1` 打开。
+
     问题（issue #4 第六层卡点）：P0-2 账号隔离把 9 月积累的全部真账
     （78 任务 / 63 video / 48 COMPLETED）留在 `state/registry/<course_key>/`，
     而账号命名空间只有 30 条退化账（29 other + 1 已 COMPLETED video）。
@@ -91,6 +101,14 @@ def inherit_from_legacy(course_key: str) -> InheritReport:
     绝不修改 legacy 源账；只在当前账号命名空间（由调用方 context 决定，测试里用
     `models.set_account_id_hook` 注入）写。
     """
+    import os
+    if os.environ.get("XUE_INHERIT_LEGACY", "").strip().lower() \
+            not in ("1", "true", "yes"):
+        return InheritReport(
+            course_key, mode="noop", status="ok",
+            reason="inherit disabled by default (XUE_INHERIT_LEGACY unset); "
+                   "fork users must bootstrap from their own server truth")
+
     from app.registry.task_registry import (
         load_registry, save_registry, load_legacy_registry)
 
@@ -132,24 +150,38 @@ def bootstrap_registry_from_server(
     cx_user: Optional[str] = None,
     cx_pass: Optional[str] = None,
     persist_progress: bool = True,
+    force: bool = False,
 ) -> BootstrapReport:
     """账号首次进入课程：由服务端真源材料化 work 列表，并把 progress 写成服务端完成数。
 
     `course_key` 传**课程级 key**（`<course_id>_<clazz_id>`，即 `identity.key()`）；账户
     命名空间由当前登录账号（CX_USER / hook）经 P0-2 的存储层注入。`identity 的账号字段。
 
+    `force=True`（issue #4 建议 1 的「账号对齐」出口）：清空该账号命名空间里本课程的
+    registry 再材料化。用于账本疑似被污染/陈旧（如曾误继承过他人 legacy 账、或想以
+    服务器为准全量重建）的显式操作——只抹**当前账号**本课程的 registry 三件套，
+    绝不触碰其他账号与其他课程。
+
     Returns:
         BootstrapReport（败则 status="error"）。
     """
-    from app.registry.task_registry import load_registry
+    from app.registry.task_registry import (
+        ExecutionQueue, load_registry, save_registry, save_queue,
+        save_chapter_points)
     from tvdp.tdvp import fetch_course_detail_and_verify
     from state.course_state import update_course_state, CourseProgress
 
-    # ── 幂等：该账号命名空间已有该课程任何记录 → 不覆盖、不打服务器 ──
     existing = load_registry(course_key)
-    if existing:
+    if existing and not force:
         return BootstrapReport(course_key, mode="noop", status="ok",
                                reason="registry already present; not touched")
+    if force and existing:
+        # 只清当前账号本课程的派生账（registry 三件套），progress 由材料化后重写。
+        save_registry(course_key, {})
+        save_queue(course_key, ExecutionQueue())
+        save_chapter_points(course_key, {})
+        print(f"[bootstrap] force: wiped {len(existing)} task(s) for {course_key}",
+              file=sys.stderr)
 
     _fetch = fetch_course_detail_and_verify(course_url,
                                             cx_user=cx_user, cx_pass=cx_pass)
