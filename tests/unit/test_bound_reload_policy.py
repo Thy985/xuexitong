@@ -49,11 +49,24 @@ def _nav(**kw):
     return should_navigate_to_target(**base)
 
 
-def test_first_video_point_never_navigates():
-    # `<cid>`（N=1）路径是被验证过的稳定链路：第 1 点就是页面"当前"播放器，
-    # Step F 正常等得到 metadata —— 不往这条链路塞新交互（用户 2026-09-21 定）
-    assert _nav(target_vi=1) is False
-    assert _nav(target_vi=0) is False
+# 2026-10-02 修订（feojfe5645 fork run 37018108922 / 37021228799 两次同形实测）：
+# 点 1 派发也会撞「帧在但 video.js 不加载（rs=0/dur=None/paused）」的串行化
+# 停滞 —— 原闸门（N=1 永不激活）让 Step F 只能干等 90s×2 后 FAIL，且 reload
+# 不覆盖这种形状（帧在 → stall_s 恒 0）。修订：N=1 仅在**绑定帧存在且停滞**
+# 时允许激活（bound_found=False —— 帧不在 —— 仍不激活）。
+
+def test_first_video_point_stalls_activate_when_frame_present():
+    """fork 实测形状：N=1、帧在、rs=0 停滞 ≥15s → 允许激活（原闸门会干等到 FAIL）。"""
+    assert _nav(target_vi=1, bound_found=True) is True
+
+
+def test_first_video_point_without_bound_frame_still_never_navigates():
+    """帧不在：完成点无播放器 / 页面未推进到它 —— 激活无意义，维持原语义。"""
+    assert _nav(target_vi=1, bound_found=False) is False
+
+
+def test_first_video_point_short_stall_still_waits():
+    assert _nav(target_vi=1, bound_found=True, stalled_for_s=5.0) is False
 
 
 def test_natural_mode_never_navigates():

@@ -423,6 +423,10 @@ def get_video_state(page, target_objectid: str | None = None) -> dict:
                     duration: (isFinite(v.duration) && v.duration > 0) ? v.duration : null,
                     paused: v.paused, readyState: v.readyState,
                     playbackRate: v.playbackRate, ended: v.ended,
+                    // 元数据停滞诊断（feojfe5645 fork 实测：rs=0 需要区分
+                    // 「源加载失败（error/networkState）」和「等待激活」）
+                    errorCode: v.error ? v.error.code : null,
+                    networkState: v.networkState,
                     src: v.currentSrc || v.src || ''
                 };
             }""")
@@ -633,19 +637,27 @@ def should_navigate_to_target(target_objectid, bound_dur, stalled_for_s,
                               target_vi: int = 0,
                               min_stall_s: float = 15.0,
                               cooldown_s: float = 15.0,
-                              max_attempts: int = 3) -> bool:
+                              max_attempts: int = 3,
+                              bound_found: bool = True) -> bool:
     """绑定模式下，何时该主动激活目标播放器（纯函数，可测）。
 
     真站实证（4738 e2e + C 探测）：cards 页**串行化**任务点 —— 只有页面
     "当前"播放器由页面驱动，目标点的 video.js 实例存在但不加载
     （rs=0/dur=None）。绑定解决"看哪一帧"，激活解决"让这一帧轮到播"。
-    **范围闸门（用户 2026-09-21 定）：仅 `:videoN`（N≥2） dispatch 启用**
-    —— 第 1 点本就是页面当前播放器，`<cid>` 链路已验证稳定，不塞新交互。
-    条件：目标 N≥2 + 绑定播放器没活 + 停滞超阈值 + 冷却已过 + 次数有界。
+    条件：绑定播放器没活 + 停滞超阈值 + 冷却已过 + 次数有界。
+
+    范围闸门（2026-10-02 修订，feojfe5645 fork run 37018108922 / 37021228799
+    两次同形实测）：原闸门「仅 :videoN（N≥2）启用」基于"第 1 点本就是页面
+    当前播放器"——但 fork 用户的首个点 1 派发连续两次撞上「帧在但不加载」
+    的串行化停滞（rs=0/dur=None/paused，90s×2 干等后 FAIL），且 reload 不
+    覆盖这种形状（帧在 → stall_s 恒 0）。修订为：**N=1 仅在绑定帧存在且
+    停滞时**同样允许激活（found 由调用方经 bound_found 传入）；帧不在的
+    N=1 仍不激活（完成点无播放器、未推进点激活无意义），阈值/冷却/次数
+    上限照旧 —— 健康链路（metadata 3~20s 内就绪）不会停滞 15s，不受影响。
     """
     if not target_objectid:
         return False
-    if target_vi < 2:
+    if target_vi < 2 and not bound_found:
         return False
     if bound_dur:
         return False
@@ -895,7 +907,8 @@ def run_test(args, params: "CourseParams | None" = None):
             if should_navigate_to_target(
                     target_objectid, st.get("duration"),
                     (now_f - stalled_since) if stalled_since else 0.0,
-                    nav_attempts, last_nav_at, now_f, target_vi=target_vi):
+                    nav_attempts, last_nav_at, now_f, target_vi=target_vi,
+                    bound_found=bool(st.get("found"))):
                 nav_attempts += 1
                 last_nav_at = now_f
                 stalled_since = now_f
@@ -935,6 +948,8 @@ def run_test(args, params: "CourseParams | None" = None):
                             log(f"[recover] reload failed: {re_}")
             if i % 10 == 0:
                 log(f"  waiting ({i+1}s) found={st.get('found')} dur={dur} "
+                    f"rs={st.get('readyState')} paused={st.get('paused')} "
+                    f"err={st.get('errorCode')} net={st.get('networkState')} "
                     f"reason={st.get('reason')} reloads={video_reload_count}")
 
         if not video_ready:
