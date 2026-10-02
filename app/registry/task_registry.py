@@ -522,6 +522,44 @@ def save_chapter_points(course_key: str, points: dict) -> None:
         points, ensure_ascii=False, indent=2))
 
 
+def materialize_video_counts_from_points(course_key: str,
+                                         job_points: list) -> dict[str, int]:
+    """从一次登录会话读到的实时点级数据反推 `video_counts` 并写入点级快照。
+
+    共享给 bootstrap（`_materialize_from`）和 probe（`_run_tdvp_probe`）。
+    `build_tasks_from_discovery` 只有拿到 `video_counts[cid]>0` 才产 video task；
+    否则未完成章全走 other → reconcile_queue 只收 video → queue 空 → scheduler
+    "No pending task / probe empty"（issue #4 卡点）。校正后的 `combined.points`
+    覆盖第一个未完成章，本函数把它落成点级快照 + video_counts，让 discovery
+    能产出可执行 video 任务。
+
+    Args:
+        course_key: 课程 identity key（账号命名空间由调用方上下文决定）。
+        job_points: `combined["points"]`，元素含 `task_id`（形如 <cid> 或
+            <cid>:videoN）、`type`、`isFinished`。
+    Returns:
+        `{chapter_id: video_total}`（仅含有 video 点的章）。
+    """
+    video_counts: dict[str, int] = {}
+    finished_by_cid: dict[str, int] = {}
+    for p in job_points or []:
+        if p.get("type") != "video":
+            continue
+        tid = str(p.get("task_id") or "")
+        if not tid:
+            continue
+        cid = tid.split(":")[0]
+        video_counts[cid] = video_counts.get(cid, 0) + 1
+        if p.get("isFinished"):
+            finished_by_cid[cid] = finished_by_cid.get(cid, 0) + 1
+    for cid, n in video_counts.items():
+        set_chapter_point_snapshot(
+            course_key, cid,
+            video_total=n, video_finished=finished_by_cid.get(cid, 0),
+            has_video=True)
+    return video_counts
+
+
 def set_chapter_point_snapshot(
     course_key: str,
     cid: str,
