@@ -1,0 +1,24 @@
+{
+  "flow_name": "Standard",
+  "gates": {
+    "G_ci": "required",
+    "G_stop": "required",
+    "G_risk": "required",
+    "G_permission": "optional",
+    "G_hitl": "optional",
+    "G_understanding": "required"
+  },
+  "roles": [
+    "TechLead",
+    "Developer",
+    "Reviewer"
+  ],
+  "risk_signals": [
+    "blast_radius_score=medium",
+    "production_repo=yes",
+    "adr_count=0",
+    "改动对象为 git-tracked 的 CI 运行态账本"
+  ],
+  "generated_by": "ai (hand-rendered from FLOW_MATRIX/GATE_PROFILES/ROLE_PROFILES — select_flow.py blocked)",
+  "flow_matrix_lookup": "FLOW_MATRIX[('medium', 'yes')] = Standard"
+}

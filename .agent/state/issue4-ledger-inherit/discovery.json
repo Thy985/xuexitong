@@ -1,0 +1,36 @@
+{
+  "project": "D:\\Projects\\Archive\\xuexitong",
+  "language_primary": "python",
+  "framework": "python",
+  "package_files": [
+    "app/requirements.txt"
+  ],
+  "entry_points": [
+    "scheduler/scheduler.py",
+    "scripts/ci_local_run.py",
+    "app/e2_headed_gha.py"
+  ],
+  "existing_agent_config": [],
+  "governing_protocol_present": "partial",
+  "harness": "claude-code",
+  "blast_radius_score": "medium",
+  "production_repo": "yes",
+  "irreversible_resources": [],
+  "ci_surface": "github-actions",
+  "ci_workflows": [
+    ".github/workflows/run.yml",
+    ".github/workflows/e2.yml",
+    ".github/workflows/e3.yml",
+    ".github/workflows/test.yml"
+  ],
+  "pre_push_hook": "no",
+  "adr_count": 0,
+  "adr_latest": null,
+  "phase_contracts": 0,
+  "verification_reports": 0,
+  "generated_by": "ai (hand-rendered — select_flow.py blocked by permission classifier)",
+  "deviation_notes": [
+    "harness 手工填 claude-code：scan_repo 的 harness 探测依赖 project_root/.claude 或 parent/.claude，本项目不存在，脚本会落 unknown",
+    "blast_radius_score 手工升 medium：脚本启发式（adr_count>=10 或 phase_contracts>=5）判 low，但本次改动对象是 CI 运行态账本，风险来自数据语义"
+  ]
+}

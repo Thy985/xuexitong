@@ -921,6 +921,15 @@ def _ensure_bootstrap_on_start(course_url: str, identity_key: str,
         return  # 无账号：account 命名空间不存在，维持原离线/legacy 路径
     try:
         from app.registry.task_registry import load_registry
+        # P0-2 继承先于 bootstrap 材料化：legacy 账已有 video 时直接并入 account 命名空间，
+        # 让本轮及后续 round 都从「真实工作历史」出发；bootstrap 的幂等护栏（registry
+        # 非空 → NOOP）会因此不再误触发，退化账死循环被打破（issue #4 第六层卡点）。
+        from app.registry.bootstrap import inherit_from_legacy
+        rep = inherit_from_legacy(identity_key)
+        if rep.mode != "noop":
+            print(f"[scheduler] P0-2 inherit: mode={rep.mode} status={rep.status} "
+                  f"legacy_tasks={rep.legacy_tasks} inherited={rep.inherited} "
+                  f"total_tasks={rep.total_tasks} reason={rep.reason}", flush=True)
         if load_registry(identity_key):          # 非空 → 幂等 NOOP
             return
         from tvdp.tdvp import fetch_course_detail_and_verify
