@@ -987,30 +987,32 @@ def points_prove_no_video(job_points: Optional[list]) -> bool:
 
 
 def combined_verify_from_points(points: Optional[list], cid: str = "") -> Optional[dict]:
-    """目录会话顺带读到的点级 → E6.2 复核形状（与 live_verify_chapter 返回同构）。
+    """会话内读到的点级（可跨多章）→ E6.2 复核形状（与 live_verify_chapter 同构）。
 
-    除了聚合数与 live_pending，还必须带 **live_finished**：reconcile 的 D14 治愈
-    （服务端判 finished 的点直接落 COMPLETED）只认这个集合。只传 live_pending 的
-    旧实现让「整章早已看完」的候选治不好 —— run 36984897107 的 1217304741 进页 0%
-    服务端就回 isPassed=true，仍被 rollback 优先规则重新投出去白看 9.5 分钟。
-
-    点级不属于 `cid`（深读目标被 _corrected_target_cid 校正到别的章）时返回 None，
-    交回独立复核：拿别章的点数当本章快照会把 has_video 写错，从队列里冻错章。
+    `cid` 给定时先把点级**过滤到该章**——多章深读后 `_combined_points` 覆盖全部
+    未完成章，不过滤会把别章的点数合计进本章快照；该章没有点 → 返回 None 交回
+    独立复核。live_finished 必须带上：reconcile 的 D14 治愈（服务端判 finished
+    的点直接落 COMPLETED）只认这个集合。只传 live_pending 的旧实现让「整章早已
+    看完」的候选治不好 —— run 36984897107 的 1217304741 进页 0% 服务端就回
+    isPassed=true，仍被 rollback 优先规则重新投出去白看 9.5 分钟。
     """
     if not points:
         return None
     from tvdp.tdvp import build_live_finished, build_live_pending, chapter_video_summary
     if cid:
-        covered = {str(p.get("task_id") or "").split(":")[0] for p in points}
-        if covered and cid not in covered:
+        pts = [p for p in points
+               if str(p.get("task_id") or "").split(":")[0] == str(cid)]
+        if not pts:
             return None
-    tv, tf = chapter_video_summary(points)
+    else:
+        pts = list(points)
+    tv, tf = chapter_video_summary(pts)
     return {
         "video_total": tv,
         "video_finished": tf,
-        "live_pending": build_live_pending(points),
-        "live_finished": build_live_finished(points),
-        "points": points,
+        "live_pending": build_live_pending(pts),
+        "live_finished": build_live_finished(pts),
+        "points": pts,
     }
 
 
@@ -1523,7 +1525,12 @@ def _run_tdvp_probe(course_url: str, course_key: str,
             chapters_raw,
             video_counts=video_counts_from_points(load_chapter_points(course_key)))
         reg_before = load_registry(course_key)
-        existing, report = reconcile_registry(course_key, reg_before, tasks, dom_status)
+        # 多章点级真源：本次会话读到 finished 的点，铸造时直接落完成（D14-mint）。
+        # 否则已看完的点以裸 DISCOVERED 进队列被盲目重投（站点不为已完成点起流）。
+        from tvdp.tdvp import build_live_finished
+        existing, report = reconcile_registry(
+            course_key, reg_before, tasks, dom_status,
+            live_finished=build_live_finished(_combined_points))
         save_registry(course_key, existing)
         # [DIAG] 确认第一次 reconcile 后 BLOCKED 是否存活（活体可能在此被 dom_done 覆盖）
         _dp = "1217304719"
@@ -1625,10 +1632,11 @@ def _run_tdvp_probe(course_url: str, course_key: str,
             head_cid = head_chapter_id(head, existing, tasks)
             if head_cid:
                 verify = None
-                # 洞3：目录发现阶段已顺带读到的该章点级（同一次浏览器），直接复用，
-                #     避免再开一次浏览器（live_verify_chapter）去重复深读。
+                # 洞3：目录发现阶段已顺带读到的点级（同一次浏览器，覆盖全部未完成
+                #     章），按章过滤后直接复用，避免再开一次浏览器重复深读；
+                #     head 章不在读数里时 combined_verify 返回 None → 走独立复核。
                 #     live_finished 一并带上（D14 治愈入口），见 combined_verify_from_points。
-                if _combined_points and head_cid == _pred_head:
+                if _combined_points:
                     verify = combined_verify_from_points(_combined_points, head_cid)
                 if verify is None:
                     verify = live_verify_chapter(
