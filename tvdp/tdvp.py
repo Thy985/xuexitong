@@ -699,6 +699,9 @@ def fetch_course_detail_and_verify(
                         params.get("course_id", ""),
                         params.get("clazz_id", ""),
                         params.get("cpi", ""),
+                        enc=params.get("enc", ""),
+                        openc=params.get("openc"),
+                        hidetype=params.get("hidetype"),
                     )
                     points.extend(pts or [])
                 except Exception as pe:
@@ -1021,19 +1024,31 @@ def read_chapter_job_points(
     course_id: str,
     clazz_id: str,
     cpi: str,
+    enc: str = "",
+    openc: Optional[str] = None,
+    hidetype: Optional[str] = None,
 ) -> list[dict]:
     """L2 live verification：打开指定章节的 cards 帧，读其真实任务点列表。
 
     返回 [{task_id, type, title, finished}]，task_id 形如 <chapterId>（video）或
     <chapterId>:<type>。只对 conflict/STALE 的章节做，不用于被动 discovery
     （成本梯度：L1 catalog 便宜，L2 每章一次，L3 才真正重播）。
+
+    `enc` 必须来自**当前登录账号自己的**课程 URL（feojfe5645 fork 实测回归）：
+    enc/cpi/openc 都是按用户签发的签名，硬编码原作者的 enc 会让 fork 用户的
+    会话拿别人的签名请求 → cards 帧整页不渲染（cards_frames=0）→ 全课程永远
+    发现不了任何视频点 → 队列恒空 NOOP。缺省时省略该参数（离线/测试）。
     """
-    page.goto(
-        f"https://mooc1.chaoxing.com/mycourse/studentstudy?chapterId={knowledge_id}"
-        f"&courseId={course_id}&clazzid={clazz_id}&cpi={cpi}"
-        "&enc=1bc1bd778f9e00d924fe97b3c63f76f4&mooc2=1&hidetype=0",
-        wait_until="domcontentloaded", timeout=30000,
-    )
+    url = (f"https://mooc1.chaoxing.com/mycourse/studentstudy"
+           f"?chapterId={knowledge_id}&courseId={course_id}"
+           f"&clazzid={clazz_id}&cpi={cpi}&mooc2=1")
+    if enc:
+        url += f"&enc={enc}"
+    if hidetype:
+        url += f"&hidetype={hidetype}"
+    if openc:
+        url += f"&openc={openc}"
+    page.goto(url, wait_until="domcontentloaded", timeout=30000)
     page.wait_for_timeout(7000)
 
     points: list[dict] = []
@@ -1132,8 +1147,12 @@ def live_verify_chapter(
     cpi: str,
     cx_user: str,
     cx_pass: str,
+    enc: str = "",
 ) -> Optional[dict]:
     """独立章节 live 复核：打开浏览器 → read_chapter_job_points。
+
+    `enc` 必须来自当前登录账号自己的课程 URL（同 read_chapter_job_points 的
+    fork 回归说明）。
 
     Returns dict 含 {points, video_total, video_finished, live_pending,
     live_finished}；失败返回 None。供 scheduler 在选任务前对目标章做 L2 实校
@@ -1157,7 +1176,8 @@ def live_verify_chapter(
             pg = b.new_page()
             ensure_login(pg, pg.context, "https://mooc1.chaoxing.com", user, pw)
             cid_old = knowledge_id
-            pts = read_chapter_job_points(pg, cid_old, course_id, clazz_id, cpi)
+            pts = read_chapter_job_points(pg, cid_old, course_id, clazz_id, cpi,
+                                          enc=enc)
             b.close()
     except Exception as e:
         print(f"[tdvp] live_verify_chapter error: {e}", file=sys.stderr)
