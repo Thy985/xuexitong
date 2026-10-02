@@ -138,6 +138,51 @@ class TestBootstrap:
         rep = bootstrap_registry_from_server(course_key, "http://x")
         assert rep.status == "error"
 
+    def test_materialize_produces_video_task_when_points_has_video(self,
+                                                                   storage_dirs,
+                                                                   monkeypatch):
+        """修复回归（issue #4 根因之二）：bootstrap 材料化时 combined 带队首章 video 点，
+        registry 必须产出可执行的 video 任务，且 reconcile_queue 有项——
+        否则全 other 退化账 → queue 恒空 → scheduler 报 'No pending task' 又一个 NOOP。
+        """
+        from app.registry import bootstrap as BS
+        from app.registry.task_registry import load_registry, reconcile_queue
+        id_ = _identity()
+        _set_account("acc-video")
+        course_key = id_.key()
+        chapters = [_ch("1217304719", "pending", "点对点协议PPP"),
+                    _ch("1217304721", "pending", "使用广播信道的数据链路层")]
+        # combined 带队首章（1217304719）的实时 video 点（1 个未完成）
+        monkeypatch.setattr(
+            "tvdp.tdvp.fetch_course_detail_and_verify",
+            lambda *a, **k: {"chapters": chapters, "points": [
+                {"task_id": "1217304719", "type": "video",
+                 "isFinished": False, "titleText": "PPP视频"},
+            ]})
+        rep = BS.bootstrap_registry_from_server(course_key, "http://x")
+        assert rep.status == "ok"
+
+        reg = load_registry(course_key)
+        assert reg, "bootstrap 应产出 registry"
+        types = {t.task_type for t in reg.values()}
+        assert "video" in types, \
+            f"bootstrap 必须产出 video 任务（缺 video → queue 恒空），实际: {types}"
+        video_tasks = [t for t in reg.values() if t.task_type == "video"]
+        assert video_tasks and all(t.chapter_id == "1217304719"
+                                   for t in video_tasks), \
+            "video 任务应归属 combined.points 里出现的章（队首章）"
+
+        # 队首章点级快照应已写入（scheduler 后续 live 复核可复用）
+        from app.registry.task_registry import load_chapter_points
+        snap = load_chapter_points(course_key)
+        assert snap.get("1217304719", {}).get("has_video") is True
+
+        # 决定性回归点：reconcile_queue 必须产出至少 1 个可执行项
+        q = reconcile_queue(course_key, reg, set(), points_map={})
+        assert len(q.items) >= 1, \
+            f"queue 必须非空才能推进，实际: {len(q.items)}"
+        assert q.items[0]["task_id"] == "1217304719"
+
 
 class TestSchedulerHook:
     """调度 Step 1.5 钩子 `_ensure_bootstrap_on_start`。

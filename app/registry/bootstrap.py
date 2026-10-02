@@ -108,7 +108,34 @@ def _materialize_from(course_key, course_url, combined,
     points = combined.get("points") or []
     live_done = build_live_finished(points)
 
-    discovery_tasks = build_tasks_from_discovery(chapters)
+    # ── P0-3 根因修复（issue #4）：bootstrap 必须产出可执行的 video 任务 ──
+    # `build_tasks_from_discovery` 只有拿到 `video_counts[cid]>0` 才产 video task；
+    # 否则所有未完成章都走 `other` 兜底 → registry 全 other → reconcile_queue 只收
+    # video（见 task_registry.reconcile_queue）→ queue 恒空 → scheduler 报
+    # "No pending task / probe empty" → 又一个 NOOP。而 combined 响应里已带本次
+    # 登录会话读到的队首章点级数据（`points`），正好可反推出 video_counts。
+    # 只修复"账上至少有一个 video 可执行任务"这一最小正确性；其余章保持 other，
+    # 由 scheduler 每轮 Step 4.5 的 live 复核渐进补全（该机制已内建）。
+    video_counts: dict[str, int] = {}
+    for p in points or []:
+        if p.get("type") != "video":
+            continue
+        tid = str(p.get("task_id") or "")
+        if not tid:
+            continue
+        cid = tid.split(":")[0]
+        video_counts[cid] = video_counts.get(cid, 0) + 1
+    if video_counts:
+        from app.registry.task_registry import set_chapter_point_snapshot
+        for cid, n in video_counts.items():
+            finished = sum(1 for p in points or []
+                           if str(p.get("task_id") or "").split(":")[0] == cid
+                           and p.get("isFinished"))
+            set_chapter_point_snapshot(course_key, cid,
+                                       video_total=n, video_finished=finished,
+                                       has_video=True)
+
+    discovery_tasks = build_tasks_from_discovery(chapters, video_counts=video_counts)
     if not discovery_tasks:
         return BootstrapReport(course_key, mode="bootstrap",
                                reason="no tasks from server catalog", status="error")
