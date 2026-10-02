@@ -110,3 +110,27 @@ def test_probe_wires_snapshot_counts_into_discovery(monkeypatch):
 
     assert seen.get("video_counts") == {CID: 2}, (
         f"主 reconcile 必须把点级快照换算成的 counts 交给 discovery，实际 {seen!r}")
+
+
+def test_corrected_target_cid_skips_completed_chapter():
+    """回归（issue #4 第三层卡点）：URL 锚定章已完成时，深读目标改到第一个未完成章。
+
+    active_course.raw_url 沿用旧 initialize 的 chapterId（可能已完成）。若仍读它的点，
+    video 标记落空 → queue 空 → scheduler 报 "No pending task"。校正必须让它落到
+    真正待推进的章上。
+    """
+    from tvdp.tdvp import _corrected_target_cid
+    chapters = [
+        {"chapter_id": "1217304706", "title": "已完成", "status": "completed"},
+        {"chapter_id": "1217304719", "title": "点对点协议PPP", "status": "pending"},
+        {"chapter_id": "1217304721", "title": "广播信道", "status": "pending"},
+    ]
+    assert _corrected_target_cid("1217304706", chapters) == "1217304719"
+    # target 未完成 → 原样返回
+    assert _corrected_target_cid("1217304719", chapters) == "1217304719"
+    # 无目录 / 空 target → 原样
+    assert _corrected_target_cid("", chapters) == ""
+    assert _corrected_target_cid("1217304706", []) == "1217304706"
+    # 全部已完成 → 回退原 target（无未完成章可读）
+    all_done = [{"chapter_id": "1217304706", "title": "x", "status": "completed"}]
+    assert _corrected_target_cid("1217304706", all_done) == "1217304706"
