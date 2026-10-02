@@ -116,6 +116,27 @@ def _make_ui_completed(info) -> TaskRecord:
     )
 
 
+def _make_server_verified(info) -> TaskRecord:
+    """铸造即服务端已判 finished 的点 → 直接落 COMPLETED（SERVER_VERIFIED）。
+
+    多章点级深读把各章的视频点一次点亮后，已 finished 的点若仍按 DISCOVERED
+    铸入，会以裸记录进队列被盲目重投 —— 站点不为已完成点起流（D14 同源结论：
+    服务端 finished 判定本身就是真实事件）。bootstrap 的 `_materialize_from`
+    早就把 live_finished 传进 reconcile，但 mint 路径从未消费它 —— 本分支让
+    该参数对空账也生效。
+    """
+    rec = _make_discovered(info)
+    rec.status = "COMPLETED"
+    now = _now()
+    rec.verification = Verification(
+        level="SERVER_VERIFIED", verified_at_utc=now, run_id="",
+        source_detail="live job points: server marked this point finished")
+    rec.completion_evidence = CompletionEvidence(
+        type="SERVER_VERIFIED", source="live job points", run_id="",
+        detail="server finished marker on the exact point (mint-time heal)")
+    return rec
+
+
 def downgrade_to_unknown(t: TaskRecord) -> None:
     """把无有效证据的 COMPLETED 降级为 UNKNOWN（不再保持 COMPLETED，也不自动执行）。
 
@@ -325,7 +346,15 @@ def reconcile_registry(
         else:
             # 服务器 DOM 未显示完成
             if old is None:
-                if (getattr(t, "task_type", "video") or "video") != "video":
+                if tid in live_finished:
+                    # D14-mint：服务端已判 finished 的点铸造即落完成，否则裸
+                    # DISCOVERED 进队列被盲目重投（站点不为已完成点起流）。
+                    result[tid] = _make_server_verified(t)
+                    report.healed_by_server += 1
+                    report.repair_map[tid] = {
+                        "before": "absent", "after": "COMPLETED",
+                        "reason": "server live truth: point finished at mint"}
+                elif (getattr(t, "task_type", "video") or "video") != "video":
                     # 非 video 残余 task：不自动执行，标 pending/unsupported（§6）
                     rec = _make_discovered(t)
                     rec.status = "PENDING"

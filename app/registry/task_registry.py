@@ -305,13 +305,22 @@ class TaskRecord:
         return True
 
     def point_is_server_verified(self) -> bool:
-        """该**点**自身是否带服务端确认（isPassed 的具体对象 id）。
+        """该**点**自身是否带服务端确认。
+
+        两种形状都算：isPassed 首捕的对象 id（经典路径），或 live 点级读数直接判
+        finished（`_heal_by_server_truth` / 铸造 heal，source 固定 "live job
+        points"，无 oid）。后者若无此放宽，`stale_completed_by_catalog` 的章级
+        粗读数会把 healed 记录打回 STALE 重投 —— 站点不为已完成点起流，白耗一次
+        投递（2026-10-02 多章深读方案定案）。
 
         status 会随后续 run 翻脸（FAILED/UNKNOWN），这条不会 —— 多视频章里"第 1 点已过、
         第 2 点没学到"时，靠它判断剩余工作该由兄弟点记录承载。
         """
-        return (getattr(self.verification, "level", "") == "SERVER_VERIFIED"
-                and bool(getattr(self.completion_evidence, "passed_object_ids", None)))
+        if getattr(self.verification, "level", "") != "SERVER_VERIFIED":
+            return False
+        if getattr(self.completion_evidence, "passed_object_ids", None):
+            return True
+        return getattr(self.completion_evidence, "source", "") == "live job points"
 
     def revoked_by_chapter_reading(self) -> bool:
         """该点的「未完成」结论是不是**章级**粗读数下的 —— 而不是这个点自己没过。
