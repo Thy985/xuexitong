@@ -986,6 +986,34 @@ def points_prove_no_video(job_points: Optional[list]) -> bool:
     return not any((p or {}).get("type") == "video" for p in job_points)
 
 
+def combined_verify_from_points(points: Optional[list], cid: str = "") -> Optional[dict]:
+    """目录会话顺带读到的点级 → E6.2 复核形状（与 live_verify_chapter 返回同构）。
+
+    除了聚合数与 live_pending，还必须带 **live_finished**：reconcile 的 D14 治愈
+    （服务端判 finished 的点直接落 COMPLETED）只认这个集合。只传 live_pending 的
+    旧实现让「整章早已看完」的候选治不好 —— run 36984897107 的 1217304741 进页 0%
+    服务端就回 isPassed=true，仍被 rollback 优先规则重新投出去白看 9.5 分钟。
+
+    点级不属于 `cid`（深读目标被 _corrected_target_cid 校正到别的章）时返回 None，
+    交回独立复核：拿别章的点数当本章快照会把 has_video 写错，从队列里冻错章。
+    """
+    if not points:
+        return None
+    from tvdp.tdvp import build_live_finished, build_live_pending, chapter_video_summary
+    if cid:
+        covered = {str(p.get("task_id") or "").split(":")[0] for p in points}
+        if covered and cid not in covered:
+            return None
+    tv, tf = chapter_video_summary(points)
+    return {
+        "video_total": tv,
+        "video_finished": tf,
+        "live_pending": build_live_pending(points),
+        "live_finished": build_live_finished(points),
+        "points": points,
+    }
+
+
 def duration_probe_policy(video_index) -> "tuple[bool, float]":
     """`(要不要先激活目标点, 轮询预算秒)`（纯函数）。
 
@@ -1596,18 +1624,12 @@ def _run_tdvp_probe(course_url: str, course_key: str,
             head = queue.items[0]
             head_cid = head_chapter_id(head, existing, tasks)
             if head_cid:
-                from tvdp.tdvp import chapter_video_summary, build_live_pending
                 verify = None
                 # 洞3：目录发现阶段已顺带读到的该章点级（同一次浏览器），直接复用，
                 #     避免再开一次浏览器（live_verify_chapter）去重复深读。
+                #     live_finished 一并带上（D14 治愈入口），见 combined_verify_from_points。
                 if _combined_points and head_cid == _pred_head:
-                    tv, tf = chapter_video_summary(_combined_points)
-                    verify = {
-                        "video_total": tv,
-                        "video_finished": tf,
-                        "live_pending": build_live_pending(_combined_points),
-                        "points": _combined_points,
-                    }
+                    verify = combined_verify_from_points(_combined_points, head_cid)
                 if verify is None:
                     verify = live_verify_chapter(
                         head_cid,
@@ -1620,6 +1642,7 @@ def _run_tdvp_probe(course_url: str, course_key: str,
                 if verify is not None:
                     total_v = verify.get("video_total", 0)
                     live_pending = verify.get("live_pending") or set()
+                    live_finished = verify.get("live_finished") or set()
                     # 洞2：点级真源快照存进 registry（缓存层）；done 由点级校准。
                     from app.registry.task_registry import (
                         set_chapter_point_snapshot, load_chapter_points,
@@ -1635,7 +1658,8 @@ def _run_tdvp_probe(course_url: str, course_key: str,
                     video_counts = {head_cid: total_v} if total_v > 0 else None
                     tasks2 = build_tasks_from_discovery(chapters_raw, video_counts=video_counts)
                     existing2, report2 = reconcile_registry(
-                        course_key, existing, tasks2, dom_status, live_pending=live_pending)
+                        course_key, existing, tasks2, dom_status,
+                        live_pending=live_pending, live_finished=live_finished)
                     # 幻影 :videoN 在**投递之前**收掉：同一次 live 读数既给了该章真实的
                     # 点列表，就没有理由再让引擎花一整晚的唯一次投递去撞它（#26）。
                     from app.registry.reconcile import prune_phantom_points_after_refine
