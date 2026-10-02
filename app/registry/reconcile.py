@@ -176,7 +176,16 @@ def reconcile_registry(
         # `<cid>` 同 title，一旦走 by_title 匹配就会被当成"格式迁移"合并掉，整章的
         # 兄弟点账目随之消失（第 4 轮 M0 run1：`tasks=82 → 74`，少的是 8 条点级记录），
         # 而"已确认的点不再重投"的护栏正因缺少兄弟点而失效。
-        matched = None if ":" in old_tid else by_title.get(old_rec.title)
+        # 迁移目标还必须是 **video** discovery 任务（run 36984897107 回归）：本轮
+        # discovery 对无点级快照的章只产 `<cid>:other`，旧实现把 plain 视频记录
+        # （含 SERVER_VERIFIED 完成证据的 COMPLETED、待学的 PENDING/DISCOVERED）也
+        # 迁进去，随后又被 upgraded 里的裸 `:other` 覆盖 —— 88 条账本一轮蒸发 28 条
+        # （19 条完成证据清零、9 个未完成视频任务从此进不了 video-only 队列）。
+        # 非视频 title 命中只用于同步目录位置，身份不动。
+        _tmatch = None if ":" in old_tid else by_title.get(old_rec.title)
+        matched = None
+        if _tmatch is not None and (getattr(_tmatch, "task_type", "video") or "video") == "video":
+            matched = _tmatch
         if matched and getattr(matched, "task_id", None):
             was_blocked = getattr(old_rec, "status", "") == "BLOCKED"
             migrated = TaskRecord(
@@ -207,6 +216,8 @@ def reconcile_registry(
         else:
             # 不在最新 discovery，也没匹配到新 title → 保留诊断，不删除历史。
             # 若曾是 COMPLETED 但无证据 → 修正为 UNKNOWN。
+            if _tmatch is not None:
+                _sync_meta(old_rec, _tmatch)   # 同章记录对齐目录位置（不动状态机）
             if old_rec.status == "COMPLETED" and not (has_strong_evidence(old_rec) or has_ui_evidence(old_rec)):
                 downgrade_to_unknown(old_rec)
                 report.repair_map[old_tid] = {
@@ -219,6 +230,17 @@ def reconcile_registry(
     # P0-11：迁移产生的旧 task_id 一律淘汰，保证 canonical 唯一（不双键）。
     for _old in migrated_old:
         result.pop(_old, None)
+    # 冲突合并：迁移产物与 canonical 记录撞同一新 id 时，不得裸覆盖 —— 迁移产物
+    # 承载旧 id 的完成证据/尝试史，canonical 是新 id 的当前状态（run 36984897107
+    # 里裸记录覆盖带证据迁移产物、整批蒸发的事故形状）。规则：迁移产物带强证据
+    # （SERVER_VERIFIED/RECHECK）且 canonical 无 → 采迁移产物；否则保留 canonical，
+    # 它马上会在主循环里按新 discovery 对账。
+    for _k, _mig in repaired.items():
+        _cur = upgraded.get(_k)
+        if _cur is not None and (
+                _evidence_level(_mig) in ("SERVER_VERIFIED", "RECHECK")
+                and _evidence_level(_cur) not in ("SERVER_VERIFIED", "RECHECK")):
+            upgraded[_k] = _mig
     result.update(repaired)
     result.update(upgraded)
 

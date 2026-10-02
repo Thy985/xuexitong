@@ -1119,8 +1119,9 @@ def live_verify_chapter(
 ) -> Optional[dict]:
     """独立章节 live 复核：打开浏览器 → read_chapter_job_points。
 
-    Returns dict 含 {points, video_total, video_finished, live_pending}；
-    失败返回 None。供 scheduler 在选任务前对目标章做 L2 实校（成本有界）。
+    Returns dict 含 {points, video_total, video_finished, live_pending,
+    live_finished}；失败返回 None。供 scheduler 在选任务前对目标章做 L2 实校
+    （成本有界）。
     """
     from playwright.sync_api import sync_playwright
     import os
@@ -1151,6 +1152,7 @@ def live_verify_chapter(
         "video_total": total,
         "video_finished": finished,
         "live_pending": build_live_pending(pts),
+        "live_finished": build_live_finished(pts),
     }
 
 
