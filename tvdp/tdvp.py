@@ -582,6 +582,34 @@ def fetch_course_discovery(course_url: str, cx_user: Optional[str] = None,
         return None
 
 
+def _corrected_target_cid(target_cid: str, chapters: list[dict]) -> str:
+    """校正深读目标章（纯函数，issue #4 第三层卡点）。
+
+    调用方锚定的 target 章在目录里可能已完成（常见：active_course.raw_url 沿用旧
+    initialize 时的 chapterId 锚点）。读已完成章的点没有意义 —— 它 COMPLETED 不进
+    queue，产出的 video 标记落空，其余待学章全走 other → queue 空 → scheduler 报
+    "No pending task / probe empty"。校正为目录里**第一个未完成章**（status !=
+    completed），让 bootstrap / probe 材料化出的 video 标记落在真正待推进的章上。
+
+    Args:
+        target_cid: 调用方原始锚定的章 id（可为空）。
+        chapters: 目录提取结果 [{chapter_id, title, status, ...}]（可为空）。
+    Returns:
+        应深读的章 id。target 未完成 / 无目录 / 无未完成章时原样返回 target_cid。
+    """
+    if not chapters or not target_cid:
+        return target_cid
+    status_of = {str(c.get("chapter_id") or ""): str(c.get("status") or "")
+                 for c in chapters}
+    if status_of.get(str(target_cid)) != "completed":
+        return target_cid
+    first_pending = next(
+        (str(c.get("chapter_id") or "") for c in chapters
+         if str(c.get("status") or "") != "completed"),
+        None)
+    return first_pending or target_cid
+
+
 def fetch_course_detail_and_verify(
     course_url: str,
     target_cid: str = "",
@@ -645,11 +673,20 @@ def fetch_course_detail_and_verify(
                       "(still extracting)", file=sys.stderr)
             chapters = extract_catalog_from_page(page, course_url)
 
+            # ── target 校正（issue #4 第三层卡点）──────────────────────────
+            # 若调用方锚定的 target 章在目录里已完成（常见：active_course.raw_url
+            # 沿用旧 initialize 时的 chapterId 锚点），读它的点没有意义 —— 该章
+            # COMPLETED 不进 queue，产出的 video 标记会落空，其余待学章全走 other
+            # → queue 空 → scheduler 报 "No pending task / probe empty"。
+            # 校正：同浏览器内改读目录里**第一个未完成章**（status != completed）
+            # 的点，让 bootstrap / probe 材料化出的 video 标记落在真正待推进的章上。
+            effective_target = _corrected_target_cid(target_cid, chapters)
+
             points = []
-            if target_cid:
+            if effective_target:
                 try:
                     loaded = read_chapter_job_points(
-                        page, target_cid,
+                        page, effective_target,
                         params.get("course_id", ""),
                         params.get("clazz_id", ""),
                         params.get("cpi", ""),
