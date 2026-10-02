@@ -1443,6 +1443,15 @@ def _run_tdvp_probe(course_url: str, course_key: str,
             from tvdp.tdvp import fetch_course_discovery
             chapters_raw = fetch_course_discovery(course_url)
             _combined_points = []
+        # ── issue #4 第五层卡点：把本次会话读到的点级落成快照 ──────────
+        # 校正后的 `_combined_points` 覆盖第一个未完成章，但若不写入点级快照，
+        # 下方 `build_tasks_from_discovery(..., video_counts=video_counts_from_points(
+        # load_chapter_points()))` 拿不到 video_counts → 该章走 other → queue 空 →
+        # "No pending task / probe empty"。bootstrap 已通过
+        # materialize_video_counts_from_points 修复同一问题；probe 共享同一函数。
+        if _combined_points:
+            from app.registry.task_registry import materialize_video_counts_from_points
+            materialize_video_counts_from_points(course_key, _combined_points)
         # 目录拉取空：可能是 CI/Xvfb 抖动的瞬时失败，先显式重试一次。
         # 重试后仍空 → **不臆测选章**（不调用 _fallback_chapter 硬猜）：
         #   否则会像 run 34564369602 那样「目录空 → 兜底到非目标章」，
