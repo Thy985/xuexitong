@@ -22,9 +22,15 @@ def _clear_hook():
 
 @pytest.fixture
 def storage_dirs(tmp_path, monkeypatch):
-    """把 TASKS_DIR 重定向到 tmp/registry；legacy 与 account 命名空间同在一个 tmp 下。"""
+    """把 TASKS_DIR 重定向到 tmp/registry；legacy 与 account 命名空间同在一个 tmp 下。
+
+    本文件的既有用例覆盖**继承机制本身**（原作者本机迁移路径）——该路径现已默认
+    关闭（fork 安全，见 inherit_from_legacy docstring），这里统一显式打开；
+    fork 默认（不继承）行为在 TestForkDefaultNoInherit 里单独覆盖。
+    """
     from app.registry import task_registry as tr
     from state import course_state as cs
+    monkeypatch.setenv("XUE_INHERIT_LEGACY", "1")
     state_root = tmp_path / "state"
     monkeypatch.setattr(tr, "TASKS_DIR", state_root / "registry")
     monkeypatch.setattr(cs, "STATE_DIR", state_root)
