@@ -481,6 +481,24 @@ def save_registry(course_key: str, registry: dict[str, TaskRecord]) -> None:
     _atomic_write_text(d / "tasks.json", text)
 
 
+def load_legacy_registry(course_key: str) -> dict[str, TaskRecord]:
+    """P0-2 前 legacy 命名空间（`<repo>/state/registry/<course_key>/`）的只读访问。
+
+    刻意**不**走 `resolve_account_id()` / `set_account_id_hook`——hook 一旦设上，
+    `_registry_dir()` 会指向 account namespace，`load_registry` 就读不到 legacy 账。
+    继承（`bootstrap.inherit_from_legacy`）需要跨命名空间读 legacy 账，
+    用本函数直读固定 legacy 路径；不存在的账返回空 dict。
+    """
+    f = TASKS_DIR / course_key / "tasks.json"
+    if not f.exists():
+        return {}
+    try:
+        data = json.loads(f.read_text(encoding="utf-8"))
+        return {k: TaskRecord.from_dict(v) for k, v in data.items()}
+    except Exception:
+        return {}
+
+
 def load_queue(course_key: str) -> ExecutionQueue:
     f = _queue_file(course_key)
     if not f.exists():
