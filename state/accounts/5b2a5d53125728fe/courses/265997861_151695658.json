@@ -10,11 +10,11 @@
     "cpi": "506830460",
     "title": "course_265997861",
     "raw_url": "https://mooc1.chaoxing.com/mycourse/studentstudy?chapterId=1217304719&courseId=265997861&clazzid=151695658&cpi=506830460&enc=1bc1bd778f9e00d924fe97b3c63f76f4&mooc2=1&hidetype=0&openc=9b5661be6351e4d46bc29bfa2d69236a",
-    "resolved_at_utc": "2026-10-02T01:26:11.229132+00:00",
+    "resolved_at_utc": "2026-09-30T01:26:11.229132+00:00",
     "account_id": ""
   },
   "progress": {
-    "completed": 0,
+    "completed": 1,
     "total": 55,
     "last_completed_task": null,
     "active_task": null
