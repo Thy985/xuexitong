@@ -1607,7 +1607,8 @@ def _run_tdvp_probe(course_url: str, course_key: str,
                 _v = live_verify_chapter(
                     cid, params.get("course_id", ""), params.get("clazz_id", ""),
                     params.get("cpi", ""),
-                    os.environ.get("CX_USER", ""), os.environ.get("CX_PASS", ""))
+                    os.environ.get("CX_USER", ""), os.environ.get("CX_PASS", ""),
+                    enc=params.get("enc", ""))
                 return (_v or {}).get("points")
 
             existing, _heal_rep = heal_blocked_by_live(
@@ -1646,6 +1647,7 @@ def _run_tdvp_probe(course_url: str, course_key: str,
                         params.get("cpi", ""),
                         os.environ.get("CX_USER", ""),
                         os.environ.get("CX_PASS", ""),
+                        enc=params.get("enc", ""),
                     )
                 if verify is not None:
                     total_v = verify.get("video_total", 0)
@@ -1749,7 +1751,8 @@ def _run_tdvp_probe(course_url: str, course_key: str,
                 _v = live_verify_chapter(cid, params.get("course_id", ""),
                                          params.get("clazz_id", ""), params.get("cpi", ""),
                                          os.environ.get("CX_USER", ""),
-                                         os.environ.get("CX_PASS", ""))
+                                         os.environ.get("CX_PASS", ""),
+                                         enc=params.get("enc", ""))
             else:
                 _v = None
             if isinstance(_v, dict):

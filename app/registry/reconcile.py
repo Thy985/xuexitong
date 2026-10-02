@@ -679,6 +679,7 @@ def run_calibrated_reconcile(
                 course_params.get("course_id", ""),
                 course_params.get("clazz_id", ""),
                 course_params.get("cpi", ""),
+                enc=course_params.get("enc", ""),
             )
             live |= build_live_pending(job_pts)
             live_done |= build_live_finished(job_pts)
