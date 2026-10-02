@@ -3078,8 +3078,8 @@
     "task_type": "video",
     "status": "COMPLETED",
     "priority": 0,
-    "attempt_count": 1,
-    "attempts": 1,
+    "attempt_count": 2,
+    "attempts": 2,
     "consecutive_failures": 0,
     "max_attempts": 3,
     "lease": {
@@ -3089,15 +3089,15 @@
     },
     "verification": {
       "level": "SERVER_VERIFIED",
-      "verified_at_utc": "2026-10-02T11:34:04.685864+00:00",
-      "run_id": "37000128111",
+      "verified_at_utc": "2026-10-02T20:56:32.226928+00:00",
+      "run_id": "37061925373",
       "source_detail": "passed_object_ids=1"
     },
     "completion_evidence": {
       "type": "SERVER_VERIFIED",
       "source": "isPassed",
-      "run_id": "37000128111",
-      "observed_at_utc": "2026-10-02T11:34:04.685864+00:00",
+      "run_id": "37061925373",
+      "observed_at_utc": "2026-10-02T20:56:32.226928+00:00",
       "detail": "passed_object_ids=1",
       "passed_object_ids": [
         "574e43348f29209929dced13600a357b"
@@ -3108,20 +3108,20 @@
       "run_id": "",
       "detail": "",
       "consecutive_failures": 0,
-      "occurred_at_utc": "2026-10-02T11:34:04.685872+00:00"
+      "occurred_at_utc": "2026-10-02T20:56:32.226938+00:00"
     },
     "created_at_utc": "2026-10-02T11:22:01.042462+00:00",
-    "updated_at_utc": "2026-10-02T11:34:04.685864+00:00",
-    "last_run_id": "37000128111",
-    "last_run_at_utc": "2026-10-02T11:34:04.685864+00:00",
-    "last_started_at": "2026-10-02T11:34:04.685864+00:00",
-    "last_finished_at": "2026-10-02T11:34:04.685864+00:00",
-    "last_success_at_utc": "2026-10-02T11:34:04.685864+00:00",
+    "updated_at_utc": "2026-10-02T20:56:32.226928+00:00",
+    "last_run_id": "37061925373",
+    "last_run_at_utc": "2026-10-02T20:56:32.226928+00:00",
+    "last_started_at": "2026-10-02T20:56:32.226928+00:00",
+    "last_finished_at": "2026-10-02T20:56:32.226928+00:00",
+    "last_success_at_utc": "2026-10-02T20:56:32.226928+00:00",
     "last_failure_at_utc": null,
     "_ch_idx": 20,
     "_cell_idx": 20,
-    "rollback_count": 0,
-    "last_rollback_at_utc": ""
+    "rollback_count": 1,
+    "last_rollback_at_utc": "2026-10-02T20:44:25.386430+00:00"
   },
   "1217304721:video3": {
     "task_id": "1217304721:video3",
