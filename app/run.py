@@ -429,8 +429,8 @@ def main():
     ap = argparse.ArgumentParser(
         description="xuexitong MVP E5: Initialize / Run / Switch course learning"
     )
-    ap.add_argument("--action", choices=["initialize", "run", "scheduler", "switch"],
-                    default="run", help="操作模式（默认 run）")
+    ap.add_argument("--action", choices=["initialize", "run", "scheduler", "switch", "loop"],
+                    default="run", help="操作模式（默认 run；loop=本地常驻刷课）")
     ap.add_argument("--course-url", default=None,
                     help="学习通 studentstudy URL（scheduler 模式下可选，从 state 读取）")
     ap.add_argument("--chapter-id", default=None,
@@ -443,6 +443,8 @@ def main():
     ap.add_argument("--video-index", type=int, default=0,
                     help="章内视频段序号(1-based)。>1 时本次 run 推进到第 N 段视频并只把该段判完成(逐段视频 dispatch)；0=按自然连播。")
     ap.add_argument("--xvfb-display", default=os.environ.get("DISPLAY", ":99"))
+    ap.add_argument("--interval-minutes", type=int, default=0,
+                    help="loop 模式每轮调度间隔分钟数（默认 30，可用 XUE_LOOP_INTERVAL 覆盖）")
     ap.add_argument("--trigger", default="manual",
                     choices=["manual", "schedule"],
                     help="触发类型（默认 manual）")
@@ -463,6 +465,18 @@ def main():
     elif args.action == "scheduler":
         # Scheduler 模式：由 Scheduler 模块决定是否需要执行
         sys.exit(cmd_scheduler(args))
+    elif args.action == "loop":
+        # 本地常驻模式（app/loop.py）：exe 双击默认；GHA 不走此路径
+        from app.loop import run_loop
+        code = run_loop(interval_minutes=args.interval_minutes,
+                        max_chapters=args.max_chapters)
+        if is_frozen():
+            # 双击启动时窗口随进程关闭，停一下让用户看到退出原因
+            try:
+                input("\n[exit] 已退出。按回车关闭窗口…")
+            except EOFError:
+                pass
+        sys.exit(code)
     else:
         sys.exit(cmd_run(args))
 
