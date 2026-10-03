@@ -38,12 +38,14 @@
 | `docs/architecture/` | 架构说明、状态机、scheduler/registry 设计 + **E3/E5/E6/E7 实验报告**（`E6_scheduler_report.md`、`E7_tdvp_report.md` 等） |
 | `docs/engineering-review/` | **工程审计**：`ACTION_HISTORY_AUDIT.md`（运行考古）、`HISTORICAL_BUG_CASES.md`（历史事故）、`REGRESSION_MATRIX.md`（回归矩阵）、`AGENT_RULE_CANDIDATES.md`、`CI_GATES_CANDIDATES.md` |
 | `docs/runbooks/` | **操作手册**：`LOCAL_PLAYWRIGHT_RUNBOOK.md`、`LOCAL_CAPABILITY_MATRIX.md`、`CAPTCHA_HANDLER_NOTES.md` |
+| `docs/USER_MANUAL.md` | **使用手册**：本地 exe 操作、配置参考、错误速查、FAQ（打包后随 dist 分发为 `使用手册.md`） |
 | `docs/evidence/` | **运行证据**：E2E 基线、真实登录/抓取快照（`mooc2_evidence/`）、`snapshot-archive/`（收敛的 CI 诊断抽样）、`E{5,6,7}_evidence.json`、历史 CI 日志 |
 
 ### 常见任务 → 去哪个链接
 
 | 你想 | 看这里 |
 |---|---|
+| 本地 exe 怎么用 / 报错了怎么办 | `docs/USER_MANUAL.md`（使用手册） |
 | 为什么某 run 全绿但 `progress.completed=0`？ | `docs/engineering-review/ACTION_HISTORY_AUDIT.md`；`docs/architecture/PROGRESS_OUTCOME_DATAFLOW.md`（五层 outcome） |
 | 这套测试/回归体系怎么建、P0 项怎样分布 | `docs/engineering-review/REGRESSION_MATRIX.md`、`docs/engineering-review/TEST_SYSTEM_DESIGN.md` |
 | 本地起浏览器做真实 E2E 验证 | `docs/runbooks/LOCAL_PLAYWRIGHT_RUNBOOK.md`、`scripts/mooc2_probe.py` |
@@ -203,36 +205,9 @@ Run 完成后，Actions 日志自动打印结构化诊断，并生成 artifact *
 
 ## 失败诊断
 
-MVP 在每次失败时自动给出结构化诊断，直接打印到 Actions 日志：
+MVP 在每次失败时自动给出结构化诊断，直接打印到 Actions 日志（`SCHEDULER DIAGNOSTICS` 块：action/decision/result/verdict/failure_stage 等）；失败场景自动保存截图到 `/tmp/diag_*.png` 并随 artifact 上传；本地 exe 的证据与完整子进程日志在 exe 旁 `evidence/` 目录。
 
-```
-══════════ SCHEDULER DIAGNOSTICS ══════════
-action:          scheduler
-decision:        RUN
-result:          SUCCESS
-trigger:         manual
-course_key:      265997861_151695658
-verdict:         PASS
-timing_s:        792.5
-error:           null
-```
-
-`failure_stage` 取值含义：
-
-| failure_stage | 含义 |
-|---|---|
-| `LOGIN_FAILED` | 账号密码错误或会话被踢 |
-| `STUDENTSTUDY_NOT_LOADED` | 无法打开学习页面（URL 参数可能有问题） |
-| `NO_CARDS_IFRAME` | cards iframe 未渲染（检查 URL 是否含 `openc`/`hidetype`） |
-| `NO_VIDEO_IN_CARDS` | cards iframe 存在但无视频子 iframe |
-| `VIDEO_DURATION_INVALID` | 视频 duration=0 或异常 |
-| `PLAYBACK_NOT_STARTED` | 视频加载但未起播 |
-| `PLAYBACK_STALLED` | 视频起播后 currentTime 不增长 |
-| `VIDEO_NOT_COMPLETED` | 视频播放中途停止 |
-| `NEXTUNIT_EARLY_TRIGGER` | nextUnit 在视频未完时被触发 |
-| `ML_LOG_MISSING` | multimedia/log 未被调用 |
-
-所有失败场景都会自动保存失败时截图到 `/tmp/diag_*.png`，并随 artifact 上传。
+`failure_stage` 全部取值、含义与处理方法见 **[docs/USER_MANUAL.md §7 错误信息速查](docs/USER_MANUAL.md#7-错误信息速查)**。
 
 ---
 
@@ -360,57 +335,17 @@ python app/run.py --action run --course-url "https://mooc1.chaoxing.com/..." --c
 
 不想用 GitHub Actions 的用户可把项目打包为本地常驻程序：产物**自带 chromium**，双击即刷，课程/凭据/状态全部落在 exe 旁边，与 GHA 模式共用同一套代码与状态机。
 
-### 打包（开发者，Windows）
-
 ```bash
-.venv/Scripts/python.exe build.py
+.venv/Scripts/python.exe build.py     # 产物 dist/Xuexitong/（内置浏览器，随包附带使用手册）
 ```
 
-产物 `dist/Xuexitong/`：`Xuexitong.exe` + `internal/`（运行时 + 内置浏览器）。升级时用新构建的 `Xuexitong.exe` 与 `internal/` 整体替换即可（`state/`、`.cache/`、`evidence/` 不受影响）。
+**详细操作说明、配置参考（.env / CLI 全表）、错误信息速查与 FAQ 见 [docs/USER_MANUAL.md](docs/USER_MANUAL.md)**（打包后随包附带 `dist/Xuexitong/使用手册.md`）。要点：
 
-> 国内网络下 chromium 下载可能超时，可用镜像重试：
-> `PLAYWRIGHT_DOWNLOAD_HOST=https://cdn.npmmirror.com/binaries/playwright .venv/Scripts/python.exe build.py`
+- 双击 `Xuexitong.exe`：首次引导填账号（写入旁 `.env`）并粘贴课程 URL；此后每次启动有**可跳过向导**（回车开始 / `s` 换课 / 数字调本次每轮章数）；
+- 常驻循环：空闲轮 30 分钟、活跃轮（刚推进过任务）2 分钟，决策与熔断 cooldown 与 GHA 完全同源；课程完成自动退出，`Ctrl+C` 优雅停止；
+- 升级只替换 `Xuexitong.exe` + `internal/`，保留 `state/`、`.cache/`、`.env`。
 
-### 使用（用户）
-
-1. 双击 `Xuexitong.exe`：首次运行会依次引导输入学习通账号密码（写入 exe 旁 `.env`，仅本地保存）和粘贴课程 URL（从浏览器地址栏完整复制，校验通过后自动激活）。
-2. 之后每次启动有一个**可跳过的向导**：显示当前课程与进度，**直接回车即开始**；输入 `s` 换课（旧课自动归档、已有进度保留，换错可再换回）；输入数字（如 `3`）调整**本次会话**每轮推进章数——不写回任何配置。优先级：命令行 `--max-chapters` > `.env` 的 `XUE_LOOP_MAX_CHAPTERS` > 向导 > 默认 1。计划任务/管道等非交互场景自动跳过向导。
-3. 进入**常驻模式**：空闲轮每 30 分钟自动调度一轮（改 `.env` 中 `XUE_LOOP_INTERVAL` 可调）；刚推进过任务的**活跃轮**默认 2 分钟后继续（`XUE_LOOP_ACTIVE_INTERVAL` 可调），看完一集很快接下一集。决策完全继承 GHA 的 RUN/NOOP/BLOCKED 与熔断 cooldown。
-4. 课程无可推进任务时自动退出；`Ctrl+C` 优雅停止（当前轮跑完；连按两次立即退出）。程序有单实例锁，双开会被拒绝。
-
-命令行等价操作（与 GHA `workflow_dispatch` 同语义）：
-
-```bash
-Xuexitong.exe --action initialize --course-url "https://mooc1.chaoxing.com/..."   # 手动配置课程
-Xuexitong.exe --action switch --course-url "..."                                  # 换课
-Xuexitong.exe --action scheduler --trigger manual                                 # 单轮调度（manual 不受 cooldown 限制）
-Xuexitong.exe --action loop --interval-minutes 60                                 # 常驻，60 分钟一轮
-Xuexitong.exe --action run --course-url "..." --chapter-id 1217304706             # 单视频学习
-```
-
-浏览器默认用内置 chromium；如想用系统 Edge/Chrome 减小体积，可设环境变量 `XUE_BROWSER_CHANNEL=msedge`（或 `XUE_BROWSER_EXE` 指到具体 exe，见 `utils/browser_factory.py`）。
-
-### 与 GHA 模式错峰双跑与状态收敛
-
-本地 exe 与 GHA 各有一份独立 state（本地在 exe 旁，GHA 在仓库 git 里随每次 run 提交），但两边都以**学习通服务端为真源**（P0-3）：每次运行开头的 TDVP 探针都会重新扫描服务端任务点的完成标记，章级判定只认服务端 `isPassed`。因此**错峰双跑不需要显式同步**：
-
-- 本地刷完的章 → 服务端已记录 → GHA 下一轮探针自动跳过，从下一个 pending 继续；
-- GHA 刷完的章 → 本地下一轮探针同样跳过；
-- 两份 state 各自向服务端真源收敛，不会重复刷同一章。
-
-需要注意的边角：
-
-1. **时间窗必须错开，不能重叠**：同账号并发互踢会话。GHA cron 为北京 00:07 / 02:07 各一次，本地避开这两个窗口即可（白天/晚上随便跑）。长期只用本地时，建议直接禁用 fork 仓库的 schedule（Actions → `run` → 禁用）。
-2. **换课要两边各自 switch**：`active_course.json` 各存各的；本地换课后 GHA 仍指向旧课，下次 cron 会继续刷旧课。
-3. **熔断/任务冻结状态不共享**：一边 BLOCKED，另一边照常重试——相当于多一条独立重试腿；若课程本身有问题，两边各自撞各自的熔断，不会互相传染。
-4. **`progress.completed` 等展示计数两边可能暂时不一致**：外观问题，真相以服务端为准（每轮结束会向服务端/registry 对齐）。
-
-如需把两份 state 手动对齐（可选，日常错峰不需要）：两边 schema 相同、账号哈希相同（同 CX_USER），整目录拷贝即可——
-
-- 本地 → 云端：把 exe 旁 `state/accounts/<账号哈希>/` 拷进仓库同名路径，commit + push，GHA 下次 run 即拿到；
-- 云端 → 本地：反向拷贝到 exe 旁。
-
-> 不推荐让 exe 做 git 自动同步：需要内嵌 git 与 GitHub PAT、处理 state 冲突，而它换来的收敛能力服务端真源已经免费提供。
+与 GHA 的错峰双跑与状态收敛详见手册 §8。核心结论：两边都以学习通服务端为真源（每轮探针重扫服务端完成标记），**错峰跑无需显式同步**；只要避开 cron 时间窗（北京 00:07 / 02:07）不重叠、换课两边各自做即可。
 
 ---
 

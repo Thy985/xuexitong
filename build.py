@@ -14,6 +14,7 @@ state/ evidence/ .cache/ 为可写数据，随运行生成在 exe 旁）。
 
 import os
 import pathlib
+import shutil
 import subprocess
 import sys
 
@@ -64,6 +65,12 @@ def main():
                     "# 可选：loop 每轮调度间隔分钟（默认 30）\n"
                     "# XUE_LOOP_INTERVAL=30\n")
         print(f"[build] 已生成凭据模板：{env_tpl}（填入 CX_USER/CX_PASS 后双击 exe 即可）")
+
+    # 使用手册随包分发（exe 用户没有仓库也能查操作说明与错误速查）
+    manual_src = os.path.join(ROOT, "docs", "USER_MANUAL.md")
+    if os.path.exists(manual_src):
+        shutil.copyfile(manual_src, os.path.join(DIST, "使用手册.md"))
+        print("[build] 已随包附带使用手册：dist/Xuexitong/使用手册.md")
 
     print(f"[build] 完成：{DIST}")
 
