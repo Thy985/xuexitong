@@ -436,8 +436,9 @@ def main():
                     help="学习通 studentstudy URL（scheduler 模式下可选，从 state 读取）")
     ap.add_argument("--chapter-id", default=None,
                     help="要学习的章节 id（run 模式）")
-    ap.add_argument("--max-chapters", type=int, default=1,
-                    help="scheduler/run 模式最多自动推进的视频任务点数量（默认 1，可设 2/3/...）")
+    ap.add_argument("--max-chapters", type=int, default=None,
+                    help="scheduler/loop 一轮最多推进的视频任务点数（默认 1；"
+                         "loop 下优先级 CLI > XUE_LOOP_MAX_CHAPTERS > 启动向导 > 1）")
     ap.add_argument("--output", default="./evidence/run_<ts>.json")
     ap.add_argument("--max-attempts", type=int, default=2,
                     help="视频 iframe/metadata 瞬态失败的最大尝试次数（默认 2）")
@@ -457,6 +458,8 @@ def main():
     # run.yml 总是显式传 --action，源码本地调用缺省 = run 与历史一致）
     if args.action is None:
         args.action = "loop" if is_frozen() else "run"
+    if args.action != "loop" and args.max_chapters is None:
+        args.max_chapters = 1
 
     # 校验 Secrets（run/scheduler 需要账号；CI 上缺账号直接拒绝，见函数 docstring）
     _secret_err = validate_action_secrets(args.action)

@@ -373,9 +373,10 @@ python app/run.py --action run --course-url "https://mooc1.chaoxing.com/..." --c
 
 ### 使用（用户）
 
-1. 双击 `Xuexitong.exe`：首次运行会依次引导输入学习通账号密码（写入 exe 旁 `.env`，仅本地保存）和粘贴课程 URL（从浏览器地址栏完整复制，校验通过后自动 initialize）。
-2. 之后进入**常驻模式**：空闲轮每 30 分钟自动调度一轮（改 `.env` 中 `XUE_LOOP_INTERVAL` 可调）；刚推进过任务的**活跃轮**默认 2 分钟后继续（`XUE_LOOP_ACTIVE_INTERVAL` 可调），看完一集很快接下一集。决策完全继承 GHA 的 RUN/NOOP/BLOCKED 与熔断 cooldown。
-3. 课程无可推进任务时自动退出；`Ctrl+C` 优雅停止（当前轮跑完；连按两次立即退出）。程序有单实例锁，双开会被拒绝。
+1. 双击 `Xuexitong.exe`：首次运行会依次引导输入学习通账号密码（写入 exe 旁 `.env`，仅本地保存）和粘贴课程 URL（从浏览器地址栏完整复制，校验通过后自动激活）。
+2. 之后每次启动有一个**可跳过的向导**：显示当前课程与进度，**直接回车即开始**；输入 `s` 换课（旧课自动归档、已有进度保留，换错可再换回）；输入数字（如 `3`）调整**本次会话**每轮推进章数——不写回任何配置。优先级：命令行 `--max-chapters` > `.env` 的 `XUE_LOOP_MAX_CHAPTERS` > 向导 > 默认 1。计划任务/管道等非交互场景自动跳过向导。
+3. 进入**常驻模式**：空闲轮每 30 分钟自动调度一轮（改 `.env` 中 `XUE_LOOP_INTERVAL` 可调）；刚推进过任务的**活跃轮**默认 2 分钟后继续（`XUE_LOOP_ACTIVE_INTERVAL` 可调），看完一集很快接下一集。决策完全继承 GHA 的 RUN/NOOP/BLOCKED 与熔断 cooldown。
+4. 课程无可推进任务时自动退出；`Ctrl+C` 优雅停止（当前轮跑完；连按两次立即退出）。程序有单实例锁，双开会被拒绝。
 
 命令行等价操作（与 GHA `workflow_dispatch` 同语义）：
 

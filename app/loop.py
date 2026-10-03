@@ -96,20 +96,13 @@ def _ensure_credentials() -> bool:
     return True
 
 
-def _ensure_active_course() -> bool:
-    """无活跃课程时交互引导 initialize（与 GHA `--action initialize` 同一状态机）。"""
-    from state.course_state import load_active_course
-    if load_active_course():
-        return True
-
-    print("[loop] 尚未配置课程。请到学习通打开目标课程的章节学习页，"
-          "从浏览器地址栏完整复制 URL（需含 chapterId/courseId/clazzid/cpi/enc/"
-          "hidetype/openc）后粘贴。")
+def _prompt_and_activate_course() -> bool:
+    """提示粘贴课程 URL,校验后激活(旧课自动归档/已有进度保留,见 activate_course)。"""
     for _ in range(3):
         try:
             url = input("  course-url: ").strip()
         except EOFError:
-            print("\n[loop] 无交互输入流，无法引导。请改用命令行：\n"
+            print("\n[loop] 无交互输入流,无法引导。请改用命令行:\n"
                   "  Xuexitong.exe --action initialize --course-url \"...\"",
                   flush=True)
             return False
@@ -118,22 +111,110 @@ def _ensure_active_course() -> bool:
         from resolvers.course_resolver import resolve_course
         r = resolve_course(url)
         if not r.is_ok():
-            print(f"  [!] URL 解析失败：{r.error}；请重新复制完整 URL。")
+            print(f"  [!] URL 解析失败:{r.error};请重新复制完整 URL。")
             continue
-        from state.course_state import initialize_course, activate_course
         from datetime import timezone
+        from state.course_state import CourseIdentity, activate_course
         ident_dict = r.to_dict()["identity"]
-        from state.course_state import CourseIdentity
         identity = CourseIdentity(
             course_id=ident_dict["course_id"], clazz_id=ident_dict["clazz_id"],
             cpi=ident_dict["cpi"], title=ident_dict.get("title", ""),
             raw_url=url, resolved_at_utc=datetime.now(timezone.utc).isoformat(),
         )
-        initialize_course(identity)
         activate_course(identity)
-        print(f"[loop] 课程已激活：{identity.key()}", flush=True)
+        print(f"[loop] 课程已激活:{identity.key()}", flush=True)
         return True
     return False
+
+
+def _ensure_active_course() -> bool:
+    """无活跃课程时交互引导 initialize(与 GHA `--action initialize` 同一状态机)。"""
+    from state.course_state import load_active_course
+    if load_active_course():
+        return True
+
+    print("[loop] 尚未配置课程。请到学习通打开目标课程的章节学习页,"
+          "从浏览器地址栏完整复制 URL(需含 chapterId/courseId/clazzid/cpi/enc/"
+          "hidetype/openc)后粘贴。")
+    return _prompt_and_activate_course()
+
+
+# ── 启动向导(可跳过:回车全默认) ────────────────────────────────────
+
+def _env_max_chapters() -> "int | None":
+    """XUE_LOOP_MAX_CHAPTERS 的合法值(≥1 整数),未设/非法返回 None。"""
+    raw = (os.environ.get("XUE_LOOP_MAX_CHAPTERS") or "").strip()
+    if not raw:
+        return None
+    try:
+        val = int(raw)
+    except ValueError:
+        return None
+    return val if val >= 1 else None
+
+
+def _parse_max_chapters(raw: str, current: int) -> int:
+    """向导输入解析:空 = 保持 current;非法/<1 = 保持 current。"""
+    raw = (raw or "").strip()
+    if not raw:
+        return current
+    try:
+        val = int(raw)
+    except ValueError:
+        return current
+    return val if val >= 1 else current
+
+
+def _active_course_desc() -> str:
+    """当前课程一句话描述:key「标题」(已完成 x/y 章)。"""
+    from state.course_state import load_active_course, load_course_state
+    active = load_active_course()
+    if not active:
+        return "(尚未配置)"
+    desc = active.key()
+    title = (getattr(active, "title", "") or "").strip()
+    if title:
+        desc += f"「{title}」"
+    prog = getattr(load_course_state(active.key()), "progress", None)
+    done, total = getattr(prog, "completed", None), getattr(prog, "total", None)
+    if isinstance(done, int) and isinstance(total, int) and total > 0:
+        desc += f"(已完成 {done}/{total} 章)"
+    return desc
+
+
+def _launch_wizard(explicit_max: "int | None") -> "int | None":
+    """交互启动的跳过式向导:展示课程/进度,回车全默认,s 换课,可调本次章数。
+
+    仅在 stdin 为 TTY 时调用;答案**只作用于本次会话**,不写回 state/.env。
+    返回本次会话的 max_chapters(None = 调用方用默认 1)。
+    优先级:CLI 显式 > XUE_LOOP_MAX_CHAPTERS > 向导输入 > 1。
+    """
+    from state.course_state import load_active_course
+    if load_active_course():
+        print(f"[loop] 当前课程:{_active_course_desc()}", flush=True)
+    else:
+        print("[loop] 尚未配置课程。请到学习通打开目标课程的章节学习页,"
+              "从浏览器地址栏完整复制 URL(需含 chapterId/courseId/clazzid/"
+              "cpi/enc/hidetype/openc)。", flush=True)
+        _prompt_and_activate_course()
+        if load_active_course():
+            print(f"[loop] 当前课程:{_active_course_desc()}", flush=True)
+
+    max_chapters = explicit_max if explicit_max is not None else _env_max_chapters()
+    hint = "回车直接开始;s=换课"
+    if explicit_max is None and _env_max_chapters() is None:
+        print(f"[loop] 每轮推进章数 max_chapters:{max_chapters or 1}"
+              "(输入 2/3/… 仅本次会话生效)", flush=True)
+        hint = "输入章数 / s=换课 / 回车直接开始"
+    try:
+        raw = input(f"[loop] {hint}: ").strip()
+    except EOFError:
+        return max_chapters
+    if raw.lower() == "s":
+        print("[loop] 换课(旧课自动归档、进度保留;换错可再换回):", flush=True)
+        _prompt_and_activate_course()
+        return max_chapters
+    return _parse_max_chapters(raw, max_chapters or 1)
 
 
 # ── 停止信号 ────────────────────────────────────────────────────────
@@ -167,8 +248,11 @@ def _sleep_interruptible(total_s: float, stop: _StopState) -> None:
 
 # ── 主循环 ──────────────────────────────────────────────────────────
 
-def run_loop(interval_minutes: int = 0, max_chapters: int = 1) -> int:
-    """常驻循环入口，返回进程退出码。"""
+def run_loop(interval_minutes: int = 0, max_chapters: "int | None" = None) -> int:
+    """常驻循环入口，返回进程退出码。
+
+    max_chapters 优先级：CLI 显式 > XUE_LOOP_MAX_CHAPTERS > 启动向导 > 默认 1。
+    """
     stop = _StopState()
     import signal
     signal.signal(signal.SIGINT, stop.request)
@@ -197,8 +281,24 @@ def run_loop(interval_minutes: int = 0, max_chapters: int = 1) -> int:
               f"{active_min} 分钟（state 根：{repo_root()}）", flush=True)
         if not _ensure_credentials():
             return 2
-        if not _ensure_active_course():
-            return 2
+        try:
+            interactive = bool(sys.stdin and sys.stdin.isatty())
+        except Exception:
+            interactive = False
+        if interactive:
+            # 交互启动（双击/终端）：跳过式向导——回车全默认，s 换课，可调本次章数
+            max_chapters = _launch_wizard(max_chapters)
+            if max_chapters is None:
+                max_chapters = 1
+            from state.course_state import load_active_course
+            if not load_active_course():
+                return 2
+        else:
+            # 非交互（计划任务/管道）：静默沿用 CLI/env；无课程走 EOF 防御引导
+            if not _ensure_active_course():
+                return 2
+            if max_chapters is None:
+                max_chapters = _env_max_chapters() or 1
 
         from scheduler import run_scheduler
         error_streak = 0
