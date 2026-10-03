@@ -430,7 +430,8 @@ def main():
         description="xuexitong MVP E5: Initialize / Run / Switch course learning"
     )
     ap.add_argument("--action", choices=["initialize", "run", "scheduler", "switch", "loop"],
-                    default="run", help="操作模式（默认 run；loop=本地常驻刷课）")
+                    default=None,
+                    help="操作模式：缺省时源码形态 = run，冻结 exe 双击 = loop 常驻")
     ap.add_argument("--course-url", default=None,
                     help="学习通 studentstudy URL（scheduler 模式下可选，从 state 读取）")
     ap.add_argument("--chapter-id", default=None,
@@ -452,6 +453,11 @@ def main():
                     help="GitHub run ID（用于记录）")
     args = ap.parse_args()
 
+    # 双击 exe（无参数）= 常驻刷课；源码/CI 形态缺省仍为 run（GHA 兼容——
+    # run.yml 总是显式传 --action，源码本地调用缺省 = run 与历史一致）
+    if args.action is None:
+        args.action = "loop" if is_frozen() else "run"
+
     # 校验 Secrets（run/scheduler 需要账号；CI 上缺账号直接拒绝，见函数 docstring）
     _secret_err = validate_action_secrets(args.action)
     if _secret_err:
@@ -466,17 +472,11 @@ def main():
         # Scheduler 模式：由 Scheduler 模块决定是否需要执行
         sys.exit(cmd_scheduler(args))
     elif args.action == "loop":
-        # 本地常驻模式（app/loop.py）：exe 双击默认；GHA 不走此路径
+        # 本地常驻模式（app/loop.py）：exe 双击默认；GHA 不走此路径。
+        # 退出窗口暂停由 __main__ 的 frozen 守卫统一负责
         from app.loop import run_loop
-        code = run_loop(interval_minutes=args.interval_minutes,
-                        max_chapters=args.max_chapters)
-        if is_frozen():
-            # 双击启动时窗口随进程关闭，停一下让用户看到退出原因
-            try:
-                input("\n[exit] 已退出。按回车关闭窗口…")
-            except EOFError:
-                pass
-        sys.exit(code)
+        sys.exit(run_loop(interval_minutes=args.interval_minutes,
+                          max_chapters=args.max_chapters))
     else:
         sys.exit(cmd_run(args))
 
@@ -546,4 +546,22 @@ def cmd_scheduler(args) -> int:
 
 
 if __name__ == "__main__":
-    main()
+    if not getattr(sys, "frozen", False):
+        main()
+    else:
+        # 冻结产物（双击启动）：任何退出路径（正常/报错/异常）都停窗，
+        # 让用户能看到输出与退出原因；EOF（管道/计划任务）直接放行不阻塞
+        _code = 0
+        try:
+            main()
+        except SystemExit as e:
+            _code = e.code if isinstance(e.code, int) else (0 if e.code is None else 1)
+        except BaseException:
+            import traceback
+            traceback.print_exc()
+            _code = 1
+        try:
+            input("\n[exit] 按回车关闭窗口…")
+        except (EOFError, KeyboardInterrupt):
+            pass
+        sys.exit(_code)
