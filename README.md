@@ -356,6 +356,63 @@ python app/run.py --action run --course-url "https://mooc1.chaoxing.com/..." --c
 
 ---
 
+## 本地 exe（Windows 双击即用，可选）
+
+不想用 GitHub Actions 的用户可把项目打包为本地常驻程序：产物**自带 chromium**，双击即刷，课程/凭据/状态全部落在 exe 旁边，与 GHA 模式共用同一套代码与状态机。
+
+### 打包（开发者，Windows）
+
+```bash
+.venv/Scripts/python.exe build.py
+```
+
+产物 `dist/Xuexitong/`：`Xuexitong.exe` + `internal/`（运行时 + 内置浏览器）。升级时用新构建的 `Xuexitong.exe` 与 `internal/` 整体替换即可（`state/`、`.cache/`、`evidence/` 不受影响）。
+
+> 国内网络下 chromium 下载可能超时，可用镜像重试：
+> `PLAYWRIGHT_DOWNLOAD_HOST=https://cdn.npmmirror.com/binaries/playwright .venv/Scripts/python.exe build.py`
+
+### 使用（用户）
+
+1. 双击 `Xuexitong.exe`：首次运行会依次引导输入学习通账号密码（写入 exe 旁 `.env`，仅本地保存）和粘贴课程 URL（从浏览器地址栏完整复制，校验通过后自动 initialize）。
+2. 之后进入**常驻模式**：每 30 分钟自动调度一轮（改 `.env` 中 `XUE_LOOP_INTERVAL` 可调），完全继承 GHA 的 RUN/NOOP/BLOCKED 决策与熔断 cooldown。
+3. 课程无可推进任务时自动退出；`Ctrl+C` 优雅停止（当前轮跑完；连按两次立即退出）。程序有单实例锁，双开会被拒绝。
+
+命令行等价操作（与 GHA `workflow_dispatch` 同语义）：
+
+```bash
+Xuexitong.exe --action initialize --course-url "https://mooc1.chaoxing.com/..."   # 手动配置课程
+Xuexitong.exe --action switch --course-url "..."                                  # 换课
+Xuexitong.exe --action scheduler --trigger manual                                 # 单轮调度（manual 不受 cooldown 限制）
+Xuexitong.exe --action loop --interval-minutes 60                                 # 常驻，60 分钟一轮
+Xuexitong.exe --action run --course-url "..." --chapter-id 1217304706             # 单视频学习
+```
+
+浏览器默认用内置 chromium；如想用系统 Edge/Chrome 减小体积，可设环境变量 `XUE_BROWSER_CHANNEL=msedge`（或 `XUE_BROWSER_EXE` 指到具体 exe，见 `utils/browser_factory.py`）。
+
+### 与 GHA 模式错峰双跑与状态收敛
+
+本地 exe 与 GHA 各有一份独立 state（本地在 exe 旁，GHA 在仓库 git 里随每次 run 提交），但两边都以**学习通服务端为真源**（P0-3）：每次运行开头的 TDVP 探针都会重新扫描服务端任务点的完成标记，章级判定只认服务端 `isPassed`。因此**错峰双跑不需要显式同步**：
+
+- 本地刷完的章 → 服务端已记录 → GHA 下一轮探针自动跳过，从下一个 pending 继续；
+- GHA 刷完的章 → 本地下一轮探针同样跳过；
+- 两份 state 各自向服务端真源收敛，不会重复刷同一章。
+
+需要注意的边角：
+
+1. **时间窗必须错开，不能重叠**：同账号并发互踢会话。GHA cron 为北京 00:07 / 02:07 各一次，本地避开这两个窗口即可（白天/晚上随便跑）。长期只用本地时，建议直接禁用 fork 仓库的 schedule（Actions → `run` → 禁用）。
+2. **换课要两边各自 switch**：`active_course.json` 各存各的；本地换课后 GHA 仍指向旧课，下次 cron 会继续刷旧课。
+3. **熔断/任务冻结状态不共享**：一边 BLOCKED，另一边照常重试——相当于多一条独立重试腿；若课程本身有问题，两边各自撞各自的熔断，不会互相传染。
+4. **`progress.completed` 等展示计数两边可能暂时不一致**：外观问题，真相以服务端为准（每轮结束会向服务端/registry 对齐）。
+
+如需把两份 state 手动对齐（可选，日常错峰不需要）：两边 schema 相同、账号哈希相同（同 CX_USER），整目录拷贝即可——
+
+- 本地 → 云端：把 exe 旁 `state/accounts/<账号哈希>/` 拷进仓库同名路径，commit + push，GHA 下次 run 即拿到；
+- 云端 → 本地：反向拷贝到 exe 旁。
+
+> 不推荐让 exe 做 git 自动同步：需要内嵌 git 与 GitHub PAT、处理 state 冲突，而它换来的收敛能力服务端真源已经免费提供。
+
+---
+
 ## 约束合规声明
 
 全程仅真实浏览器自然播放；不调用/构造/伪造/重放 `multimedia/log`；不修改
