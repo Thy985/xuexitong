@@ -48,3 +48,6 @@ evidence_dl/
 # —— 本地 exe 打包产物（PyInstaller，Xuexitong.spec 保留版本化）——
 build/
 dist/
+
+# —— 宣传视频工程（Remotion，本地开发用，产物不入库）——
+promo/
