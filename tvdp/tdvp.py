@@ -1226,7 +1226,10 @@ def aggregate_evidence(
 
 # ── Task Registry ──────────────────────────────────────────────────
 
-TASKS_FILE = Path(__file__).parent.parent / "state" / "tdvp_tasks.json"
+# repo_root(): 源码形态 = 仓库根（与旧表达式等价）；冻结形态 = exe 旁（utils/paths.py）
+from utils.paths import repo_root  # noqa: E402
+
+TASKS_FILE = repo_root() / "state" / "tdvp_tasks.json"
 
 
 def load_task_registry(course_key: str) -> dict[str, TaskInfo]:

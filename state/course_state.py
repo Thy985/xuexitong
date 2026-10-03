@@ -40,7 +40,10 @@ from pathlib import Path
 from typing import Literal, Optional
 
 # ── 路径常量 ───────────────────────────────────────────────────────
-REPO_ROOT = Path(__file__).parent.parent.resolve()
+# repo_root(): 源码形态 = 仓库根（与旧表达式等价）；冻结形态 = exe 旁（utils/paths.py）
+from utils.paths import repo_root  # noqa: E402
+
+REPO_ROOT = repo_root().resolve()
 STATE_DIR = REPO_ROOT / "state"
 COURSES_DIR = STATE_DIR / "courses"
 ACTIVE_FILE = STATE_DIR / "active_course.json"

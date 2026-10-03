@@ -333,8 +333,24 @@ def _kill_proc_tree(pid: int) -> None:
     调用方须用 `start_new_session=True` 启动子进程，使其成为独立进程组组长，
     这样 killpg(pid, ...) 能连同其所有子进程（browser/page）一并清理。
     GHA runner 是 Linux：先 SIGTERM（graceful），随后 SIGKILL 兜底。
+    Windows 无进程组语义：taskkill /T 连整棵进程树（含 Chromium 子进程）终止，
+    避免只杀主进程泄漏浏览器。仅 frozen/本地 Windows 分支受影响，Linux 路径不变。
     """
     if not pid:
+        return
+    if os.name == "nt":
+        import subprocess as _sp
+        try:
+            _r = _sp.run(["taskkill", "/F", "/T", "/PID", str(pid)],
+                         capture_output=True, timeout=15)
+            if _r.returncode == 0:
+                return
+        except Exception:
+            pass
+        try:
+            os.kill(pid, 9)
+        except Exception:
+            pass
         return
     import signal as _signal
     import time as _t
@@ -433,8 +449,14 @@ def _run_one_chapter(course_url: str, chapter_id: str, task_id: str = "",
     # 章视角对齐：用任务自己的 chapter_id 重建课程 URL，避免沿用 state 里
     # 旧章 raw_url 的 chapterId 锚点（否则 page 落到的章节视图与任务不对齐）。
     spawn_url = _align_chapter_url(course_url, chapter_id)
-    cmd = [
-        sys.executable, "-m", "app.run",
+    if getattr(sys, "frozen", False):
+        # 冻结产物：sys.executable 是本 exe 而非 Python 解释器，`-m app.run` 不成立；
+        # 直接以 CLI 语义重入（exe 的 main() 会自行 chdir 到 exe 旁，./evidence
+        # 产物落点与源码形态一致）。源码形态（含 GHA）保持原样。
+        cmd = [sys.executable]
+    else:
+        cmd = [sys.executable, "-m", "app.run"]
+    cmd += [
         "--action", "run",
         "--course-url", spawn_url,
         "--chapter-id", chapter_id,
@@ -447,6 +469,10 @@ def _run_one_chapter(course_url: str, chapter_id: str, task_id: str = "",
     exit_code = 1
     timed_out = False
     budget_s = int(max_s)
+    # frozen 子进程重入同一 exe：注入 XUE_NO_EXIT_PAUSE，让 __main__ 的
+    # 双击停窗守卫跳过 input——否则子进程播完后卡在等回车，被看门狗当
+    # 超时收割（实测 PASS 被误标 FAILED，污染 consecutive_failures）。
+    child_env = dict(os.environ, XUE_NO_EXIT_PAUSE="1")
     # 看门狗轮询片长：够短（能在子进程播报后十几秒内扩预算），又不至于把日志
     # 读成热路径。真正的判定权在 deadline，不在这个数。
     watch_tick_s = 15.0
@@ -454,6 +480,7 @@ def _run_one_chapter(course_url: str, chapter_id: str, task_id: str = "",
     try:
         try:
             proc = sp.Popen(cmd, stdout=stdout_fh, stderr=sp.STDOUT,
+                        env=child_env,
                         start_new_session=True)  # 独立进程组 → killpg 可连 browser 一并清理
             # 墙钟预算改成分片轮询：只有轮询才能在子进程还活着时读到它自己
             # 播报的视频时长，把静态 base 扩成自适应预算（R5/#20 —— 父进程
@@ -525,7 +552,14 @@ def _run_one_chapter(course_url: str, chapter_id: str, task_id: str = "",
             res = r.get("result", {})
             if res.get("verdict", ""):
                 verdict = res.get("verdict", verdict)
-            passed = res.get("exit_code", 1) == 0 if not timed_out else False
+            if not timed_out:
+                passed = res.get("exit_code", 1) == 0
+            else:
+                # 超时被杀 ≠ 播放失败：子进程可能在收尾阶段挂住（如等待交互输入）
+                # 被看门狗收割，但 evidence 是它被杀前写下的——verdict=PASS 意味着
+                # 服务端已确认 isPassed、registry 已标 SERVER_VERIFIED。此时仍判
+                # 失败会污染 consecutive_failures（3 集长视频 → 课程级 BLOCKED）。
+                passed = str(res.get("verdict", "") or "") == "PASS"
             runtime_evidence = r.get("evidence") or {}
             failure_stage = runtime_evidence.get("failure_stage") \
                 if isinstance(runtime_evidence, dict) else None

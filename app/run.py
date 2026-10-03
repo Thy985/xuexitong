@@ -75,6 +75,10 @@ def _write_output(output: str, data: dict) -> None:
     if not output:
         return
     try:
+        # <ts> 是 run 模式的时间戳模板；initialize/scheduler 直传时也替换掉，
+        # 否则 Windows 上 `<` 非法文件名会写盘失败（非致命，但丢 evidence）
+        if "<ts>" in output:
+            output = output.replace("<ts>", str(int(time.time())))
         p = Path(output)
         p.parent.mkdir(parents=True, exist_ok=True)
         tmp = p.with_suffix(p.suffix + ".tmp")
@@ -416,29 +420,46 @@ def validate_action_secrets(action: str, *, github_actions: bool | None = None) 
 
 
 def main():
+    # 冻结形态：把 CWD 锚到 exe 旁可写根（utils/paths.py），使 ./evidence 等
+    # 相对路径产物稳定落在 exe 目录，与启动位置无关。源码形态（含 GHA）不 chdir。
+    from utils.paths import is_frozen, repo_root
+    if is_frozen():
+        os.chdir(repo_root())
+
     ap = argparse.ArgumentParser(
         description="xuexitong MVP E5: Initialize / Run / Switch course learning"
     )
-    ap.add_argument("--action", choices=["initialize", "run", "scheduler", "switch"],
-                    default="run", help="操作模式（默认 run）")
+    ap.add_argument("--action", choices=["initialize", "run", "scheduler", "switch", "loop"],
+                    default=None,
+                    help="操作模式：缺省时源码形态 = run，冻结 exe 双击 = loop 常驻")
     ap.add_argument("--course-url", default=None,
                     help="学习通 studentstudy URL（scheduler 模式下可选，从 state 读取）")
     ap.add_argument("--chapter-id", default=None,
                     help="要学习的章节 id（run 模式）")
-    ap.add_argument("--max-chapters", type=int, default=1,
-                    help="scheduler/run 模式最多自动推进的视频任务点数量（默认 1，可设 2/3/...）")
+    ap.add_argument("--max-chapters", type=int, default=None,
+                    help="scheduler/loop 一轮最多推进的视频任务点数（默认 1；"
+                         "loop 下优先级 CLI > XUE_LOOP_MAX_CHAPTERS > 启动向导 > 1）")
     ap.add_argument("--output", default="./evidence/run_<ts>.json")
     ap.add_argument("--max-attempts", type=int, default=2,
                     help="视频 iframe/metadata 瞬态失败的最大尝试次数（默认 2）")
     ap.add_argument("--video-index", type=int, default=0,
                     help="章内视频段序号(1-based)。>1 时本次 run 推进到第 N 段视频并只把该段判完成(逐段视频 dispatch)；0=按自然连播。")
     ap.add_argument("--xvfb-display", default=os.environ.get("DISPLAY", ":99"))
+    ap.add_argument("--interval-minutes", type=int, default=0,
+                    help="loop 模式每轮调度间隔分钟数（默认 30，可用 XUE_LOOP_INTERVAL 覆盖）")
     ap.add_argument("--trigger", default="manual",
                     choices=["manual", "schedule"],
                     help="触发类型（默认 manual）")
     ap.add_argument("--run-id", default=os.environ.get("GITHUB_RUN_ID", "local"),
                     help="GitHub run ID（用于记录）")
     args = ap.parse_args()
+
+    # 双击 exe（无参数）= 常驻刷课；源码/CI 形态缺省仍为 run（GHA 兼容——
+    # run.yml 总是显式传 --action，源码本地调用缺省 = run 与历史一致）
+    if args.action is None:
+        args.action = "loop" if is_frozen() else "run"
+    if args.action != "loop" and args.max_chapters is None:
+        args.max_chapters = 1
 
     # 校验 Secrets（run/scheduler 需要账号；CI 上缺账号直接拒绝，见函数 docstring）
     _secret_err = validate_action_secrets(args.action)
@@ -453,6 +474,12 @@ def main():
     elif args.action == "scheduler":
         # Scheduler 模式：由 Scheduler 模块决定是否需要执行
         sys.exit(cmd_scheduler(args))
+    elif args.action == "loop":
+        # 本地常驻模式（app/loop.py）：exe 双击默认；GHA 不走此路径。
+        # 退出窗口暂停由 __main__ 的 frozen 守卫统一负责
+        from app.loop import run_loop
+        sys.exit(run_loop(interval_minutes=args.interval_minutes,
+                          max_chapters=args.max_chapters))
     else:
         sys.exit(cmd_run(args))
 
@@ -522,4 +549,24 @@ def cmd_scheduler(args) -> int:
 
 
 if __name__ == "__main__":
-    main()
+    # 调度器派生的 frozen 子进程带 XUE_NO_EXIT_PAUSE=1（scheduler.py 注入）：
+    # 播完必须立即退出供父进程收割，停窗会让看门狗把 PASS 误杀成 TIMEOUT。
+    if not getattr(sys, "frozen", False) or os.environ.get("XUE_NO_EXIT_PAUSE"):
+        main()
+    else:
+        # 冻结产物（双击启动）：任何退出路径（正常/报错/异常）都停窗，
+        # 让用户能看到输出与退出原因；EOF（管道/计划任务）直接放行不阻塞
+        _code = 0
+        try:
+            main()
+        except SystemExit as e:
+            _code = e.code if isinstance(e.code, int) else (0 if e.code is None else 1)
+        except BaseException:
+            import traceback
+            traceback.print_exc()
+            _code = 1
+        try:
+            input("\n[exit] 按回车关闭窗口…")
+        except (EOFError, KeyboardInterrupt):
+            pass
+        sys.exit(_code)
