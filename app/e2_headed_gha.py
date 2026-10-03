@@ -106,7 +106,10 @@ def build_base_url(chap_id: str, params: "CourseParams | None" = None) -> str:
     p = params or default_params()
     return CourseParams(**{**p.to_dict(), "chapter_id": chap_id}).build_base_url()
 
-V3_SCRIPT_PATH = Path(__file__).parent.parent / "scripts" / "v3_optimized.user.js"
+# 随包只读资源：源码形态 = 仓库 scripts/；冻结形态 = _MEIPASS/scripts/（utils/paths.py）
+from utils.paths import resource_root  # noqa: E402
+
+V3_SCRIPT_PATH = resource_root() / "scripts" / "v3_optimized.user.js"
 
 MAX_PLAY_SECONDS     = 1500   # 25 min timeout
 IS_PASSED_SETTLE_S   = 20

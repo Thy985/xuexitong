@@ -75,6 +75,10 @@ def _write_output(output: str, data: dict) -> None:
     if not output:
         return
     try:
+        # <ts> 是 run 模式的时间戳模板；initialize/scheduler 直传时也替换掉，
+        # 否则 Windows 上 `<` 非法文件名会写盘失败（非致命，但丢 evidence）
+        if "<ts>" in output:
+            output = output.replace("<ts>", str(int(time.time())))
         p = Path(output)
         p.parent.mkdir(parents=True, exist_ok=True)
         tmp = p.with_suffix(p.suffix + ".tmp")
@@ -416,6 +420,12 @@ def validate_action_secrets(action: str, *, github_actions: bool | None = None) 
 
 
 def main():
+    # 冻结形态：把 CWD 锚到 exe 旁可写根（utils/paths.py），使 ./evidence 等
+    # 相对路径产物稳定落在 exe 目录，与启动位置无关。源码形态（含 GHA）不 chdir。
+    from utils.paths import is_frozen, repo_root
+    if is_frozen():
+        os.chdir(repo_root())
+
     ap = argparse.ArgumentParser(
         description="xuexitong MVP E5: Initialize / Run / Switch course learning"
     )

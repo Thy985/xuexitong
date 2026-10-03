@@ -17,9 +17,11 @@ from __future__ import annotations
 import argparse
 import json
 from datetime import datetime, timezone
-from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+# repo_root(): 源码形态 = 仓库根（与旧表达式等价）；冻结形态 = exe 旁（utils/paths.py）
+from utils.paths import repo_root  # noqa: E402
+
+_REPO_ROOT = repo_root()
 _MIGRATIONS_DIR = _REPO_ROOT / "state" / "migrations"
 _REGISTRY_ROOT = _REPO_ROOT / "state" / "registry"
 

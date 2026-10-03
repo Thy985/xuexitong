@@ -24,7 +24,10 @@ from pathlib import Path
 from typing import Optional
 
 # 保存在 git 不追踪的本地缓存目录，绝不入库、绝不上传 artifact
-COOKIE_DIR = Path(__file__).resolve().parent.parent / ".cache"
+# repo_root(): 源码形态 = 仓库根；冻结形态 = exe 旁（utils/paths.py）
+from utils.paths import repo_root  # noqa: E402
+
+COOKIE_DIR = repo_root() / ".cache"
 COOKIE_FILE = COOKIE_DIR / "cookies.json"   # legacy（无账号）文件名，保持兼容
 
 
