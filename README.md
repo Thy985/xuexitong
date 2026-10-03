@@ -1,4 +1,4 @@
-# xuexitong — 学习通自然学习 MVP
+# xuexitong — 学习通自然学习 
 
 > 对超星学习通（chaoxing）课程，**Fork → 设置 Secrets → Initialize → Scheduler / TDVP 探针 → GitHub Actions 定时**，
 > 系统按计划自动唤醒 Runtime，基于持久化状态和任务队列决定执行/跳过，输出可审计的 **Evidence**。
@@ -333,7 +333,7 @@ python app/run.py --action run --course-url "https://mooc1.chaoxing.com/..." --c
 
 ## 本地 exe（Windows 双击即用，可选）
 
-不想用 GitHub Actions 的用户可把项目打包为本地常驻程序：产物**自带 chromium**，双击即刷，课程/凭据/状态全部落在 exe 旁边，与 GHA 模式共用同一套代码与状态机。
+不想用 GitHub Actions 的用户可把项目打包为本地常驻程序，压缩包我放在Github tag上了：产物**自带 chromium**，双击即刷，课程/凭据/状态全部落在 exe 旁边，与 GHA 模式共用同一套代码与状态机。
 
 ```bash
 .venv/Scripts/python.exe build.py     # 产物 dist/Xuexitong/（内置浏览器，随包附带使用手册）
