@@ -44,3 +44,7 @@ mvp-evidence-*/
 tmp_artifacts*/
 tmp_success*/
 evidence_dl/
+
+# —— 本地 exe 打包产物（PyInstaller，Xuexitong.spec 保留版本化）——
+build/
+dist/
