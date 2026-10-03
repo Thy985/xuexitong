@@ -36,6 +36,7 @@ ERROR_STREAK_EXIT = 5          # 连续 ERROR 次数上限，超过即退出
 NO_ACTIVE_COURSE_MARK = "No active course"
 NO_PENDING_MARK = "No pending task"
 DEFAULT_INTERVAL_MIN = 30
+DEFAULT_ACTIVE_INTERVAL_MIN = 2   # 活跃轮（刚推进过任务）后的短间隔，连续刷课
 
 
 # ── 单实例锁 ────────────────────────────────────────────────────────
@@ -178,6 +179,12 @@ def run_loop(interval_minutes: int = 0, max_chapters: int = 1) -> int:
     except ValueError:
         interval_min = DEFAULT_INTERVAL_MIN
     interval_min = max(1, interval_min)
+    try:
+        active_min = int(os.environ.get("XUE_LOOP_ACTIVE_INTERVAL", "")
+                         or DEFAULT_ACTIVE_INTERVAL_MIN)
+    except ValueError:
+        active_min = DEFAULT_ACTIVE_INTERVAL_MIN
+    active_min = max(1, active_min)
 
     lock = _acquire_lock(LOCK_PATH)
     if lock is None:
@@ -186,8 +193,8 @@ def run_loop(interval_minutes: int = 0, max_chapters: int = 1) -> int:
         return 2
 
     try:
-        print(f"[loop] 本地常驻模式：每 {interval_min} 分钟调度一轮"
-              f"（state 根：{repo_root()}）", flush=True)
+        print(f"[loop] 本地常驻模式：空闲轮每 {interval_min} 分钟、活跃轮每 "
+              f"{active_min} 分钟（state 根：{repo_root()}）", flush=True)
         if not _ensure_credentials():
             return 2
         if not _ensure_active_course():
@@ -243,7 +250,10 @@ def run_loop(interval_minutes: int = 0, max_chapters: int = 1) -> int:
                 error_streak = 0
 
             if not stop.requests:
-                _sleep_interruptible(interval_min * 60, stop)
+                # 活跃轮（刚推进过任务，decision=RUN）用短间隔连续刷；
+                # 空闲轮（NOOP/BLOCKED/ERROR）用长间隔，避免空转打扰服务端
+                _sleep_interruptible(active_min * 60 if decision == "RUN"
+                                     else interval_min * 60, stop)
 
         print("[loop] 收到停止请求，退出。", flush=True)
         return 0
