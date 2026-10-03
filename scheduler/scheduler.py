@@ -333,8 +333,24 @@ def _kill_proc_tree(pid: int) -> None:
     调用方须用 `start_new_session=True` 启动子进程，使其成为独立进程组组长，
     这样 killpg(pid, ...) 能连同其所有子进程（browser/page）一并清理。
     GHA runner 是 Linux：先 SIGTERM（graceful），随后 SIGKILL 兜底。
+    Windows 无进程组语义：taskkill /T 连整棵进程树（含 Chromium 子进程）终止，
+    避免只杀主进程泄漏浏览器。仅 frozen/本地 Windows 分支受影响，Linux 路径不变。
     """
     if not pid:
+        return
+    if os.name == "nt":
+        import subprocess as _sp
+        try:
+            _r = _sp.run(["taskkill", "/F", "/T", "/PID", str(pid)],
+                         capture_output=True, timeout=15)
+            if _r.returncode == 0:
+                return
+        except Exception:
+            pass
+        try:
+            os.kill(pid, 9)
+        except Exception:
+            pass
         return
     import signal as _signal
     import time as _t
@@ -433,8 +449,14 @@ def _run_one_chapter(course_url: str, chapter_id: str, task_id: str = "",
     # 章视角对齐：用任务自己的 chapter_id 重建课程 URL，避免沿用 state 里
     # 旧章 raw_url 的 chapterId 锚点（否则 page 落到的章节视图与任务不对齐）。
     spawn_url = _align_chapter_url(course_url, chapter_id)
-    cmd = [
-        sys.executable, "-m", "app.run",
+    if getattr(sys, "frozen", False):
+        # 冻结产物：sys.executable 是本 exe 而非 Python 解释器，`-m app.run` 不成立；
+        # 直接以 CLI 语义重入（exe 的 main() 会自行 chdir 到 exe 旁，./evidence
+        # 产物落点与源码形态一致）。源码形态（含 GHA）保持原样。
+        cmd = [sys.executable]
+    else:
+        cmd = [sys.executable, "-m", "app.run"]
+    cmd += [
         "--action", "run",
         "--course-url", spawn_url,
         "--chapter-id", chapter_id,
