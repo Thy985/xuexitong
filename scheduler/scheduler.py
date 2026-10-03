@@ -469,6 +469,10 @@ def _run_one_chapter(course_url: str, chapter_id: str, task_id: str = "",
     exit_code = 1
     timed_out = False
     budget_s = int(max_s)
+    # frozen 子进程重入同一 exe：注入 XUE_NO_EXIT_PAUSE，让 __main__ 的
+    # 双击停窗守卫跳过 input——否则子进程播完后卡在等回车，被看门狗当
+    # 超时收割（实测 PASS 被误标 FAILED，污染 consecutive_failures）。
+    child_env = dict(os.environ, XUE_NO_EXIT_PAUSE="1")
     # 看门狗轮询片长：够短（能在子进程播报后十几秒内扩预算），又不至于把日志
     # 读成热路径。真正的判定权在 deadline，不在这个数。
     watch_tick_s = 15.0
@@ -476,6 +480,7 @@ def _run_one_chapter(course_url: str, chapter_id: str, task_id: str = "",
     try:
         try:
             proc = sp.Popen(cmd, stdout=stdout_fh, stderr=sp.STDOUT,
+                        env=child_env,
                         start_new_session=True)  # 独立进程组 → killpg 可连 browser 一并清理
             # 墙钟预算改成分片轮询：只有轮询才能在子进程还活着时读到它自己
             # 播报的视频时长，把静态 base 扩成自适应预算（R5/#20 —— 父进程
@@ -547,7 +552,14 @@ def _run_one_chapter(course_url: str, chapter_id: str, task_id: str = "",
             res = r.get("result", {})
             if res.get("verdict", ""):
                 verdict = res.get("verdict", verdict)
-            passed = res.get("exit_code", 1) == 0 if not timed_out else False
+            if not timed_out:
+                passed = res.get("exit_code", 1) == 0
+            else:
+                # 超时被杀 ≠ 播放失败：子进程可能在收尾阶段挂住（如等待交互输入）
+                # 被看门狗收割，但 evidence 是它被杀前写下的——verdict=PASS 意味着
+                # 服务端已确认 isPassed、registry 已标 SERVER_VERIFIED。此时仍判
+                # 失败会污染 consecutive_failures（3 集长视频 → 课程级 BLOCKED）。
+                passed = str(res.get("verdict", "") or "") == "PASS"
             runtime_evidence = r.get("evidence") or {}
             failure_stage = runtime_evidence.get("failure_stage") \
                 if isinstance(runtime_evidence, dict) else None

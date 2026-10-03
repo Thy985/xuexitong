@@ -546,7 +546,9 @@ def cmd_scheduler(args) -> int:
 
 
 if __name__ == "__main__":
-    if not getattr(sys, "frozen", False):
+    # 调度器派生的 frozen 子进程带 XUE_NO_EXIT_PAUSE=1（scheduler.py 注入）：
+    # 播完必须立即退出供父进程收割，停窗会让看门狗把 PASS 误杀成 TIMEOUT。
+    if not getattr(sys, "frozen", False) or os.environ.get("XUE_NO_EXIT_PAUSE"):
         main()
     else:
         # 冻结产物（双击启动）：任何退出路径（正常/报错/异常）都停窗，
