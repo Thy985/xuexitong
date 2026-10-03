@@ -3884,10 +3884,10 @@
     "chapter_id": "1217304743",
     "title": "VPN和NAT",
     "task_type": "video",
-    "status": "DISCOVERED",
+    "status": "COMPLETED",
     "priority": 0,
-    "attempt_count": 0,
-    "attempts": 0,
+    "attempt_count": 1,
+    "attempts": 1,
     "consecutive_failures": 0,
     "max_attempts": 3,
     "lease": {
@@ -3896,33 +3896,35 @@
       "expires_at_utc": null
     },
     "verification": {
-      "level": "NONE",
-      "verified_at_utc": null,
-      "run_id": null,
-      "source_detail": ""
+      "level": "SERVER_VERIFIED",
+      "verified_at_utc": "2026-10-03T21:24:26.766106+00:00",
+      "run_id": "37153940452",
+      "source_detail": "passed_object_ids=1"
     },
     "completion_evidence": {
-      "type": "NONE",
-      "source": "",
-      "run_id": "",
-      "observed_at_utc": "2026-10-02T11:22:01.042745+00:00",
-      "detail": "",
-      "passed_object_ids": []
+      "type": "SERVER_VERIFIED",
+      "source": "isPassed",
+      "run_id": "37153940452",
+      "observed_at_utc": "2026-10-03T21:24:26.766106+00:00",
+      "detail": "passed_object_ids=1",
+      "passed_object_ids": [
+        "871e404c80a93f62d8274fd66cccc8c6"
+      ]
     },
     "failure": {
       "stage": "",
       "run_id": "",
       "detail": "",
       "consecutive_failures": 0,
-      "occurred_at_utc": "2026-10-02T11:22:01.042748+00:00"
+      "occurred_at_utc": "2026-10-03T21:24:26.766116+00:00"
     },
     "created_at_utc": "2026-10-02T11:22:01.042750+00:00",
-    "updated_at_utc": "2026-10-02T11:22:01.042750+00:00",
-    "last_run_id": null,
-    "last_run_at_utc": null,
-    "last_started_at": null,
-    "last_finished_at": null,
-    "last_success_at_utc": null,
+    "updated_at_utc": "2026-10-03T21:24:26.766106+00:00",
+    "last_run_id": "37153940452",
+    "last_run_at_utc": "2026-10-03T21:24:26.766106+00:00",
+    "last_started_at": "2026-10-03T21:24:26.766106+00:00",
+    "last_finished_at": "2026-10-03T21:24:26.766106+00:00",
+    "last_success_at_utc": "2026-10-03T21:24:26.766106+00:00",
     "last_failure_at_utc": null,
     "_ch_idx": 41,
     "_cell_idx": 41,
