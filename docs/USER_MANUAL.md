@@ -2,7 +2,7 @@
 
 > 面向使用者的完整操作说明与故障排查。README 只保留快速开始与架构导航；
 > 本文是**唯一**的详细操作文档：本地 exe 的安装配置、启动向导、常驻行为、
-> 配置参考、状态文件说明、错误信息速查与 FAQ。
+> 配置参考、状态文件说明、错误信息速查、报告故障与 FAQ。
 >
 > 边界重申：本项目只做「真实浏览器自然播放 → 服务端完成」，
 > 不伪造 `multimedia/log`、不修改 `enc/attDurationEnc` 等签名参数、不跳过播放。
@@ -20,6 +20,7 @@
 7. [错误信息速查](#7-错误信息速查)
 8. [与云端 GHA 错峰双跑](#8-与云端-gha-错峰双跑)
 9. [FAQ](#9-faq)
+10. [报告故障（生成诊断包）](#10-报告故障生成诊断包)
 
 ---
 
@@ -190,9 +191,13 @@ dist/Xuexitong/
 ├── .env                                        # 凭据（明文，勿外传）
 ├── .cache/
 │   └── cookies-<账号哈希>.json                  # 登录态；失效才重新登录/过滑块
+├── 收集故障信息.bat                              # 双击生成诊断包（见 §10）
+├── VERSION                                     # 版本号（报障时请一并说明）
 ├── evidence/
 │   ├── chapter_<id>.json                       # 每章证据（verdict/failure_stage/10 项检查）
-│   └── chapter_<id>.scheduler.stdout.log       # 子进程完整日志
+│   ├── chapter_<id>.scheduler.stdout.log       # 子进程完整日志
+│   ├── loop.log                                # 调度层日志（轮次决策/探针推进/异常）
+│   └── diag_*.png                              # 失败瞬间截图
 └── state/
     ├── loop.lock                               # 防双开文件锁（退出自动释放）
     └── accounts/<账号哈希>/                     # 按账号隔离
@@ -222,6 +227,9 @@ dist/Xuexitong/
 
 ### 7.2 运行期 `failure_stage`（evidence JSON / 调度诊断）
 
+由引擎按固定顺序逐项自检推导（`app/e2_headed_gha.py::_derive_failure_stage`），
+是定位问题的总开关——先看它，再看 `evidence.checks` 里具体哪一项为 false。
+
 | failure_stage | 含义 | 常见处理 |
 |---|---|---|
 | `LOGIN_FAILED` | 账号密码错误或会话被踢 | 核对 `.env`；是否别处登录挤掉 |
@@ -229,11 +237,17 @@ dist/Xuexitong/
 | `NO_CARDS_IFRAME` | 章节卡片 iframe 未渲染 | URL 缺 `openc`/`hidetype`（§3.2） |
 | `NO_VIDEO_IN_CARDS` | 有卡片但无视频子 iframe | 该章可能是文档/测验类，程序会跳过换下一任务 |
 | `VIDEO_DURATION_INVALID` | 视频 duration=0 | 瞬态，重试；持续出现换章试试 |
-| `PLAYBACK_NOT_STARTED` | 视频未起播 | 网络慢/ CDN 抖动，重试 |
-| `PLAYBACK_STALLED` | 起播后 currentTime 不增长 | 网络问题；重试 |
-| `VIDEO_NOT_COMPLETED` | 播放中途停止 | 看门狗/网络；重试 |
-| `NEXTUNIT_EARLY_TRIGGER` | 翻页早于播完 | 记录证据即可，程序自行纠正 |
-| `ML_LOG_MISSING` | 服务端心跳缺失 | 多为网络瞬态，重试 |
+| `PLAYBACK_NOT_STARTED` | 视频未起播 | 网络慢 / CDN 抖动 / 被杀毒拦截，重试 |
+| `PLAYBACK_STALLED` | 起播后 currentTime 不增长 | 网络中断或页面被切后台导致节流，重试 |
+| `NO_MULTIMEDIA_LOG` | 服务端心跳（multimedia/log）未上报 | 多为网络瞬态或请求被拦，重试 |
+| `VIDEO_NOT_COMPLETED` | 播到中途停止（未到 90% 时长） | 看门狗/网络；重试 |
+| `ISPASSED_FALSE` | 播完了但服务端未判通过 | 视频尾部可能有确认交互，或学习通侧未落库 |
+| `NO_NEXTUNIT_NO_ENDED` | 既没触发下一节也没检测到结束 | 按卡播处理 |
+| `UNREPORTED_BY_RUNTIME` | 运行时崩溃或被看门狗杀掉，未自报阶段 | 看 `result.crash` 字段与 `evidence/loop.log` 尾部 |
+| `UNKNOWN` | 程序未能归类 | 人工看 `checks` 与 `key_console` |
+
+> `NEXTUNIT_EARLY_TRIGGER` 不是失败阶段，而是引擎自纠正的记录项（翻页早于播完
+> 时记证据并纠正，不计失败次数）。
 
 ### 7.3 调度状态类
 
@@ -288,3 +302,46 @@ dist/Xuexitong/
 
 **Q: exe 升级后要重新配置吗？**
 不用。只替换 `Xuexitong.exe` 与 `internal/`，保留 `.env`、`state/`、`.cache/`。
+
+---
+
+## 10. 报告故障（生成诊断包）
+
+遇到播放失败、卡住、闪退等问题时，**不需要你描述现象**——双击 exe 目录下的
+**`收集故障信息.bat`**，它会在同目录生成 `故障信息-<时间戳>.zip`，把这个 zip
+作为附件发到 issue 即可。维护者能从里面直接定位到失败阶段。
+
+**它收集什么**
+
+| 内容 | 位置 | 作用 |
+|---|---|---|
+| 每章证据 | `evidence/chapter_*.json` | `failure_stage` 失败阶段 + `checks` 十项自检 |
+| 子进程日志 | `evidence/chapter_*.scheduler.stdout.log` | 该章播放全过程 |
+| 调度层日志 | `evidence/loop.log` | 每轮决策、探针推进、为什么没推进 |
+| 失败截图 | `evidence/diag_*.png` | 失败瞬间的页面 |
+| 任务账本 | `state/**/tasks.json` | 哪一章失败几次、是否熔断 |
+| 环境信息 | `收集信息.txt` | 版本号、系统、收集清单 |
+
+**它不会收集什么**（已在脚本里硬性排除）
+
+- `.env`——你的账号密码
+- `.cache/`——登录 Cookie
+- `internal/`——560MB 运行时，与排障无关
+
+此外所有文本里的**手机号、课程 URL 的 `enc` 访问令牌、CDN 的 `ak_`/`at_`/`ad_`
+临时签名**都会在打包前自动打码。截图有配额（最近 5 张 / 12MB 内），避免超出
+issue 附件 25MB 上传限制。
+
+**手动等价操作**（不想用 .bat 时）
+
+```bash
+# 只要 evidence 和 state 两个目录压成 zip 也行
+# 注意：不要包含 .env 与 .cache/
+```
+
+**为什么不用 exe 的 `--action` 来收集？**
+因为「双击闪退」本身就是要报的问题——收集入口若挂在 exe 上，那类故障恰好
+收不到任何现场。`.bat` 走 PowerShell，不依赖 exe 能运行。
+
+**小技巧**：issue 里补一句你 `VERSION` 文件里的版本号，能省掉一轮"是不是
+版本不一致"的来回。
