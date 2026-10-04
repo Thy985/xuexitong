@@ -19,6 +19,9 @@ ROOT = Path(SPECPATH)
 datas = [
     # 浏览器引擎注入用的 user.js（运行时经 utils.paths.resource_root() 读取）
     (str(ROOT / "scripts" / "v3_optimized.user.js"), "scripts"),
+    # 版本戳：冻结形态下 utils/version.py 从 _MEIPASS 读这份，写进 evidence.meta。
+    # 缺了它，本地 exe 报的 issue 就无法判断对方是哪个 build（复现不了的常见原因）。
+    (str(ROOT / "VERSION"), "."),
 ]
 # playwright driver + .local-browsers（内置 chromium）由 playwright 包自带的
 # PyInstaller hook（entry point `pyinstaller40`）自动收集，无需在此 collect。
@@ -41,6 +44,12 @@ hiddenimports = [
     "utils.cookie_store",
     "utils.env_file",
     "utils.paths",
+    # 运行期由 app.loop / app.e2_headed_gha 直接 import，显式列出
+    "utils.runlog",
+    "utils.version",
+    # 注意：utils.diag_summary **刻意不进包** —— 它是维护者侧工具，收到用户
+    # 交来的诊断包后用源码 venv 跑 `python -m utils.diag_summary <目录>` 即可。
+    # 冻结形态里没有调用方，打进去只是白占体积。
 ]
 
 a = Analysis(
