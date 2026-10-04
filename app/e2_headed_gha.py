@@ -108,6 +108,7 @@ def build_base_url(chap_id: str, params: "CourseParams | None" = None) -> str:
 
 # 随包只读资源：源码形态 = 仓库 scripts/；冻结形态 = _MEIPASS/scripts/（utils/paths.py）
 from utils.paths import resource_root  # noqa: E402
+from utils.version import app_version, git_sha  # noqa: E402
 
 V3_SCRIPT_PATH = resource_root() / "scripts" / "v3_optimized.user.js"
 
@@ -708,6 +709,10 @@ def run_test(args, params: "CourseParams | None" = None):
         "github_actor": os.environ.get("GITHUB_ACTOR", "local"),
         "started_at_utc": datetime.now(timezone.utc).isoformat(),
         "chapter_id": args.chapter_id,
+        # 本地 exe 没有 GITHUB_SHA，报障时无从判断对方是哪个 build —— 补上
+        # 自报版本（VERSION 文件 + git sha，冻结形态走 _MEIPASS 随包那份）。
+        "app_version": app_version(),
+        "app_git_sha": git_sha(),
     }
     evidence["checks"] = {}
     evidence["errors"] = []
@@ -1392,15 +1397,40 @@ def _write(ev: dict, path: str):
 
 
 # ── 诊断辅助：失败阶段推导 + 截图 + 结构化上下文 ──────────────────
+def _diag_dir() -> "Path | None":
+    """截图落点：与 evidence 同目录（`<可写根>/evidence/`）。
+
+    原先硬编码 `/tmp/diag_*.png`。Linux runner 上 `/tmp` 正常，但 Windows 把它
+    解析成**当前盘符根目录下的 tmp\\**（实测落在 `D:\\tmp\\`）—— 不在 exe 旁边、
+    不随 evidence 打包、换个盘符路径就对不上，报障的人根本不会想到去那儿找。
+    落在 evidence 下才对：收集脚本拷走 evidence/ 就把截图一并带走，GHA 的
+    `paths: evidence/` 也自然覆盖到。
+
+    目录不可写时返回 None（跳过截图，不影响主流程）。
+    """
+    try:
+        from utils.paths import repo_root
+        d = repo_root() / "evidence"
+        d.mkdir(parents=True, exist_ok=True)
+        return d
+    except Exception:
+        return None
+
+
 def _capture_diagnostic(page, evidence: dict, tag: str):
     """失败时自动截图 + 记录页面 URL/title + video 状态 + 最后 console 消息。"""
-    try:
-        shot_path = f"/tmp/diag_{tag}_{int(time.time())}.png"
-        page.screenshot(path=shot_path, full_page=True)
-        evidence.setdefault("diagnostics", {})[tag + "_screenshot"] = shot_path
-        log(f"[diag] screenshot saved: {shot_path}")
-    except Exception as e:
-        evidence.setdefault("errors", []).append(f"diag_screenshot_{tag}: {e}")
+    _dir = _diag_dir()
+    if _dir is not None:
+        try:
+            shot_path = str(_dir / f"diag_{tag}_{int(time.time())}.png")
+            page.screenshot(path=shot_path, full_page=True)
+            evidence.setdefault("diagnostics", {})[tag + "_screenshot"] = shot_path
+            log(f"[diag] screenshot saved: {shot_path}")
+        except Exception as e:
+            evidence.setdefault("errors", []).append(f"diag_screenshot_{tag}: {e}")
+    else:
+        evidence.setdefault("errors", []).append(
+            f"diag_screenshot_{tag}: evidence 目录不可写，跳过截图")
     try:
         st = get_video_state(page)
         evidence.setdefault("diagnostics", {})[tag + "_video_state"] = st

@@ -30,8 +30,10 @@ from datetime import datetime
 from pathlib import Path
 
 from utils.paths import repo_root
+from utils.runlog import env_opt_out, install_run_log
 
 LOCK_PATH = repo_root() / "state" / "loop.lock"
+LOG_PATH = repo_root() / "evidence" / "loop.log"
 ERROR_STREAK_EXIT = 5          # 连续 ERROR 次数上限，超过即退出
 NO_ACTIVE_COURSE_MARK = "No active course"
 NO_PENDING_MARK = "No pending task"
@@ -257,6 +259,20 @@ def run_loop(interval_minutes: int = 0, max_chapters: "int | None" = None) -> in
     import signal
     signal.signal(signal.SIGINT, stop.request)
 
+    # 调度层的决策/异常只 print 到 stdout，exe 双击形态下关窗即丢 ——
+    # 而故障高发恰恰在这一层（选错章、熔断、探针空转），引擎层日志一片 PASS
+    # 时恰恰看不出「这一轮为什么没推进」。装 tee 让窗口里看到的 = 事后能查的。
+    # 句柄存到局部变量并在整个函数期持有（GC 关闭文件会让日志静默截断）。
+    _log_fh = None
+    if not env_opt_out():
+        _log_fh = install_run_log(LOG_PATH)
+        if _log_fh is not None:
+            from utils.version import build_info
+            _bi = build_info()
+            print(f"[loop] 运行日志: {LOG_PATH}"
+                  f"（版本 {_bi['app_version']}"
+                  f"{'/' + _bi['git_sha'] if _bi['git_sha'] else ''}）", flush=True)
+
     try:
         interval_min = int(interval_minutes or 0) or int(
             os.environ.get("XUE_LOOP_INTERVAL", "") or DEFAULT_INTERVAL_MIN)
@@ -366,3 +382,11 @@ def run_loop(interval_minutes: int = 0, max_chapters: "int | None" = None) -> in
             lock.close()
         except Exception:
             pass
+        # 显式关闭日志：靠 GC 的话解释器退出时可能丢尾部几行，
+        # 而「退出前的最后几行」恰恰常常就是报错本身。
+        if _log_fh is not None:
+            try:
+                _log_fh.flush()
+                _log_fh.close()
+            except Exception:
+                pass
