@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status": "ACTIVE",
-  "run_count": 9,
-  "success_count": 9,
+  "run_count": 10,
+  "success_count": 10,
   "failure_count": 0,
   "course_identity": {
     "course_id": "265997861",
@@ -16,12 +16,12 @@
   "progress": {
     "completed": 25,
     "total": 55,
-    "last_completed_task": "1217304771",
+    "last_completed_task": "1217304773",
     "active_task": null
   },
-  "last_run": "2026-10-04T21:35:01.610391+00:00",
-  "last_success": "2026-10-04T21:35:01.610391+00:00",
-  "last_completed_task": "1217304771",
+  "last_run": "2026-10-05T22:45:37.555480+00:00",
+  "last_success": "2026-10-05T22:45:37.555480+00:00",
+  "last_completed_task": "1217304773",
   "history": [
     {
       "run_at_utc": "2026-10-02T08:46:42.490676+00:00",
@@ -85,18 +85,25 @@
       "passed": true,
       "verdict": "PASS",
       "chapter_id": "1217304771"
+    },
+    {
+      "run_at_utc": "2026-10-05T22:45:37.555480+00:00",
+      "timing_s": 455.8,
+      "passed": true,
+      "verdict": "PASS",
+      "chapter_id": "1217304773"
     }
   ],
   "scheduler": {
-    "last_scheduled_at": "2026-10-04T21:35:01.664227+00:00",
-    "last_started_at": "2026-10-04T21:35:01.664227+00:00",
-    "last_finished_at": "2026-10-04T21:35:01.664545+00:00",
+    "last_scheduled_at": "2026-10-05T22:45:37.623662+00:00",
+    "last_started_at": "2026-10-05T22:45:37.623662+00:00",
+    "last_finished_at": "2026-10-05T22:45:37.624193+00:00",
     "last_result": "SUCCESS",
-    "last_run_id": "37235296509",
+    "last_run_id": "37383120006",
     "last_trigger": "schedule",
     "consecutive_failures": 0,
-    "execution_id": "37235296509",
-    "attempt": 9,
+    "execution_id": "37383120006",
+    "attempt": 10,
     "blocked_since": null,
     "blocked_hits": 0,
     "blocked_retry_interval": 0
