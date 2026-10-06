@@ -130,7 +130,8 @@ dist/Xuexitong/
 
 ```
 每轮 = 一次 run_scheduler（与 GHA cron 同一决策引擎）
-  ├─ 探测（PREPARE）：扫描目录 + 只深读队首附近 Top-K 章候选（默认 3，XUE_PROBE_TOPK 可调）
+  ├─ 探测（PREPARE）：扫描目录 + 只深读队首附近 Top-K 章候选（默认 3，XUE_PROBE_TOPK 可调）；
+  │   已确认无视频工作的章（视频看完/纯测验文档）自动跳过并跨轮记忆，窗口只前移不停滞
   ├─ 决策：RUN（有活）/ NOOP（没活）/ BLOCKED（熔断）/ ERROR（环境异常退避）
   └─ RUN → 逐章真实播放直到服务端 isPassed
 轮间隔：活跃轮（刚推进过任务）默认 2 分钟；空闲轮默认 30 分钟
@@ -274,7 +275,7 @@ dist/Xuexitong/
 | `verdict=PASS` 但 `result=FAILED` | 旧版本看门狗误杀的误标（已修复） | 升级 exe；任务实际已完成，不会重刷 |
 | 轮次一直 NOOP | 课程完成 / 无活跃课程 / 探针无 pending | 看向导展示的进度；确认课程选对 |
 | Chrome 反复打开又关闭 | 每轮固定 2 个窗口：探测（备课）+ 播放（§4.2） | 正常流程；探测窗口约 1 分钟内让位给播放窗口 |
-| 探测偏慢（`[prepare] 深读候选 i/K`） | 每轮深读 Top-K 候选章（默认 3） | 正常，约 1 分钟内；可 `.env` 调 `XUE_PROBE_TOPK` |
+| 探测偏慢（`[prepare] 深读候选 i/K`） | 每轮深读 Top-K 候选章（默认 3）；已确认无视频工作的章会自动跳过并跨轮记忆 | 正常，约 1 分钟内；可 `.env` 调 `XUE_PROBE_TOPK` |
 
 ### 7.4 环境/系统类
 

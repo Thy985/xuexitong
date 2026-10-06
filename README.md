@@ -146,7 +146,7 @@ catalog 材料化全部未完成章的 work 列表并写 `progress.completed`，
 
 Scheduler 内部自动执行：
 1. 从 `state/active_course.json` 读取活跃课程
-2. **TDVP Passive Probe**（后台静默）：扫描目录，深读队首附近 Top-K 候选章（`XUE_PROBE_TOPK`，默认 3），点亮任务队列
+2. **TDVP Passive Probe**（后台静默）：扫描目录，深读队首附近 Top-K 候选章（`XUE_PROBE_TOPK`，默认 3），点亮任务队列；已验证无视频工作的章跨轮记忆跳过，窗口只前移不停滞
 3. 读取课程状态决定本次是否执行（RUN / NOOP / BLOCKED / ERROR）
 4. 若 RUN，自动选择下一个 pending 任务，调用浏览器 Runtime 执行学习
 5. 更新并持久化 state 到 main 分支
