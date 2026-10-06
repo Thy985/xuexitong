@@ -670,6 +670,11 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
         identity_key = active.key()
         course_url = active.raw_url  # 使用 state 中保存的 URL
 
+    # ── 窗口跨轮记忆：深读窗口跳过「点级快照已证明无视频工作」的章 ──────
+    # 无视频章（测验/文档/已看完）不再永久占槽，Top-K 窗口才能真正前移。
+    from tvdp.tdvp import set_window_skipper
+    set_window_skipper(_make_no_video_work_skipper(identity_key))
+
     # ── Step 1.5: 账号首次进入课程 → 服务端真源 bootstrap（P0-3，幂等）──────
     # 该账号命名空间里此课程 registry 为空（首次进）时，用服务端 catalog 一次性
     # 材料化 work 列表并写 progress（服务端完成数），避免"空账 → 探针无 pending →
@@ -1023,6 +1028,7 @@ def _ensure_bootstrap_on_start(course_url: str, identity_key: str,
         if not combined:
             print("[scheduler] P0-3 bootstrap: fetch returned None; skip", flush=True)
             return
+        _mark_no_video_work_snapshots(identity_key, combined)
         _PROBE_FETCH_CACHE[identity_key] = combined  # 本轮 probe 复用，免二次登录
         rep = materialize_from_common(identity_key, course_url, combined,
                                       persist_progress=True)
@@ -1246,6 +1252,57 @@ def _env_video_duration() -> "tuple[Optional[float], Optional[str]]":
     except ValueError:
         return None, f"XUE_VIDEO_DURATION_S 非数字: {ev!r}"
     return (v, None) if v > 0 else (None, "XUE_VIDEO_DURATION_S <= 0")
+
+
+def _make_no_video_work_skipper(course_key: str):
+    """窗口跳过器工厂：点级快照（24h 内）证明「无视频工作」的章跳过深读。
+
+    两条跳过依据（failure-safe：任何异常/缺数据都不跳，宁可多读不可漏读）：
+      - has_video 且 finished>=total → 视频点全看完（剩余只可能是非视频任务）；
+      - has_video=False → 读过且 cards 帧在、但没有任何视频点（纯文档/测验章）。
+    没有这层记忆时，这类章会永久占据 Top-K 窗口槽位 —— 窗口停在原地，
+    后续章永远不被点亮（2026-10-06 用户实测发现的停滞边界）。
+    """
+    def _skip(cid) -> bool:
+        try:
+            from app.registry.task_registry import (load_chapter_points,
+                                                    POINTS_SNAPSHOT_TTL_S,
+                                                    _snapshot_is_fresh)
+            snap = (load_chapter_points(course_key) or {}).get(str(cid))
+            if not snap or not _snapshot_is_fresh(
+                    snap, datetime.now(timezone.utc), POINTS_SNAPSHOT_TTL_S):
+                return False
+            if snap.get("has_video"):
+                total = int(snap.get("video_total") or 0)
+                fin = int(snap.get("video_finished") or 0)
+                return total > 0 and fin >= total
+            return True      # has_video=False：读过（帧在）但无视频点
+        except Exception:
+            return False
+    return _skip
+
+
+def _mark_no_video_work_snapshots(course_key: str, combined: Optional[dict]) -> None:
+    """把本轮深读证明「没有任何视频点」的章落成 has_video=False 快照。
+
+    materialize_video_counts_from_points 只给**有视频点**的章写快照；纯文档/
+    测验章（或帧在而无任务点行的章）没有任何记录，下一轮窗口无法跳过它们。
+    这里补上跨轮记忆。视频「全 finished」的章不在此列 —— materialize 写的
+    has_video=True finished=total 语义更完整，skipper 走「全看完」分支。
+    """
+    cids = (combined or {}).get("no_video_cids") or []
+    if not cids:
+        return
+    from app.registry.task_registry import set_chapter_point_snapshot
+    for cid in cids:
+        try:
+            set_chapter_point_snapshot(course_key, str(cid),
+                                       video_total=0, video_finished=0,
+                                       has_video=False)
+        except Exception:
+            continue
+    print(f"[scheduler] 无视频工作章已记忆，后续窗口跳过: {sorted(cids)}",
+          flush=True)
 
 
 def _probe_video_duration_s(course_url: str, chapter_id: str,
@@ -1570,6 +1627,7 @@ def _run_tdvp_probe(course_url: str, course_key: str,
         if combined is not None:
             chapters_raw = combined.get("chapters") or []
             _combined_points = combined.get("points") or []
+            _mark_no_video_work_snapshots(course_key, combined)
         else:
             from tvdp.tdvp import fetch_course_discovery
             chapters_raw = fetch_course_discovery(course_url)

@@ -232,3 +232,36 @@ def test_probe_lights_all_pending_chapters_and_queues_real_work(probe_env,
 
     # 5) probe 选中队首真活
     assert nxt == "1217304721:video2", f"实际选中 {nxt!r}"
+
+
+def test_probe_marks_no_video_chapters_for_cross_round_skip(probe_env,
+                                                            monkeypatch):
+    """fetch 报告的 no_video_cids → probe 落 has_video=False 快照（跨轮窗口跳过依据）。
+
+    无此记忆时，PPP 这类「无视频点」章每轮重读（~12s）并永久占据 Top-K 窗口槽，
+    窗口停滞在原地 —— 后续章永远不被点亮（2026-10-06 用户实测发现的停滞边界）。
+    """
+    store, points, saved_queues = probe_env
+    _PROBE_FETCH_CACHE.clear()
+
+    chapters = [
+        {"chapter_id": "1217304719", "title": "点对点协议PPP", "status": "pending",
+         "job_remaining": 1, "chapter_index": 40, "cell_index": 40},
+        {"chapter_id": "1217304721", "title": "广播信道", "status": "pending",
+         "job_remaining": 6, "chapter_index": 41, "cell_index": 41},
+    ]
+    monkeypatch.setattr(T, "fetch_course_detail_and_verify",
+                        lambda url, cid="", **kw: {"chapters": chapters,
+                                                   "points": [],
+                                                   "no_video_cids":
+                                                       ["1217304719"]})
+    monkeypatch.setattr(T, "live_verify_chapter", lambda *a, **kw: None)
+
+    _run_tdvp_probe(
+        "https://mooc1.chaoxing.com/mycourse/studentstudy"
+        "?chapterId=1217304719&courseId=1&clazzid=2&cpi=3", "k")
+
+    snap = points.get("1217304719")
+    assert snap is not None and snap.get("has_video") is False, \
+        "无视频点章必须落快照，下一轮窗口才能跳过它"
+    assert snap.get("video_total") == 0 and snap.get("video_finished") == 0

@@ -631,21 +631,22 @@ def _probe_topk() -> "Optional[int]":
 
 def select_chapters_to_read(chapters: "list[dict]|None",
                             target_cid: str = "",
-                            limit: "Optional[int]" = 3) -> "list[dict]":
-    """从目录挑本轮要深读的章（纯函数，可单测）。
+                            skip=None) -> "list[dict]":
+    """目录 → 按优先级排序的深读**候选队列**（纯函数，可单测）。
 
     规则：
       - 只考虑未完成章（目录 DOM 状态 != completed）；
       - 预测队首章（target_cid）**必读**且排最前 —— 队首可播性是本轮最重要
         的信息，Step 4.5 refine / 投递闸门都直接复用它的点级；
-      - 其余按目录序填充到 limit 个 —— 滑动窗口随进度前移；
-      - limit=None → 全量（旧行为逃生口）。
+      - skip(cid) 为 True 的章被剔除 —— 跨轮记忆：点级快照已证明该章无视频
+        工作（视频全看完 / 读过且无视频点），不再花 12s 重读（无此机制时，
+        这类章会永久占据窗口槽，窗口停在原地不前移）；
+      - 返回**完整候选队列**；窗口槽位、回填与读取预算由
+        `run_windowed_deep_read` 负责（limit 参数在那里）。
     """
     incomplete = [ch for ch in (chapters or [])
                   if str(ch.get("chapter_id") or "")
                   and str(ch.get("status") or "") != "completed"]
-    if limit is None:
-        return list(incomplete)
     tgt = str(target_cid or "")
     ordered: list[dict] = []
     for ch in incomplete:
@@ -653,7 +654,92 @@ def select_chapters_to_read(chapters: "list[dict]|None",
             ordered.insert(0, ch)
         else:
             ordered.append(ch)
-    return ordered[:max(1, int(limit))]
+    if skip is not None:
+        def _skipped(ch: dict) -> bool:
+            try:
+                return bool(skip(str(ch.get("chapter_id") or "")))
+            except Exception:
+                return False          # 跳过器自身故障 → 宁可多读不可漏读
+        ordered = [ch for ch in ordered if not _skipped(ch)]
+    return ordered
+
+
+def chapter_video_work_state(points: "list[dict]") -> str:
+    """一章的点级读数里还有没有「未完成的视频工作」（纯函数）。
+
+    返回：
+      "work"    → 有未 finished 的视频点（本章可能要播，占窗口槽）
+      "done"    → 读到了点且没有任何未 finished 的视频点（视频全看完，
+                   或只有非视频点）—— 槽位可回填
+      "unknown" → 没读到任何点 —— 没读到 ≠ 没有，保守占槽；
+                   调用方若确认 cards_frames>=1（帧在而无行）可改判 done
+    """
+    if not points:
+        return "unknown"
+    videos = [p for p in points if p.get("type") == "video"]
+    if not videos:
+        return "done"
+    return "work" if any(not p.get("isFinished") for p in videos) else "done"
+
+
+def run_windowed_deep_read(candidates: "list[dict]", *,
+                           limit: "Optional[int]", read_fn) -> "tuple[list[dict], list[str]]":
+    """窗口化深读循环（纯逻辑，read_fn 注入，可单测）。
+
+    - limit=None → 旧行为：全量读完，无回填、无标记。
+    - 否则：读到「有未完成视频工作」的章占一个窗口槽（共 limit 个）；
+      证明无视频工作的章（点级全 finished / 帧在而无任何点）**不占槽**、
+      队列自动回填；总读取次数封顶 2*limit —— 回填不能变成变相全量。
+    - 「本章没有任何视频点」的章（非视频行 / 帧在而无行）记入 no_video_cids，
+      由调用方落 has_video=False 快照，下一轮窗口直接跳过（跨轮记忆）。
+      视频「全 finished」的章**不**记这里：materialize 会写 has_video=True
+      finished=total，skipper 走「全看完」分支，账本语义更完整。
+    """
+    points: list[dict] = []
+    no_video_cids: list[str] = []
+    budget = None if limit is None else max(1, int(limit)) * 2
+    reads = 0
+    slots = 0
+    queue = list(candidates or [])
+    while queue:
+        if budget is not None and reads >= budget:
+            print(f"[prepare] 深读预算用尽（{reads} 次读取），剩余 "
+                  f"{len(queue)} 章下一轮再读", flush=True)
+            break
+        if limit is not None and slots >= limit:
+            break
+        ch = queue.pop(0)
+        cid = str(ch.get("chapter_id") or "")
+        reads += 1
+        try:
+            pts, cards = read_fn(ch)
+        except Exception as pe:
+            print(f"[tdvp] point-read failed cid={cid} (kept going): {pe}",
+                  file=sys.stderr)
+            continue
+        points.extend(pts or [])
+        state = chapter_video_work_state(pts or [])
+        if limit is not None and (state == "done"
+                                  or (state == "unknown" and cards >= 1)):
+            videos = [p for p in (pts or []) if p.get("type") == "video"]
+            print(f"[prepare] chapter={cid} 无未完成视频工作"
+                  f"(video={len(videos)}, cards={cards}) → 回填槽位",
+                  flush=True)
+            if not videos:
+                no_video_cids.append(cid)
+            continue
+        slots += 1
+    return points, no_video_cids
+
+
+# 进程内窗口跳过器：由 scheduler 注册（只有它有 course_key），深读前剔除
+# 「点级快照已证明无视频工作」的章 —— 无视频章不再永久占槽，窗口真正前移。
+_WINDOW_SKIPPER: "dict[str, object]" = {"fn": None}
+
+
+def set_window_skipper(fn) -> None:
+    """注册/更换窗口跳过器（fn(cid) -> bool）；传 None 关闭。"""
+    _WINDOW_SKIPPER["fn"] = fn
 
 
 def fetch_course_detail_and_verify(
@@ -731,37 +817,32 @@ def fetch_course_detail_and_verify(
             # ── 窗口化点级深读（2026-10-06 排查定案，取代全量深读）─────────
             # 旧实现（2026-10-02）一次会话内读**全部 DOM 未完成章**：每章 ~12s，
             # 29 章实测 ~6min —— 后台 benchmark 里显得稳健，exe 双击形态下用户
-            # 盯着的却是「浏览器一直翻下一章、迟迟不播放」。改为 Top-K 滑动窗口
-            # （select_chapters_to_read）：预测队首章必读 + 目录序补足 K 章，
-            # 备课成本有预算，窗口随进度前移，未读章走 <cid>:other 不会死锁。
-            points = []
-            to_read = select_chapters_to_read(chapters, target_cid=target_cid,
-                                              limit=_probe_topk())
-            n_read = len(to_read)
-            if n_read:
-                print(f"[prepare] 点级深读 {n_read} 章"
-                      f"（预算 XUE_PROBE_TOPK={_probe_topk()}）", flush=True)
-            for i, ch in enumerate(to_read, 1):
-                cid = str(ch.get("chapter_id") or "")
-                try:
-                    print(f"[prepare] 深读候选 {i}/{n_read} chapter={cid} …",
-                          flush=True)
-                    pts = read_chapter_job_points(
-                        page, cid,
-                        params.get("course_id", ""),
-                        params.get("clazz_id", ""),
-                        params.get("cpi", ""),
-                        enc=params.get("enc", ""),
-                        openc=params.get("openc"),
-                        hidetype=params.get("hidetype"),
-                    )
-                    points.extend(pts or [])
-                except Exception as pe:
-                    # 单章读失败不影响其余章与已拿到的目录（独立复核兜底仍在）。
-                    print(f"[tdvp] point-read failed cid={cid} (kept going): {pe}",
-                          file=sys.stderr)
+            # 盯着的却是「浏览器一直翻下一章、迟迟不播放」。改为 Top-K 窗口 +
+            # 回填（run_windowed_deep_read）：读到有未完成视频工作的章占槽
+            # （限 K 个），证明无视频工作的章当场回填（读取封顶 2K），无视频
+            # 章跨轮记忆（no_video_cids → 调用方落快照），窗口只前移不停滞。
+            _k = _probe_topk()
+            print(f"[prepare] 点级深读窗口 XUE_PROBE_TOPK={_k}"
+                  + ("" if _k is None else f"（读取封顶 {2 * _k} 次）"),
+                  flush=True)
+            points, no_video_cids = run_windowed_deep_read(
+                select_chapters_to_read(
+                    chapters, target_cid=target_cid,
+                    skip=_WINDOW_SKIPPER["fn"]),
+                limit=_k,
+                read_fn=lambda ch: read_chapter_job_points_diag(
+                    page, str(ch.get("chapter_id") or ""),
+                    params.get("course_id", ""),
+                    params.get("clazz_id", ""),
+                    params.get("cpi", ""),
+                    enc=params.get("enc", ""),
+                    openc=params.get("openc"),
+                    hidetype=params.get("hidetype"),
+                ),
+            )
             browser.close()
-            return {"chapters": chapters or [], "points": points}
+            return {"chapters": chapters or [], "points": points,
+                    "no_video_cids": no_video_cids}
     except Exception as e:
         print(f"[tdvp] fetch_course_detail_and_verify error: {e}", file=sys.stderr)
         return None
@@ -1082,14 +1163,30 @@ def read_chapter_job_points(
 ) -> list[dict]:
     """L2 live verification：打开指定章节的 cards 帧，读其真实任务点列表。
 
-    返回 [{task_id, type, title, finished}]，task_id 形如 <chapterId>（video）或
-    <chapterId>:<type>。只对 conflict/STALE 的章节做，不用于被动 discovery
-    （成本梯度：L1 catalog 便宜，L2 每章一次，L3 才真正重播）。
+    兼容包装：只需要点级时用这个；需要区分「帧没挂载」还是「帧在而无任务点」
+    时用 `read_chapter_job_points_diag`（返回值多一个 cards_frames）。
+    """
+    pts, _cards = read_chapter_job_points_diag(
+        page, knowledge_id, course_id, clazz_id, cpi,
+        enc=enc, openc=openc, hidetype=hidetype)
+    return pts
 
-    `enc` 必须来自**当前登录账号自己的**课程 URL（feojfe5645 fork 实测回归）：
-    enc/cpi/openc 都是按用户签发的签名，硬编码原作者的 enc 会让 fork 用户的
-    会话拿别人的签名请求 → cards 帧整页不渲染（cards_frames=0）→ 全课程永远
-    发现不了任何视频点 → 队列恒空 NOOP。缺省时省略该参数（离线/测试）。
+
+def read_chapter_job_points_diag(
+    page,
+    knowledge_id: str,
+    course_id: str,
+    clazz_id: str,
+    cpi: str,
+    enc: str = "",
+    openc: Optional[str] = None,
+    hidetype: Optional[str] = None,
+) -> "tuple[list[dict], int]":
+    """同 read_chapter_job_points，额外返回 (points, cards_frames)。
+
+    cards_frames 是挂载的 knowledge/cards 帧数 —— 「读空」的归因依据：
+    0 = 帧没挂载（读取失败，不能下任何结论）；>=1 且 pts=0 = 帧在而没有
+    可识别任务点行（纯文档/无任务点章，可判定「无视频工作」）。
     """
     url = (f"https://mooc1.chaoxing.com/mycourse/studentstudy"
            f"?chapterId={knowledge_id}&courseId={course_id}"
@@ -1156,7 +1253,7 @@ def read_chapter_job_points(
     tv, tf = chapter_video_summary(points)
     print(f"[tdvp] point-read {knowledge_id}: pts={len(points)} "
           f"video={tf}/{tv} cards_frames={n_cards}", file=sys.stderr, flush=True)
-    return points
+    return points, n_cards
 
 
 def build_live_pending(job_points: list[dict]) -> set[str]:
