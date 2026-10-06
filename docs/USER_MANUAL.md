@@ -130,12 +130,15 @@ dist/Xuexitong/
 
 ```
 每轮 = 一次 run_scheduler（与 GHA cron 同一决策引擎）
-  ├─ TDVP 探针：逐章读取服务端完成标记，刷新任务队列
-  ├─ 决策：RUN（有活）/ NOOP（没活）/ BLOCKED（熔断）
+  ├─ 探测（PREPARE）：扫描目录 + 只深读队首附近 Top-K 章候选（默认 3，XUE_PROBE_TOPK 可调）
+  ├─ 决策：RUN（有活）/ NOOP（没活）/ BLOCKED（熔断）/ ERROR（环境异常退避）
   └─ RUN → 逐章真实播放直到服务端 isPassed
 轮间隔：活跃轮（刚推进过任务）默认 2 分钟；空闲轮默认 30 分钟
 ```
 
+- **浏览器窗口**：每轮固定 2 个 Chrome 窗口——第 1 个是「备课」探测（扫描目录、
+  验证候选，约 1 分钟内），关闭后第 2 个才是真正播放视频的。**看到 Chrome 打开又
+  关闭是正常流程**，不是故障。
 - **退出条件**：课程无可推进任务（自动退出，exit 0）；连续 5 轮 ERROR/异常（exit 1）。
 - **Ctrl+C**：按一次 = 优雅停止（当前轮跑完不再开下一轮）；连按两次 = 立即退出。
 - **防双开**：程序有文件锁，双开会被拒绝（同账号并发互踢会话）。
@@ -143,8 +146,12 @@ dist/Xuexitong/
 
 ### 4.3 BLOCKED 熔断与恢复
 
-同一任务连续失败 3 次（`consecutive_failures ≥ 3`）→ 课程级 BLOCKED：
+同一任务连续**内容级**失败 3 次（`consecutive_failures ≥ 3`）→ 该任务 BLOCKED；课程级熔断见 §7.3：
 
+- **环境类失败不计入**：登录失败、会话被踢、页面框架未渲染（`LOGIN_FAILED` /
+  `SESSION_KICKED` / `NO_CARDS_IFRAME` 等，见 §7.2）属于系统级故障，程序不会把它
+  记到某一章头上——本轮立即终止并按 ERROR 退避（空闲轮间隔后重试，连续 5 轮自动
+  退出），环境恢复后原章照常重试，**不会被跳过或冻结**；
 - **自动恢复**：`schedule` 触发下每累计 4 次 BLOCKED 轮自动放行一次探测重试（`XUE_BLOCKED_RETRY_INTERVAL` 可调），恢复成功即清零；
 - **立即干预**：手动触发不受 cooldown 限制——`Xuexitong.exe --action scheduler --trigger manual`；
 - 具体失败原因看 `evidence/chapter_*.json` 的 `failure_stage`（见 §7.2）。
@@ -161,6 +168,7 @@ dist/Xuexitong/
 | `XUE_LOOP_INTERVAL` | `30` | loop 空闲轮间隔（分钟） |
 | `XUE_LOOP_ACTIVE_INTERVAL` | `2` | loop 活跃轮间隔（分钟，刚推进过任务后） |
 | `XUE_LOOP_MAX_CHAPTERS` | `1` | loop 每轮最多推进的视频任务点数 |
+| `XUE_PROBE_TOPK` | `3` | 每轮探测最多深读的候选章数（0 = 全量，旧行为） |
 | `XUE_BROWSER_EXE` | 无 | 指定浏览器可执行文件（优先级最高） |
 | `XUE_BROWSER_CHANNEL` | 内置 chromium | `msedge` / `chrome` 用系统浏览器（包体积小、免杀毒误报的备选） |
 | `XUE_BLOCKED_RETRY_INTERVAL` | `4` | BLOCKED cooldown 自动放行的累计轮数 |
@@ -230,20 +238,28 @@ dist/Xuexitong/
 由引擎按固定顺序逐项自检推导（`app/e2_headed_gha.py::_derive_failure_stage`），
 是定位问题的总开关——先看它，再看 `evidence.checks` 里具体哪一项为 false。
 
+**环境类 vs 内容类**：标 🖥 的属于环境/会话级故障（登录态、页面框架、网络、崩溃），
+不计入章节失败次数、**不会导致任何一章被跳过或冻结**；本轮自动终止退避，环境恢复
+后原章照常重试。其余为内容/播放级，连续 3 次才 BLOCKED（§4.3）。
+
 | failure_stage | 含义 | 常见处理 |
 |---|---|---|
-| `LOGIN_FAILED` | 账号密码错误或会话被踢 | 核对 `.env`；是否别处登录挤掉 |
-| `STUDENTSTUDY_NOT_LOADED` | 学习页没打开 | 检查 URL 是否过期（重新复制） |
-| `NO_CARDS_IFRAME` | 章节卡片 iframe 未渲染 | URL 缺 `openc`/`hidetype`（§3.2） |
-| `NO_VIDEO_IN_CARDS` | 有卡片但无视频子 iframe | 该章可能是文档/测验类，程序会跳过换下一任务 |
+| `LOGIN_FAILED` 🖥 | 账号密码错误或登录被风控拦截 | 核对 `.env`；确认账号可用 |
+| `SESSION_KICKED` 🖥 | 会话被踢（别处登录/多开/服务端挤下线） | 关掉其他登录终端；不要双开 exe |
+| `HEARTBEAT_DEAD` 🖥 | 播放中心跳长时间停止（网络/会话断） | 检查网络；重跑恢复 |
+| `STUDENTSTUDY_NOT_LOADED` 🖥 | 学习页没打开 | 检查 URL 是否过期（重新复制） |
+| `NO_CARDS_IFRAME` 🖥 | 章节卡片 iframe 未渲染 | URL 缺 `openc`/`hidetype`（§3.2） |
+| `NO_VIDEO_IN_CARDS` 🖥 | 有卡片但无视频子 iframe | 多为渲染抖动会自动重试；持续出现换章试试 |
+| `VIDEO_METADATA_NOT_READY` 🖥 | 有界重载后仍拿不到视频时长 | 网络慢 / CDN 抖动 / 被杀毒拦截，重试 |
+| `NO_MULTIMEDIA_LOG` 🖥 | 服务端心跳（multimedia/log）未上报 | 多为网络瞬态或请求被拦，重试 |
 | `VIDEO_DURATION_INVALID` | 视频 duration=0 | 瞬态，重试；持续出现换章试试 |
 | `PLAYBACK_NOT_STARTED` | 视频未起播 | 网络慢 / CDN 抖动 / 被杀毒拦截，重试 |
 | `PLAYBACK_STALLED` | 起播后 currentTime 不增长 | 网络中断或页面被切后台导致节流，重试 |
-| `NO_MULTIMEDIA_LOG` | 服务端心跳（multimedia/log）未上报 | 多为网络瞬态或请求被拦，重试 |
 | `VIDEO_NOT_COMPLETED` | 播到中途停止（未到 90% 时长） | 看门狗/网络；重试 |
 | `ISPASSED_FALSE` | 播完了但服务端未判通过 | 视频尾部可能有确认交互，或学习通侧未落库 |
 | `NO_NEXTUNIT_NO_ENDED` | 既没触发下一节也没检测到结束 | 按卡播处理 |
-| `UNREPORTED_BY_RUNTIME` | 运行时崩溃或被看门狗杀掉，未自报阶段 | 看 `result.crash` 字段与 `evidence/loop.log` 尾部 |
+| `TARGET_NOT_ON_PAGE` | 账本要求的视频段在页面上不存在（账本错，非播放失败） | 程序自动纠正账本，不计失败 |
+| `UNREPORTED_BY_RUNTIME` | 运行时被看门狗杀掉，未自报阶段 | 看 `result.crash` 字段与 `evidence/loop.log` 尾部 |
 | `UNKNOWN` | 程序未能归类 | 人工看 `checks` 与 `key_console` |
 
 > `NEXTUNIT_EARLY_TRIGGER` 不是失败阶段，而是引擎自纠正的记录项（翻页早于播完
@@ -253,10 +269,12 @@ dist/Xuexitong/
 
 | 现象 | 原因 | 处理 |
 |---|---|---|
-| 日志出现 `BLOCKED` / 课程不推进 | 连续失败 ≥3 熔断 | 见 §4.3：等 cooldown 自动复位，或 `--trigger manual` 立即重试 |
+| 日志出现 `BLOCKED` / 课程不推进 | 连续内容级失败 ≥3 熔断 | 见 §4.3：等 cooldown 自动复位，或 `--trigger manual` 立即重试 |
+| `⛔ 环境类失败 …本轮终止` | 登录/会话/页面框架级故障（环境类，不计章节失败） | 看 `failure_stage`（§7.2 🖥 行）排除双开/网络/账号问题；30 分钟后自动重试，连续 5 轮 ERROR 会自动退出 |
 | `verdict=PASS` 但 `result=FAILED` | 旧版本看门狗误杀的误标（已修复） | 升级 exe；任务实际已完成，不会重刷 |
 | 轮次一直 NOOP | 课程完成 / 无活跃课程 / 探针无 pending | 看向导展示的进度；确认课程选对 |
-| 卡在探测（大量 `point-read`） | 每轮要逐章读服务端状态 | 正常，几十秒到几分钟；用 `--max-chapters` 减少轮数 |
+| Chrome 反复打开又关闭 | 每轮固定 2 个窗口：探测（备课）+ 播放（§4.2） | 正常流程；探测窗口约 1 分钟内让位给播放窗口 |
+| 探测偏慢（`[prepare] 深读候选 i/K`） | 每轮深读 Top-K 候选章（默认 3） | 正常，约 1 分钟内；可 `.env` 调 `XUE_PROBE_TOPK` |
 
 ### 7.4 环境/系统类
 
@@ -286,7 +304,10 @@ dist/Xuexitong/
 ## 9. FAQ
 
 **Q: 刷课速度由什么决定？**
-真实播放时长（一集 25 分钟就看 25 分钟）+ 每轮探测开销。程序不会倍速、不会跳播——这是设计边界，也是合规底线。想连续刷就保持活跃轮短间隔（默认已是 2 分钟）。
+真实播放时长（一集 25 分钟就看 25 分钟）+ 每轮探测开销（约 1 分钟，有预算上限）。程序不会倍速、不会跳播——这是设计边界，也是合规底线。想连续刷就保持活跃轮短间隔（默认已是 2 分钟）。
+
+**Q: 为什么 Chrome 会先打开又关闭，过一会才开始播？**
+每轮调度先用第 1 个窗口「备课」——扫描目录、验证候选章（约 1 分钟），关掉后第 2 个窗口才是真正播放视频的（§4.2）。备课范围有预算上限（`XUE_PROBE_TOPK`，默认 3 章），不会像旧版本那样把整门课翻一遍再播。
 
 **Q: 看完一集为什么不立刻下一集？**
 活跃轮默认等 2 分钟再探测/执行（`XUE_LOOP_ACTIVE_INTERVAL` 可调）。想单轮连播多集用 `--max-chapters N` 或向导输入 N。

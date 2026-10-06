@@ -29,7 +29,7 @@ from typing import Literal, Optional
 # 加固属于进程入口职责：见 scripts/ci_local_run.py 与 app/run.py。
 
 # 类型定义
-SchedulerResult = Literal["SUCCESS", "NOOP", "BLOCKED", "FAILED"]
+SchedulerResult = Literal["SUCCESS", "NOOP", "BLOCKED", "FAILED", "ENV_FAILED"]
 SchedulerDecision = Literal["RUN", "NOOP", "BLOCKED", "ERROR"]
 TriggerType = Literal["manual", "schedule"]
 
@@ -93,6 +93,7 @@ class ExecutionResult:
     chapters_failed: list = field(default_factory=list)      # 本轮失败的章节 id（含 TIMEOUT）
     chapters_timed_out: list = field(default_factory=list)   # 本轮超时(watchdog)的章节 id
     chapters_corrected: list = field(default_factory=list)    # 本轮按页面实测纠正账本错的章
+    chapters_env_failed: list = field(default_factory=list)   # 本轮环境/会话级失败的章（不计章节失败）
 
     def __post_init__(self):
         if not self.timestamp_utc:
@@ -248,6 +249,7 @@ def record_result(
     ss.attempt += 1
 
     # 更新连续失败计数
+    # ENV_FAILED = 纯环境/会话级失败轮：不是任何一章的问题，不烧课程级失败预算。
     if result.result == "FAILED":
         ss.consecutive_failures += 1
         # 连续失败 ≥ 阈值 → 进入 BLOCKED 熔断（by _blocked_decision 下次 schedule 生效）
@@ -563,6 +565,11 @@ def _run_one_chapter(course_url: str, chapter_id: str, task_id: str = "",
             runtime_evidence = r.get("evidence") or {}
             failure_stage = runtime_evidence.get("failure_stage") \
                 if isinstance(runtime_evidence, dict) else None
+            # 子进程崩溃没有 failure_stage（run.py 的 CRASH evidence 无此字段）——
+            # 显式补上，failure_class_policy 才能把它归入 ENV 而非章节失败。
+            if not failure_stage and (res.get("crash")
+                                      or (runtime_evidence or {}).get("verdict") == "CRASH"):
+                failure_stage = "CRASH"
     except Exception as e:
         # 必须出声：D5 的归因丢失能活过三轮验证，就是因为这里静默吞掉了读取异常。
         print(f"[scheduler] {Path(evidence_path).name} 产物读取失败，"
@@ -712,6 +719,7 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
     runtime_evidence = None
 
     # 首次探测：无显式 chapter_id 时自动选下一个 pending 任务。
+    print("[状态] PREPARE 探测候选中(目录扫描+点级验证)…", flush=True)
     next_task = chapter_id or _run_tdvp_probe(course_url, identity_key,
                                               run_id=run_id)
     if not next_task:
@@ -731,6 +739,7 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
     executed = 0
     chapters_timed_out: list = []
     chapters_corrected: list = []      # 本轮按页面实测纠正掉账本错的章（§4.13）
+    chapters_env_failed: list = []     # 本轮环境/会话级失败的章（不计章节失败）
     while executed < max_chapters:
         if time.time() - t0 > budget_s:
             print(f"[scheduler] budget exceeded ({budget_s}s), "
@@ -757,14 +766,23 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
             continue
         chapters_attempted.append(next_task)
         # 自适应看门狗：长视频按实际时长展开 per-chapter 预算（避免 838s 视频被
-        # 900s 静态墙钟在 play ~46% 时误杀成 TIMEOUT）。取不到时长则回 base，
-        # 但**降级必须打日志** —— 静默回退曾让 846s 视频在 34% 处被砍且无线索。
-        dur, dur_err = _probe_video_duration_s(course_url, run_cid,
-                                               video_index=run_vidx)
-        watch_s, watch_reason = video_watch_budget(chapter_max_s, dur, dur_err)
-        if watch_reason.startswith("fallback"):
-            print(f"[scheduler] ⚠️ 看门狗降级 chapter={run_cid} {watch_reason}",
-                  flush=True)
+        # 900s 静态墙钟在 play ~46% 时误杀成 TIMEOUT）。
+        # 父进程侧时长探测已下线（2026-10-06）：它跑在起播之前，页面上没有激活
+        # 的播放器，真站两个 run 实证只读得到 None（见 child_reported_duration），
+        # 却让每轮调度多开一次浏览器+登录+25-45s 轮询 —— 用户眼里的第 2 个
+        # "Chrome 开了又关"。预算按 base 起步，子进程 "Video ready" 播报后自适应
+        # 扩（deadline 重基线，已流逝时间不损失）；XUE_VIDEO_DURATION_S 仍可覆盖。
+        dur, dur_err = _env_video_duration()
+        if dur is not None:
+            watch_s, watch_reason = video_watch_budget(chapter_max_s, dur, dur_err)
+            if watch_reason.startswith("fallback"):
+                print(f"[scheduler] ⚠️ 看门狗降级 chapter={run_cid} {watch_reason}",
+                      flush=True)
+        else:
+            watch_s = chapter_max_s
+            watch_reason = "base: 无预读时长;子进程播报后自适应扩(重基线)"
+        print(f"[状态] PLAYING {next_task} "
+              f"[{executed + 1}/{max_chapters}] 预算 {watch_s}s", flush=True)
         one = _run_one_chapter(course_url, run_cid, task_id=next_task,
                                trigger=trigger, run_id=run_id,
                                video_index=run_vidx, max_s=watch_s)
@@ -773,7 +791,8 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
         rt_ev = one["runtime_evidence"]
         fail_stage = one["failure_stage"]
         timed_out = one["timed_out"]
-        from app.registry.reconcile import phantom_correction_policy
+        from app.registry.reconcile import (phantom_correction_policy,
+                                            failure_class_policy)
         phantom = phantom_correction_policy(
             fail_stage,
             video_index=(rt_ev or {}).get("target_video_index"),
@@ -802,6 +821,16 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
             # 聚合结果用），但不计入「连续失败熔断 budget」——避免单个 watchdog
             # 超时把整轮多章 run 熔断得"连下一章也不跑"，继续推进下一章。
             chapters_failed.append(next_task)
+        elif failure_class_policy(fail_stage, verdict) == "ENV":
+            # 环境/会话级失败（登录/被踢/页面框架/崩溃）：不是这一章的问题，
+            # 烧章节失败预算只会把一个系统级故障伪装成整门课逐章 BLOCKED。
+            # 终止本轮，走调度器级熔断（decision=ERROR → loop 30 分钟退避，
+            # 连续 5 轮退出）；任务保持原状，环境恢复后自然重试。
+            chapters_env_failed.append(next_task)
+            print(f"[scheduler] ⛔ 环境类失败 {next_task} "
+                  f"(stage={fail_stage or '?'})，不计入章节失败；"
+                  "本轮终止，等待环境恢复", flush=True)
+            break
         else:
             chapters_failed.append(next_task)
             consecutive_fail_in_run += 1
@@ -815,6 +844,7 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
         # 跑完一段后重新探测下一任务（registry 已更新）。
         # 按 task_id 排除本轮已处理过的——允许同一章的下一个视频段被接着选中。
         if executed < max_chapters:
+            print("[状态] PREPARE 探测下一候选中…", flush=True)
             next_task = _run_tdvp_probe(
                 course_url, identity_key, run_id=run_id,
                 exclude_chapters=set(chapters_attempted))
@@ -825,22 +855,27 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
 
     # 汇总（P0-06）：不得用「任一章成功」归一成全局 SUCCESS 掩盖真实失败。
     #   * real_failures：非 TIMEOUT 的真实失败章（TIMEOUT 由 watchdog 单独记账，见下）。
-    #   * successful：本次真正推进成功的章（不在 chapters_failed 中）。
+    #   * successful：本次真正推进成功的章（不在 chapters_failed / chapters_env_failed 中）。
     # 规则：
     #   - 有真实失败 → 全局 FAILED（不归一 SUCCESS，也不让 record_result 清零失败 budget）
-    #   - 无真实失败但没有任何成功章（全超时/全失败）→ FAILED
-    #   - 否则（部分推进，可含零星 TIMEOUT）→ SUCCESS
+    #   - 有成功章 → SUCCESS（含零星 TIMEOUT / 环境失败）
+    #   - 全是环境/会话失败 → ENV_FAILED（不烧课程级失败预算，decision 升为 ERROR 退避）
+    #   - 其余（全超时/全失败且无成功）→ FAILED
     real_failures = [c for c in chapters_failed if c not in chapters_timed_out]
-    successful = [c for c in chapters_attempted if c not in chapters_failed]
+    successful = [c for c in chapters_attempted
+                  if c not in chapters_failed and c not in chapters_env_failed]
     if real_failures:
         agg_result = "FAILED"
         agg_passed = False
-    elif not successful:
-        agg_result = "FAILED"
-        agg_passed = False
-    else:
+    elif successful:
         agg_result = "SUCCESS"
         agg_passed = True
+    elif chapters_env_failed:
+        agg_result = "ENV_FAILED"
+        agg_passed = False
+    else:
+        agg_result = "FAILED"
+        agg_passed = False
 
     exec_result = ExecutionResult(
         decision="RUN",
@@ -859,9 +894,19 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
     exec_result.chapters_failed = chapters_failed
     exec_result.chapters_timed_out = chapters_timed_out
     exec_result.chapters_corrected = chapters_corrected
+    exec_result.chapters_env_failed = chapters_env_failed
 
     # 记录结果（aggregate 后 commit 一次）
     record_result(identity_key, exec_result)
+
+    # 环境熔断：record 已按聚合结果落账（ENV_FAILED 不计课程级 cf），
+    # 这里再把 decision 升为 ERROR —— loop 对 ERROR 轮用 30 分钟长间隔退避，
+    # 连续 5 轮 ERROR 自动退出，避免环境坏掉后还每 2 分钟打扰服务端。
+    if chapters_env_failed:
+        exec_result.decision = "ERROR"
+        exec_result.error = (f"环境/会话类失败 x{len(chapters_env_failed)} "
+                             f"({', '.join(chapters_env_failed)}; "
+                             f"stage={last_failure_stage or '?'})")
 
     # 3D / P1-12：把「已完成章」同步进 course_state.progress（由 registry 派生，单一真源）。
     _try_sync_progress(identity_key)
@@ -875,6 +920,7 @@ def run_scheduler(course_url: Optional[str] = None, chapter_id: str = "",
     summary["chapters_failed"] = chapters_failed
     summary["chapters_timed_out"] = chapters_timed_out
     summary["chapters_corrected"] = chapters_corrected
+    summary["chapters_env_failed"] = chapters_env_failed
     _write_summary(summary)
 
     return exec_result
@@ -1188,6 +1234,18 @@ def video_watch_budget(base_max_s: int,
         return budget, f"ok: video={video_duration_s:.0f}s -> budget={budget}s"
     return budget, (f"fallback: 时长探测失败({probe_error or '探测未返回时长'}) "
                     f"-> 静态 {budget}s；长视频有被误杀成 TIMEOUT 的风险")
+
+
+def _env_video_duration() -> "tuple[Optional[float], Optional[str]]":
+    """XUE_VIDEO_DURATION_S 显式覆盖（原时长探测的 env 快路径，单点收敛）。"""
+    ev = os.environ.get("XUE_VIDEO_DURATION_S")
+    if not ev:
+        return None, None
+    try:
+        v = float(ev)
+    except ValueError:
+        return None, f"XUE_VIDEO_DURATION_S 非数字: {ev!r}"
+    return (v, None) if v > 0 else (None, "XUE_VIDEO_DURATION_S <= 0")
 
 
 def _probe_video_duration_s(course_url: str, chapter_id: str,
@@ -1637,7 +1695,19 @@ def _run_tdvp_probe(course_url: str, course_key: str,
         if _dq_frozen:
             from app.registry.reconcile import heal_blocked_by_live
 
+            # 治愈也要预算：每个冻结章一次独立浏览器,冻结多了会把一轮调度变成
+            # 连续开窗表演（系统性环境故障冻结整门课时尤其如此）。预算与深读
+            # 窗口同源（XUE_PROBE_TOPK）；没轮到的章下一轮再试 —— 冻结章本来
+            # 就不进队列,跳过它不阻塞本轮投递。
+            from tvdp.tdvp import _probe_topk
+            _heal_budget = {"left": (_probe_topk() or 3)}
+
             def _verify_frozen_points(cid):
+                if _heal_budget["left"] <= 0:
+                    print(f"[scheduler] heal 预算用尽,本轮跳过冻结章 {cid}",
+                          flush=True)
+                    return None
+                _heal_budget["left"] -= 1
                 _v = live_verify_chapter(
                     cid, params.get("course_id", ""), params.get("clazz_id", ""),
                     params.get("cpi", ""),

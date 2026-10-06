@@ -210,14 +210,25 @@ def cmd_run(args) -> int:
         video_index=getattr(args, "video_index", 0) or 0,
     )
 
-    def retryable(verdict: str) -> bool:
-        v = verdict or ""
+    def retryable(evidence: dict) -> bool:
+        """attempt 级重试判定（failure_stage 优先，verdict 兜底）。
+
+        旧实现按 verdict 子串匹配，但引擎的实际 verdict 串早已对不上那些关键词
+        （no_cards_frame/ananas/currentTime 全部失配），--max-attempts 对页面
+        框架类瞬态失败形同虚设。登录/被踢是会话级问题，重试只会再被踢。
+        """
+        ev = evidence or {}
+        stage = str(ev.get("failure_stage") or "").upper()
+        if stage in ("LOGIN_FAILED", "SESSION_KICKED", "CRASH"):
+            return False
+        if stage in ("NO_CARDS_IFRAME", "NO_VIDEO_IN_CARDS",
+                     "STUDENTSTUDY_NOT_LOADED", "VIDEO_METADATA_NOT_READY",
+                     "NO_MULTIMEDIA_LOG"):
+            return True
+        v = str(ev.get("verdict") or "")
         if "login failed" in v or "session kicked" in v:
             return False
-        return any(k in v for k in (
-            "video metadata not ready", "no_cards_frame",
-            "ananas", "cards iframe", "Heartbeat dead", "currentTime",
-        ))
+        return "video metadata not ready" in v
 
     max_attempts = max(1, args.max_attempts)
     t0 = time.time()
@@ -248,7 +259,7 @@ def cmd_run(args) -> int:
                 pass
             break
         v = ev.get("verdict", "")
-        if attempt < max_attempts and retryable(v):
+        if attempt < max_attempts and retryable(ev):
             retry_count += 1
             continue
         break
@@ -278,7 +289,8 @@ def cmd_run(args) -> int:
             from app.registry.task_registry import (
                 load_registry, save_registry, video_total_from_observation)
             from app.registry.reconcile import (
-                phantom_correction_policy, prune_phantom_video_points)
+                phantom_correction_policy, prune_phantom_video_points,
+                failure_class_policy)
             reg = load_registry(identity.key())
             # E6.2：同一章可有多个视频 task（<chapterId>, <chapterId>:video2, ...）。
             # 标记「本章第一个尚未完成的 video task」——即本次播放的那个视频点的任务，
@@ -348,13 +360,22 @@ def cmd_run(args) -> int:
                               f"snapshot_corrected={corrected}; 不计 consecutive_failures",
                               flush=True)
                     else:
-                        status = target.mark_failed(
-                            run_id=run_id, detail=detail, failure_stage=failure_stage,
-                        )
-                        save_registry(identity.key(), reg)
-                        print(f"[run] Task {target.task_id} marked {status} "
-                              f"(cf={target.consecutive_failures}/{target.max_attempts}, "
-                              f"stage={failure_stage or '?'})", flush=True)
+                        fclass = failure_class_policy(failure_stage, detail)
+                        if fclass == "ENV":
+                            # 环境/会话级失败（登录/被踢/页面框架/崩溃）：不计入
+                            # 章节 consecutive_failures —— BLOCKED 只留给真正
+                            # 「这一章播不动」的证据链，系统级故障不伪装成章节级。
+                            # 任务保持原状，调度器侧按 evidence 走轮级熔断。
+                            print(f"[run] 环境类失败 stage={failure_stage or '?'}"
+                                  f"，不计入章节失败: {detail}", flush=True)
+                        else:
+                            status = target.mark_failed(
+                                run_id=run_id, detail=detail, failure_stage=failure_stage,
+                            )
+                            save_registry(identity.key(), reg)
+                            print(f"[run] Task {target.task_id} marked {status} "
+                                  f"(cf={target.consecutive_failures}/{target.max_attempts}, "
+                                  f"stage={failure_stage or '?'})", flush=True)
         except Exception as e:
             print(f"[run] Task registry update failed (non-fatal): {e}",
                   file=sys.stderr, flush=True)

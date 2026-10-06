@@ -66,15 +66,44 @@ def _acquire_lock(lock_path: Path):
 
 # ── 凭据 / 活跃课程引导 ─────────────────────────────────────────────
 
+def _merge_env_file(env_path: Path, updates: dict) -> None:
+    """合并写 .env：已有键**原地更新**，缺失键追加到末尾；注释与其他行保留。
+
+    旧实现是无脑追加 —— 随包模板自带 `CX_USER=` 空键时，每次启动都会在文件
+    尾部"另起写入"一对重复键（用户报障的原话），且先到先得的解析让追加的
+    真值永远读不到。原子写回，避免中途崩溃留下半截文件。
+    """
+    lines = (env_path.read_text(encoding="utf-8").splitlines()
+             if env_path.exists() else [])
+    remaining = dict(updates)
+    out: list[str] = []
+    for line in lines:
+        key = None
+        stripped = line.strip()
+        if stripped and not stripped.startswith("#"):
+            seps = [i for i in (stripped.find("="), stripped.find(":")) if i > 0]
+            if seps:
+                k = stripped[:min(seps)].strip()
+                if k in remaining:
+                    key = k
+        out.append(f"{key}={remaining.pop(key)}" if key else line)
+    for k, v in remaining.items():
+        out.append(f"{k}={v}")
+    tmp = env_path.with_suffix(env_path.suffix + ".tmp")
+    tmp.write_text("\n".join(out) + "\n", encoding="utf-8")
+    tmp.replace(env_path)
+
+
 def _ensure_credentials() -> bool:
     """保证 os.environ 里有 CX_USER/CX_PASS；缺失时引导输入并写 .env。
 
-    真实环境变量优先（与 utils.env_file 语义一致），.env 只补空。
+    优先级刻意与 CI 相反：**exe 旁 .env 覆盖机器环境变量**（override=True）。
+    .env 是双击用户唯一的显式配置；用户机器上残留的 CX_USER（可能是别的账号）
+    曾静默顶掉 .env，浏览器里填出的手机号和用户填的完全对不上。
     """
-    if os.environ.get("CX_USER") and os.environ.get("CX_PASS"):
-        return True
     from utils.env_file import load_env_file
-    load_env_file(repo_root())
+    if not (os.environ.get("CX_USER") and os.environ.get("CX_PASS")):
+        load_env_file(repo_root(), override=True)
     if os.environ.get("CX_USER") and os.environ.get("CX_PASS"):
         return True
 
@@ -91,11 +120,19 @@ def _ensure_credentials() -> bool:
         print("[loop] 未提供凭据，无法开始。", flush=True)
         return False
     env_path = repo_root() / ".env"
-    with open(env_path, "a", encoding="utf-8") as f:
-        f.write(f"CX_USER={user}\nCX_PASS={passwd}\n")
+    _merge_env_file(env_path, {"CX_USER": user, "CX_PASS": passwd})
     os.environ["CX_USER"], os.environ["CX_PASS"] = user, passwd
     print(f"[loop] 凭据已写入 {env_path}", flush=True)
     return True
+
+
+def _account_banner() -> None:
+    """打印本次实际使用的账号（打码）——账号错位（.env vs 环境变量残留）的第一线索。"""
+    user = (os.environ.get("CX_USER") or "").strip()
+    if not user:
+        return
+    masked = f"{user[:3]}****{user[-4:]}" if len(user) >= 8 else user
+    print(f"[loop] 使用账号 {masked}（exe 旁 .env 优先于机器环境变量）", flush=True)
 
 
 def _prompt_and_activate_course() -> bool:
@@ -297,6 +334,7 @@ def run_loop(interval_minutes: int = 0, max_chapters: "int | None" = None) -> in
               f"{active_min} 分钟（state 根：{repo_root()}）", flush=True)
         if not _ensure_credentials():
             return 2
+        _account_banner()
         try:
             interactive = bool(sys.stdin and sys.stdin.isatty())
         except Exception:

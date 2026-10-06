@@ -692,7 +692,7 @@ def run_calibrated_reconcile(
 
 def phantom_correction_policy(failure_stage: str, *, video_index, observed_points):
     """这个失败是不是「账本要的序号比页面上的点多」？是则返回应采纳的观测点数。
-    
+
     只有一种观测可以采信：引擎确实数到了 >=1 个视频点，而投递要求的那个序号比它大。
     数到 0 个是「没读到」（登录墙 / cards 帧未挂载 / 瞬态），把它当「该章没有视频点」
     就会把好章的快照清零 —— 那正是 §4.2 那类误降的来路，所以这里一律拒绝 0。
@@ -707,6 +707,45 @@ def phantom_correction_policy(failure_stage: str, *, video_index, observed_point
     if obs < 1 or vi <= obs:
         return None
     return obs
+
+
+# 环境级失败阶段：根因在登录态 / 页面框架 / 会话 / 运行环境，**不在这一章的内容**。
+# 这类失败计入章节 consecutive_failures 会把一个系统级故障伪装成几十个章节级
+# BLOCKED（整门课逐章冻住、零播放成功）。引擎已在对应 break 点显式写入这些
+# stage（e2_headed_gha.py），不再靠 _derive_failure_stage 从终端状态反推。
+ENV_FAILURE_STAGES = frozenset({
+    "LOGIN_FAILED",            # 登录失败（密码/cookie/风控）
+    "SESSION_KICKED",          # 会话被踢（登录中 / 起播等待 / 播放中）
+    "HEARTBEAT_DEAD",          # 播放心跳停止（会话/网络层断）
+    "STUDENTSTUDY_NOT_LOADED", # studentstudy 页没加载出来
+    "NO_CARDS_IFRAME",         # cards iframe 没挂载（页面框架）
+    "NO_VIDEO_IN_CARDS",       # cards 里没有 video（渲染 flaky 居多）
+    "VIDEO_METADATA_NOT_READY",# 有界重载后仍拿不到 metadata（页面/源超时）
+    "NO_MULTIMEDIA_LOG",       # 上报端点零请求（风控/播放器没起）
+    "CRASH",                   # 子进程崩溃（无 stage，verdict/evidence 判）
+})
+
+
+def failure_class_policy(failure_stage: "str|None", verdict: str = "") -> str:
+    """把一次 run 失败归类为 'ENV'（环境/会话级）或 'CHAPTER'（章节内容级）。
+
+    ENV 类失败**不计入**章节 consecutive_failures（子进程侧跳过 mark_failed，
+    父进程侧走调度器级熔断 decision=ERROR），让 BLOCKED 语义回归「这一章经
+    足够证据确认在当前环境下不可完成」，而不是「页面抽风了三次」。
+    判定顺序：显式 stage → verdict 兜底（CRASH / 旧格式字符串）。
+    """
+    stage = (failure_stage or "").strip().upper()
+    if stage in ENV_FAILURE_STAGES:
+        return "ENV"
+    if stage == "TARGET_NOT_ON_PAGE":
+        # 幻影点：既不是环境也不是章节失败，由 phantom_correction_policy 单独处理
+        return "PHANTOM"
+    v = (verdict or "").upper()
+    if "SESSION KICKED" in v or "LOGIN FAILED" in v:
+        return "ENV"
+    if "CRASH" in v:
+        return "ENV"
+    return "CHAPTER"
 
 
 def prune_phantom_video_points(existing, *, chapter_id, observed) -> list:
