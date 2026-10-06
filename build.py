@@ -109,14 +109,19 @@ def main():
         elif not os.path.isdir(_saved) or not os.listdir(_saved):
             shutil.rmtree(_saved, ignore_errors=True)
 
-    # 可写目录骨架 + 空白 .env 模板 —— 产物里只放空目录骨架，不放任何真实数据
+    # 可写目录骨架 + 空白 .env 模板 —— 产物里只放空目录骨架，不放任何真实数据。
+    # 键必须是**注释形式**：裸的 `CX_USER=` 空值行会被 env_file 先到先得地读成
+    # ""，永远遮住用户之后填的真值（exe 二次启动反复要求输入的根因）。
     for d in ("state", "evidence", ".cache"):
         os.makedirs(os.path.join(DIST, d), exist_ok=True)
     env_tpl = os.path.join(DIST, ".env")
     if not os.path.exists(env_tpl):
         with open(env_tpl, "w", encoding="utf-8") as f:
             f.write("# 学习通账号（本地保存，勿上传/入库）\n"
-                    "CX_USER=\nCX_PASS=\n"
+                    "# 方式一：取消下面两行注释并填入账号密码后保存。\n"
+                    "# 方式二：直接双击 Xuexitong.exe，按提示输入（自动写回本文件）。\n"
+                    "# CX_USER=\n"
+                    "# CX_PASS=\n"
                     "# 可选：loop 每轮调度间隔分钟（默认 30）\n"
                     "# XUE_LOOP_INTERVAL=30\n")
         print(f"[build] 已生成凭据模板：{env_tpl}（填入 CX_USER/CX_PASS 后双击 exe 即可）")
