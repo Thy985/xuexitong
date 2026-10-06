@@ -610,26 +610,74 @@ def _corrected_target_cid(target_cid: str, chapters: list[dict]) -> str:
     return first_pending or target_cid
 
 
+def _probe_topk() -> "Optional[int]":
+    """每轮点级深读的章数预算（XUE_PROBE_TOPK）。
+
+    默认 3：exe 双击形态下用户全程盯着浏览器，全量深读所有未完成章（每章
+    ~12s，29 章 ~6min）在用户眼里就是「一直翻下一章、永不播放」。K 章窗口
+    按目录序滑动，随前面章节完成自然前移 —— 窗口外的章保持 <cid>:other 不进
+    队列，但绝不会永远选不到。显式设 0 = 关掉预算（全量，旧行为逃生口）。
+    """
+    import os
+    raw = (os.environ.get("XUE_PROBE_TOPK") or "").strip()
+    if not raw:
+        return 3
+    try:
+        val = int(raw)
+    except ValueError:
+        return 3
+    return val if val > 0 else None
+
+
+def select_chapters_to_read(chapters: "list[dict]|None",
+                            target_cid: str = "",
+                            limit: "Optional[int]" = 3) -> "list[dict]":
+    """从目录挑本轮要深读的章（纯函数，可单测）。
+
+    规则：
+      - 只考虑未完成章（目录 DOM 状态 != completed）；
+      - 预测队首章（target_cid）**必读**且排最前 —— 队首可播性是本轮最重要
+        的信息，Step 4.5 refine / 投递闸门都直接复用它的点级；
+      - 其余按目录序填充到 limit 个 —— 滑动窗口随进度前移；
+      - limit=None → 全量（旧行为逃生口）。
+    """
+    incomplete = [ch for ch in (chapters or [])
+                  if str(ch.get("chapter_id") or "")
+                  and str(ch.get("status") or "") != "completed"]
+    if limit is None:
+        return list(incomplete)
+    tgt = str(target_cid or "")
+    ordered: list[dict] = []
+    for ch in incomplete:
+        if str(ch.get("chapter_id")) == tgt:
+            ordered.insert(0, ch)
+        else:
+            ordered.append(ch)
+    return ordered[:max(1, int(limit))]
+
+
 def fetch_course_detail_and_verify(
     course_url: str,
     target_cid: str = "",
     cx_user: Optional[str] = None,
     cx_pass: Optional[str] = None,
 ) -> Optional[dict]:
-    """洞3：把「目录发现 + 全部未完成章点级深读」合并进**一次**浏览器会话。
+    """洞3：把「目录发现 + 未完成章点级深读」合并进**一次**浏览器会话。
 
-    只登录一次、只开一个 browser/context，既拿目录树（发现），又顺便对**所有
-    DOM 未完成章**打开 cards 帧读真实点（L2 深度验证）。相比
+    只登录一次、只开一个 browser/context，既拿目录树（发现），又对未完成章
+    打开 cards 帧读真实点（L2 深度验证）。相比
     `fetch_course_discovery` 再单独 `live_verify_chapter`（两次 launch + 两次
-    登录），显著降低 CI 的双开抖动；相比旧的单 target 深读，一次点亮全部章的
-    video_counts（2026-10-02 定案，见函数内注释）。
+    登录），显著降低 CI 的双开抖动。
+
+    深读范围受 `XUE_PROBE_TOPK`（默认 3）预算约束（见 select_chapters_to_read）：
+    队列由快照逐步点亮，每轮只花 K 章的备课成本就把队首候选验证到位，而不是
+    每轮重建整门课的完整认知。全量旧行为逃生口：XUE_PROBE_TOPK=0。
 
     Args:
-        target_cid: 兼容保留（旧单章读的 target）；现行读取范围由目录状态决定，
-            该参数不再影响行为。
+        target_cid: 预测队首章（必读且优先）；不影响其余窗口章的选取。
 
     Returns:
-        {"chapters": [...], "points": [{...}] }  （points 为全部未完成章的平铺点级，
+        {"chapters": [...], "points": [{...}] }  （points 为窗口内章的平铺点级，
         task_id 前缀区分章节；空列表表示没有任何可读点）
         失败返回 None。
     """
@@ -680,20 +728,24 @@ def fetch_course_detail_and_verify(
                       "(still extracting)", file=sys.stderr)
             chapters = extract_catalog_from_page(page, course_url)
 
-            # ── 多章点级深读（2026-10-02 排查定案，取代单 target 读）─────────
-            # 旧实现只深读 corrected target 一章：「点亮」能力被锚死在一个章上 ——
-            # run 36993138621 的 URL 锚点章 719 是 PPT 章（无视频点，当年「headed
-            # 抓不到 video」的真相），深读空转 → 全课程无 video_counts → 队列空 →
-            # NOOP，且每轮都锚死同一章。改为一次会话内读**全部 DOM 未完成章**：
-            # 每章 ~12s，29 章实测 ~6min。点级按 task_id 前缀分组落快照，
-            # reconcile 的铸造 heal 把已 finished 的点直接落完成 —— 台账随服务端
-            # 真源自愈，无需考古恢复。
+            # ── 窗口化点级深读（2026-10-06 排查定案，取代全量深读）─────────
+            # 旧实现（2026-10-02）一次会话内读**全部 DOM 未完成章**：每章 ~12s，
+            # 29 章实测 ~6min —— 后台 benchmark 里显得稳健，exe 双击形态下用户
+            # 盯着的却是「浏览器一直翻下一章、迟迟不播放」。改为 Top-K 滑动窗口
+            # （select_chapters_to_read）：预测队首章必读 + 目录序补足 K 章，
+            # 备课成本有预算，窗口随进度前移，未读章走 <cid>:other 不会死锁。
             points = []
-            for ch in chapters or []:
+            to_read = select_chapters_to_read(chapters, target_cid=target_cid,
+                                              limit=_probe_topk())
+            n_read = len(to_read)
+            if n_read:
+                print(f"[prepare] 点级深读 {n_read} 章"
+                      f"（预算 XUE_PROBE_TOPK={_probe_topk()}）", flush=True)
+            for i, ch in enumerate(to_read, 1):
                 cid = str(ch.get("chapter_id") or "")
-                if not cid or str(ch.get("status") or "") == "completed":
-                    continue
                 try:
+                    print(f"[prepare] 深读候选 {i}/{n_read} chapter={cid} …",
+                          flush=True)
                     pts = read_chapter_job_points(
                         page, cid,
                         params.get("course_id", ""),

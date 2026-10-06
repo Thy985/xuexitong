@@ -810,12 +810,16 @@ def run_test(args, params: "CourseParams | None" = None):
         log(f"Login: ok={login_ok} url={page.url[:80]}")
 
         if not login_ok:
+            # 显式失败阶段：提前 return 的路径走不到末尾的 _derive_failure_stage，
+            # 不写就是 None → 上层误记 UNREPORTED_BY_RUNTIME，环境级根因被遮蔽
+            evidence["failure_stage"] = "LOGIN_FAILED"
             evidence["verdict"] = "FAIL(login failed in GHA)"
             _write(evidence, args.output)
             browser.close()
             return evidence
 
         if is_session_kicked(page.url):
+            evidence["failure_stage"] = "SESSION_KICKED"
             evidence["verdict"] = "FAIL(session kicked during login)"
             _write(evidence, args.output)
             browser.close()
@@ -881,6 +885,7 @@ def run_test(args, params: "CourseParams | None" = None):
             except Exception:
                 break
             if is_session_kicked(page.url):
+                evidence["failure_stage"] = "SESSION_KICKED"
                 evidence["verdict"] = "FAIL(session-kicked during video-wait)"
                 break
             if target_vi and target_objectid is None:
@@ -961,6 +966,11 @@ def run_test(args, params: "CourseParams | None" = None):
                     f"reason={st.get('reason')} reloads={video_reload_count}")
 
         if not video_ready:
+            # video-wait 里被踢会话时 verdict 会被下面这行覆盖成 metadata not
+            # ready —— stage 按真实根因记，别让环境故障伪装成播放故障。
+            evidence["failure_stage"] = ("SESSION_KICKED"
+                                         if is_session_kicked(page.url)
+                                         else "VIDEO_METADATA_NOT_READY")
             evidence["verdict"] = "FAIL(video metadata not ready in GHA headed)"
             _write(evidence, args.output)
             browser.close()
@@ -1003,6 +1013,7 @@ def run_test(args, params: "CourseParams | None" = None):
         while time.time() - start < MAX_PLAY_SECONDS:
             now = time.time()
             if is_session_kicked(page.url):
+                evidence["failure_stage"] = "SESSION_KICKED"
                 evidence["verdict"] = "FAIL(session kicked during playback)"
                 log("⚠️ Session kicked during playback!")
                 break
@@ -1054,6 +1065,7 @@ def run_test(args, params: "CourseParams | None" = None):
                     last_ct = ct
                     last_ct_change_at = now
                 elif summary.get("duration") and (now - last_ct_change_at) >= HEARTBEAT_DEAD_S:
+                    evidence["failure_stage"] = "HEARTBEAT_DEAD"
                     log(f"⚠️ Heartbeat dead at ct={ct:.0f}s")
                     break
                 if st.get("ended") and not ended_seen:
@@ -1361,8 +1373,12 @@ def run_test(args, params: "CourseParams | None" = None):
         f"ended={checks.get('ended_seen')} nextUnit={checks.get('nextunit_triggered')}")
 
     # ── 诊断：失败阶段推导（截图已在 close() 前采集）──
+    # 显式 stage（SESSION_KICKED / HEARTBEAT_DEAD / LOGIN_FAILED …）优先 ——
+    # 它们是循环 break 处记下的真实根因，推导函数只看得到终端状态，会把环境
+    # 故障误推成 VIDEO_NOT_COMPLETED 这类"内容味"标签。
     if passed_count < 10:
-        evidence["failure_stage"] = _derive_failure_stage(evidence)
+        if not evidence.get("failure_stage"):
+            evidence["failure_stage"] = _derive_failure_stage(evidence)
         log(f"[diag] failure_stage={evidence['failure_stage']} passed={passed_count}/10")
     else:
         evidence["failure_stage"] = None
