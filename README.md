@@ -146,10 +146,13 @@ catalog 材料化全部未完成章的 work 列表并写 `progress.completed`，
 
 Scheduler 内部自动执行：
 1. 从 `state/active_course.json` 读取活跃课程
-2. **TDVP Passive Probe**（后台静默）：扫描任务列表，更新 `state/tdvp_tasks.json`
-3. 读取课程状态决定本次是否执行（RUN / NOOP / BLOCKED）
+2. **TDVP Passive Probe**（后台静默）：扫描目录，深读队首附近 Top-K 候选章（`XUE_PROBE_TOPK`，默认 3），点亮任务队列
+3. 读取课程状态决定本次是否执行（RUN / NOOP / BLOCKED / ERROR）
 4. 若 RUN，自动选择下一个 pending 任务，调用浏览器 Runtime 执行学习
 5. 更新并持久化 state 到 main 分支
+
+> 失败分类（2026-10-06）：登录/会话/页面框架类**环境级失败**不计入章节失败预算，
+> 本轮终止退避（`decision=ERROR`）；BLOCKED 只由真实播放类失败累积产生。
 
 **用户只需 2 步**：
 ```bash
