@@ -465,6 +465,9 @@ def main():
                     help="视频 iframe/metadata 瞬态失败的最大尝试次数（默认 2）")
     ap.add_argument("--video-index", type=int, default=0,
                     help="章内视频段序号(1-based)。>1 时本次 run 推进到第 N 段视频并只把该段判完成(逐段视频 dispatch)；0=按自然连播。")
+    ap.add_argument("--playback-rate", default=None,
+                    help="视频播放倍速 0.5–2.0（默认 1.0，不倍速；"
+                         "亦可用 XUE_PLAYBACK_RATE 配置，CLI 优先）")
     ap.add_argument("--xvfb-display", default=os.environ.get("DISPLAY", ":99"))
     ap.add_argument("--interval-minutes", type=int, default=0,
                     help="loop 模式每轮调度间隔分钟数（默认 30，可用 XUE_LOOP_INTERVAL 覆盖）")
@@ -481,6 +484,12 @@ def main():
         args.action = "loop" if is_frozen() else "run"
     if args.action != "loop" and args.max_chapters is None:
         args.max_chapters = 1
+
+    # 统一倍速配置：CLI 显式 > XUE_PLAYBACK_RATE（.env/云端）> 默认 1.0。
+    # 写回 os.environ 让 run_test / scheduler 子进程 / loop 全部读到同一份；
+    # loop 内 _ensure_credentials 会再压 .env，随后 run_loop 恢复 CLI 优先级。
+    if args.playback_rate is not None:
+        os.environ["XUE_PLAYBACK_RATE"] = args.playback_rate
 
     # 校验 Secrets（run/scheduler 需要账号；CI 上缺账号直接拒绝，见函数 docstring）
     _secret_err = validate_action_secrets(args.action)
@@ -500,7 +509,8 @@ def main():
         # 退出窗口暂停由 __main__ 的 frozen 守卫统一负责
         from app.loop import run_loop
         sys.exit(run_loop(interval_minutes=args.interval_minutes,
-                          max_chapters=args.max_chapters))
+                          max_chapters=args.max_chapters,
+                          playback_rate=args.playback_rate))
     else:
         sys.exit(cmd_run(args))
 

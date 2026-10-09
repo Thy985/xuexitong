@@ -100,10 +100,12 @@ def _ensure_credentials() -> bool:
     优先级刻意与 CI 相反：**exe 旁 .env 覆盖机器环境变量**（override=True）。
     .env 是双击用户唯一的显式配置；用户机器上残留的 CX_USER（可能是别的账号）
     曾静默顶掉 .env，浏览器里填出的手机号和用户填的完全对不上。
+    .env **无条件**加载（2026-10-09）：旧实现仅在凭据缺失时 load —— 若机器上
+    已有 CX_USER 残留就短路跳过 .env，XUE_PLAYBACK_RATE 等所有 XUE_* 本地配置
+    永远读不到。override=True 下 .env 对本进程是权威，与凭据语义一致。
     """
     from utils.env_file import load_env_file
-    if not (os.environ.get("CX_USER") and os.environ.get("CX_PASS")):
-        load_env_file(repo_root(), override=True)
+    load_env_file(repo_root(), override=True)
     if os.environ.get("CX_USER") and os.environ.get("CX_PASS"):
         return True
 
@@ -287,10 +289,13 @@ def _sleep_interruptible(total_s: float, stop: _StopState) -> None:
 
 # ── 主循环 ──────────────────────────────────────────────────────────
 
-def run_loop(interval_minutes: int = 0, max_chapters: "int | None" = None) -> int:
+def run_loop(interval_minutes: int = 0, max_chapters: "int | None" = None,
+             playback_rate: "float | None" = None) -> int:
     """常驻循环入口，返回进程退出码。
 
     max_chapters 优先级：CLI 显式 > XUE_LOOP_MAX_CHAPTERS > 启动向导 > 默认 1。
+    playback_rate：CLI 显式倍速；.env 的 XUE_PLAYBACK_RATE 由 _ensure_credentials
+    无条件加载，此处再压一次保证 CLI > .env（与 max_chapters 优先级一致）。
     """
     stop = _StopState()
     import signal
@@ -334,6 +339,10 @@ def run_loop(interval_minutes: int = 0, max_chapters: "int | None" = None) -> in
               f"{active_min} 分钟（state 根：{repo_root()}）", flush=True)
         if not _ensure_credentials():
             return 2
+        # CLI 显式倍速压过 .env：load_env_file(override=True) 已把 .env 的
+        # XUE_PLAYBACK_RATE 写进 os.environ，这里恢复 CLI 优先级（与 max_chapters 一致）。
+        if playback_rate is not None:
+            os.environ["XUE_PLAYBACK_RATE"] = str(playback_rate)
         _account_banner()
         try:
             interactive = bool(sys.stdin and sys.stdin.isatty())

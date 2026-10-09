@@ -59,7 +59,13 @@
     function initializePlayer() {
         const app = {
             configs: {
-                playbackRate: 1.5,
+                // 统一倍速配置：读引擎注入的 window.__XUE_PLAYBACK_RATE__
+                // （Python 侧已校验的合法数值）；缺失/非法回退 1.0（合规默认）。
+                playbackRate: (() => {
+                    const r = window.__XUE_PLAYBACK_RATE__;
+                    return (typeof r === 'number' && Number.isFinite(r) && r > 0)
+                        ? r : 1.0;
+                })(),
                 autoplay: true,
                 retryInterval: 2000,
                 maxRetries: 10,

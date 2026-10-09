@@ -169,6 +169,7 @@ dist/Xuexitong/
 | `XUE_LOOP_INTERVAL` | `30` | loop 空闲轮间隔（分钟） |
 | `XUE_LOOP_ACTIVE_INTERVAL` | `2` | loop 活跃轮间隔（分钟，刚推进过任务后） |
 | `XUE_LOOP_MAX_CHAPTERS` | `1` | loop 每轮最多推进的视频任务点数 |
+| `XUE_PLAYBACK_RATE` | `1.0` | 视频播放倍速 0.5–2.0（默认 1.0 不倍速；越界/非法回退 1.0） |
 | `XUE_PROBE_TOPK` | `3` | 每轮探测最多深读的候选章数（0 = 全量，旧行为） |
 | `XUE_BROWSER_EXE` | 无 | 指定浏览器可执行文件（优先级最高） |
 | `XUE_BROWSER_CHANNEL` | 内置 chromium | `msedge` / `chrome` 用系统浏览器（包体积小、免杀毒误报的备选） |
@@ -184,6 +185,7 @@ dist/Xuexitong/
 | `--course-url` | 课程 URL（initialize/switch/run 用） |
 | `--chapter-id` | 指定章节（run 模式，通常不需要） |
 | `--max-chapters` | 一轮最多推进 N 个视频任务点（默认 1） |
+| `--playback-rate` | 视频播放倍速 0.5–2.0（默认 1.0；优先级 CLI > XUE_PLAYBACK_RATE） |
 | `--interval-minutes` | loop 空闲轮间隔（分钟） |
 | `--trigger manual` | 手动触发语义（不受 BLOCKED cooldown 限制） |
 | `--video-index` | 章内第 N 段视频（逐段视频的章用，一般不用管） |
@@ -305,7 +307,7 @@ dist/Xuexitong/
 ## 9. FAQ
 
 **Q: 刷课速度由什么决定？**
-真实播放时长（一集 25 分钟就看 25 分钟）+ 每轮探测开销（约 1 分钟，有预算上限）。程序不会倍速、不会跳播——这是设计边界，也是合规底线。想连续刷就保持活跃轮短间隔（默认已是 2 分钟）。
+默认真实播放时长（一集 25 分钟就看 25 分钟）+ 每轮探测开销（约 1 分钟，有预算上限）。默认倍速 1.0（不倍速）；如需加速可设 `XUE_PLAYBACK_RATE`（或 `--playback-rate`、云端 Action 输入），范围 0.5–2.0，越界/非法自动回退 1.0。程序不会跳播、不伪造时间戳。>1x 是用户显式选择，站点对倍速时长的认定请自行评估并遵守所在学校规则。想连续刷就保持活跃轮短间隔（默认已是 2 分钟）。
 
 **Q: 为什么 Chrome 会先打开又关闭，过一会才开始播？**
 每轮调度先用第 1 个窗口「备课」——扫描目录、验证候选章（约 1 分钟），关掉后第 2 个窗口才是真正播放视频的（§4.2）。备课范围有预算上限（`XUE_PROBE_TOPK`，默认 3 章），不会像旧版本那样把整门课翻一遍再播。

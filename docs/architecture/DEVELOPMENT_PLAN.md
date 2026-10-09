@@ -73,9 +73,13 @@ docs/                   # REQUIREMENTS.md（本文档）+ architecture/ + runboo
 4. [2] **自动续播（R-04）**：在 `app/e2_headed_gha.py` 的视频播放等待循环里，
    加轮询 `video.paused`：若为真则 `video.play()`，并记一次 `recovered_count` 进 evidence。
    - 不动 `multimedia/log`、不改 `playingTime`。验收：人为 `page.click('.pause')` 可被自动恢复。
-5. [3] **静音/倍速本地化（R-06）**：新增 `app/actions.py`（新模块）封装
-   `mute_video / set_playback_rate(safe)`，在引擎可配置开关 `--mute --speed 1.5`下生效。
-   - `auto` 静音只对声音、倍速只对 `playbackRate`，不涉时间戳合成。
+5. [3] **倍速本地化（R-06，已落地 2026-10-09）**：统一配置入口
+   `XUE_PLAYBACK_RATE`（默认 `1.0`，范围 0.5–2.0，越界/非法回退 1.0）。
+   主链路由 v3 读注入的 `window.__XUE_PLAYBACK_RATE__`；章内后续点（:videoN
+   N≥2，不注 v3）由引擎 `apply_playback_rate` 在「src 含目标 objectid」的绑定帧
+   上设置。两条路**不强行统一底层播放实现**——保留各自已验证的播放路径，只统一
+   配置与控制接口。CLI `--playback-rate`、本地 `.env`、云端 Action 输入/仓库变量
+   三处都汇入同一 Python 权威来源。原计划的 `--mute` 仍未实现。
 6. [4] **轮询噪声分级（R-07）**：`app/e2_headed_gha.py` 现有 retryable 分类
    已是雏形（`retryable(verdict)`），把它转成更通用的 `is_expected_polling_error(e)`
    （借鉴 AutoVisor `tasks.is_expected_polling_error`），日志：expected→debug，其余→warn/error。
