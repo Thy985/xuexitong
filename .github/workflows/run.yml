@@ -46,6 +46,21 @@ on:
         description: "视频 iframe/metadata 瞬态失败的最大尝试次数（默认 2）"
         required: false
         default: "2"
+      playback_rate:
+        description: "视频播放倍速（默认 1.0 不倍速；定时任务用仓库变量 XUE_PLAYBACK_RATE）"
+        required: false
+        default: "1.0"
+        type: choice
+        options:
+          - "1.0"
+          - "1.25"
+          - "1.5"
+          - "2.0"
+      video_index:
+        description: "(可选) 章内视频段序号 1-based；≥2 时验证引擎侧倍速路径"
+        required: false
+        default: "0"
+        type: number
   schedule:
     # 一天两次触发，每次只学 1 个视频任务点（max_chapters 兜底 1；executed 对
     # 每次尝试计数，所以一轮最多 1 次失败 → 一晚最多 2 次，够不到 failure_count>=3
@@ -78,6 +93,12 @@ jobs:
       GHA_CHAPTER: ${{ github.event.inputs.chapter_id }}
       GHA_MAX: ${{ github.event.inputs.max_chapters || '1' }}
       GHA_ATTEMPTS: ${{ github.event.inputs.max_attempts || '2' }}
+      # 章内视频段序号（Run 模式可选；≥2 时引擎侧按目标帧设倍速，验证 in-chapter 路径）
+      GHA_VIDEO_INDEX: ${{ github.event.inputs.video_index || '0' }}
+      # 统一倍速配置：手动触发用 workflow_dispatch 输入；定时触发（schedule）无法
+      # 带输入，用仓库变量 vars.XUE_PLAYBACK_RATE（Settings → Variables）兜底；都
+      # 没设 → 默认 1.0（不倍速）。scheduler 子进程继承 os.environ，一条 env 全覆盖。
+      XUE_PLAYBACK_RATE: ${{ inputs.playback_rate || vars.XUE_PLAYBACK_RATE || '1.0' }}
       PLAYWRIGHT_JSBUNDLE: ""
       DEBIAN_FRONTEND: noninteractive
     steps:
@@ -194,13 +215,16 @@ jobs:
           ARGS="--course-url \"$COURSE_URL\" --output ./evidence/result.json --xvfb-display :99 --max-attempts $GHA_ATTEMPTS"
           if [ -n "$GHA_CHAPTER" ]; then ARGS="$ARGS --chapter-id $GHA_CHAPTER"; fi
           ARGS="$ARGS --max-chapters $GHA_MAX"
+          if [ -n "$GHA_VIDEO_INDEX" ] && [ "$GHA_VIDEO_INDEX" != "0" ]; then ARGS="$ARGS --video-index $GHA_VIDEO_INDEX"; fi
           echo ">> python app/run.py $ARGS"
           eval "python app/run.py $ARGS"
           echo "mvp-run-complete"
 
       # ── 提交状态更新（run/scheduler 模式成功后）───────────────────
+      # 只允许 main 上跑：schedule 固定跑 default branch，手动调度默认也在 main。
+      # 特性分支调度验证时绝不能把分支 HEAD 推回 main —— 否则绕过 PR 直接把代码合进主干。
       - name: Commit state update
-        if: (github.event.inputs.action != '' || github.event.schedule) && success()
+        if: (github.event.inputs.action != '' || github.event.schedule) && success() && github.ref == 'refs/heads/main'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

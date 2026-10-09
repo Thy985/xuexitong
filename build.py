@@ -123,7 +123,9 @@ def main():
                     "# CX_USER=\n"
                     "# CX_PASS=\n"
                     "# 可选：loop 每轮调度间隔分钟（默认 30）\n"
-                    "# XUE_LOOP_INTERVAL=30\n")
+                    "# XUE_LOOP_INTERVAL=30\n"
+                    "# 可选：视频播放倍速 0.5–2.0（默认 1.0，不倍速）\n"
+                    "# XUE_PLAYBACK_RATE=1.0\n")
         print(f"[build] 已生成凭据模板：{env_tpl}（填入 CX_USER/CX_PASS 后双击 exe 即可）")
 
     # 使用手册随包分发（exe 用户没有仓库也能查操作说明与错误速查）

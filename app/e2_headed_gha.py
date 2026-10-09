@@ -41,6 +41,7 @@
 
 import argparse
 import json
+import math
 import os
 import re
 import subprocess
@@ -73,6 +74,33 @@ ENC        = os.environ.get("ENC", DEMO_ENC)
 CHAPTER_ID = os.environ.get("CHAPTER_ID", DEMO_CHAPTER)
 OPENR = os.environ.get("OPENR") or os.environ.get("OPEN_C")    # noqa: N816
 HIDETYPE = os.environ.get("HIDETYPE")
+
+
+# ── 播放倍速配置（唯一权威来源：XUE_PLAYBACK_RATE，默认 1.0）──────────
+# 合规默认：不倍速。v3 主链路与章内后续点都从这里取同一份数；Python 校验后
+# 以安全序列化注入浏览器，绝不把未经校验的输入拼进 JS。
+PLAYBACK_RATE_DEFAULT = 1.0
+PLAYBACK_RATE_MIN = 0.5
+PLAYBACK_RATE_MAX = 2.0
+
+
+def parse_playback_rate(raw: "str | None") -> float:
+    """解析 XUE_PLAYBACK_RATE（纯函数，可测）。非法一律回退 1.0。
+
+    拒绝：空值、非数字、NaN、±inf、越界（0.5–2.0）。故障安全方向是回退到
+    合规默认，绝不沿用机器上可能残留的高倍速。
+    """
+    if raw is None or not str(raw).strip():
+        return PLAYBACK_RATE_DEFAULT
+    try:
+        v = float(raw)
+    except (TypeError, ValueError):
+        return PLAYBACK_RATE_DEFAULT
+    if not math.isfinite(v):
+        return PLAYBACK_RATE_DEFAULT
+    if v < PLAYBACK_RATE_MIN or v > PLAYBACK_RATE_MAX:
+        return PLAYBACK_RATE_DEFAULT
+    return v
 
 
 def default_params() -> "CourseParams":
@@ -249,6 +277,59 @@ def resume_paused_video(page, target_objectid: str | None = None) -> bool:
         except Exception:
             continue
         if ok:
+            return True
+    return False
+
+
+# ── 引擎侧倍速应用（章内后续点专用；复用与 resume_paused_video 相同的帧身份判定）─
+PLAYBACK_RATE_APPLY_JS = """(a) => {
+    const oid = a.oid, rate = a.rate;
+    const v = document.querySelector(
+        'video#video_html5_api, video[id*="video_html5"], video');
+    if (!v) return {ok: false, reason: 'no_video'};
+    const src = v.currentSrc || v.src || '';
+    if (!src || !src.includes(oid)) return {ok: false, reason: 'not_target'};
+    let applied = false;
+    try {
+        v.playbackRate = rate;
+        applied = Math.abs(v.playbackRate - rate) < 0.001;
+    } catch (e) {
+        return {ok: false, reason: 'set_failed', err: String(e)};
+    }
+    if (!v.__xueRateBound) {
+        v.__xueRateBound = true;
+        const reapply = () => { try { v.playbackRate = rate; } catch (e) {} };
+        v.addEventListener('play', reapply);
+        v.addEventListener('loadedmetadata', reapply);
+    }
+    return {ok: applied, rate: v.playbackRate};
+}"""
+
+
+def apply_playback_rate(page, target_objectid: str | None, rate: float) -> bool:
+    """在「src 含目标 objectid」的那一帧上把视频倍速设为 rate（引擎侧控制）。
+
+    章内后续点（:videoN, N≥2）不注入 v3，倍速由这里负责：复用与
+    resume_paused_video 相同的帧遍历 + 身份判定，**只**动目标帧的视频。
+    找不到绑定帧 / 帧内无视频 → 返回 False，绝不去碰别的点的 video（v3 的
+    "取第一个 video"选择回退正是把它钉死在点 1 的根因，见 should_inject_v3）。
+    帧内同时挂 play/loadedmetadata 监听：播放器在同一元素上复位速率时按需恢复；
+    元素被重建（换新 <video>）时监听随旧元素销毁，由主循环每次观测到速率偏离
+    再调本函数重新绑定。
+    """
+    if not target_objectid or rate is None:
+        return False
+    try:
+        frames = page.frames
+    except Exception:
+        return False
+    arg = {"oid": target_objectid, "rate": rate}
+    for fr in frames:
+        try:
+            r = fr.evaluate(PLAYBACK_RATE_APPLY_JS, arg)
+        except Exception:
+            continue
+        if isinstance(r, dict) and r.get("ok"):
             return True
     return False
 
@@ -683,12 +764,14 @@ def video_reload_warranted(reason) -> bool:
     return reason in ("no_video_in_cards", "no_cards_doc", "no_cards_frame")
 
 
-def run_test(args, params: "CourseParams | None" = None):
+def run_test(args, params: "CourseParams | None" = None,
+             playback_rate: "float | None" = None):
     """执行浏览器学习验证。
 
     params: 显式运行参数（课程 + 章节 + openc/hidetype）。缺省时从模块全局默认取，
             仅用于 E2 standalone；生产 / scheduler / app.run 一律显式传入，
             避免依赖跨模块改写模块级全局。
+    playback_rate: 显式倍速覆盖（测试用）；None = 读 XUE_PLAYBACK_RATE。
     """
     from models import CourseParams as _CP
     # 取一次生效参数：显式优先，否则包一层模块默认（chapter_id 与 args 保持一致）。
@@ -696,6 +779,12 @@ def run_test(args, params: "CourseParams | None" = None):
     if not params.chapter_id:
         params.chapter_id = getattr(args, "chapter_id", "") or params.chapter_id
     evidence: dict = {}
+    # 统一倍速配置（唯一权威）：显式参数 > XUE_PLAYBACK_RATE > 默认 1.0。
+    # 主链路(v3)与章内后续点(引擎)从这里取同一份数；Python 校验后安全序列化注入。
+    rate = parse_playback_rate(
+        playback_rate if playback_rate is not None
+        else os.environ.get("XUE_PLAYBACK_RATE"))
+    evidence["playback_rate"] = rate
 
     # ── A. CI 环境信息 ──────────────────────────────────────────────
     log("=" * 60)
@@ -856,8 +945,14 @@ def run_test(args, params: "CourseParams | None" = None):
         else:
             evidence["v3_route"] = "injected"
             try:
+                # 倍速前导：v3 在 IIFE 启动时读 window.__XUE_PLAYBACK_RATE__
+                # （缺省回退 1.0）。json.dumps 安全序列化 —— Python 侧已校验
+                # 过的数值，绝不把未经校验的输入拼进 JS。
+                page.add_script_tag(content="window.__XUE_PLAYBACK_RATE__="
+                                            f"{json.dumps(rate)};")
                 page.add_script_tag(content=script_src)
-                log(f"v3 injected ({len(script_src)} bytes)")
+                log(f"v3 injected ({len(script_src)} bytes, "
+                    f"playbackRate={rate})")
                 evidence["checks"]["v3_injected"] = True
             except Exception as e:
                 evidence["checks"]["v3_injected"] = False
@@ -955,6 +1050,10 @@ def run_test(args, params: "CourseParams | None" = None):
                             page.goto(base, wait_until="domcontentloaded")
                             page.wait_for_timeout(2000)
                             if inject_v3:
+                                # reload 后 window 全局清空，前导倍速配置要重注
+                                page.add_script_tag(
+                                    content="window.__XUE_PLAYBACK_RATE__="
+                                            f"{json.dumps(rate)};")
                                 page.add_script_tag(content=script_src)
                             page.wait_for_timeout(1500)
                         except Exception as re_:
@@ -1000,6 +1099,11 @@ def run_test(args, params: "CourseParams | None" = None):
         # R-04 自动续播计数（进 evidence，供验收与事后归因）
         recovered_count = 0
         last_resume_at = None
+        # 引擎侧倍速（章内后续点专用：不注 v3 的那条腿，:videoN N≥2）。
+        # 主链路倍速由 v3 负责；引擎只在「不注 v3」时接管绑定帧，两条路不重叠。
+        rate_reapplies = 0
+        engine_rate_active = (not inject_v3) and (rate != 1.0) \
+            and bool(target_objectid)
         # Options B 绑定：target_vi/target_objectid 已在 Step F 解析（evidence
         # 里有 video_objectids / target_objectid）。0/None = 自然连播整章。
         initial_duration = evidence.get("video_duration", 0) or 0  # 记录初始视频总时长
@@ -1033,6 +1137,23 @@ def run_test(args, params: "CourseParams | None" = None):
                         f"(ct={(st.get('currentTime') or 0):.0f}s)")
                 last_resume_at = now   # 成败都记冷却，避免每轮空转重试
                 evidence["recovered_count"] = recovered_count
+
+            # 引擎侧倍速维持（章内后续点）：get_video_state 已回读目标帧实际
+            # playbackRate，偏离配置 → 重设并重绑监听；也覆盖播放器重建换新
+            # <video>（新元素默认 1.0、旧监听随元素销毁，靠这里重新绑定）。
+            # 回读值异常（非数字）视为"未知速率"→ 同样重设，故障安全。
+            if engine_rate_active and st.get("found"):
+                actual = st.get("playbackRate")
+                try:
+                    drift = abs(float(actual) - rate) if actual is not None else None
+                except (TypeError, ValueError):
+                    drift = None
+                if drift is None or drift > 0.01:
+                    if apply_playback_rate(page, target_objectid, rate):
+                        rate_reapplies += 1
+                        log(f"[rate] target {target_objectid[:8]} "
+                            f"playbackRate {actual} -> {rate}")
+            evidence["playback_rate_reapplies"] = rate_reapplies
 
             if st and st.get("found"):
                 ct = st.get("currentTime") or 0
