@@ -46,6 +46,7 @@
 | 你想 | 看这里 |
 |---|---|
 | 本地 exe 怎么用 / 报错了怎么办 | `docs/USER_MANUAL.md`（使用手册） |
+| 云端 / 本地操作演示视频 | 下方「本地 exe」段的 📹 链接（v0.4.0 Release 附件） |
 | 为什么某 run 全绿但 `progress.completed=0`？ | `docs/engineering-review/ACTION_HISTORY_AUDIT.md`；`docs/architecture/PROGRESS_OUTCOME_DATAFLOW.md`（五层 outcome） |
 | 这套测试/回归体系怎么建、P0 项怎样分布 | `docs/engineering-review/REGRESSION_MATRIX.md`、`docs/engineering-review/TEST_SYSTEM_DESIGN.md` |
 | 本地起浏览器做真实 E2E 验证 | `docs/runbooks/LOCAL_PLAYWRIGHT_RUNBOOK.md`、`scripts/mooc2_probe.py` |
@@ -336,7 +337,12 @@ python app/run.py --action run --course-url "https://mooc1.chaoxing.com/..." --c
 
 ## 本地 exe（Windows 双击即用，可选）
 
-不想用 GitHub Actions 的用户可把项目打包为本地常驻程序，压缩包我放在Github tag上了：产物**自带 chromium**，双击即刷，课程/凭据/状态全部落在 exe 旁边，与 GHA 模式共用同一套代码与状态机。
+不想用 GitHub Actions 的用户可把项目打包为本地常驻程序，压缩包放在 [GitHub Release](https://github.com/Thy985/xuexitong/releases)（tag `v0.4.0`）：产物**自带 chromium**，双击即刷，课程/凭据/状态全部落在 exe 旁边，与 GHA 模式共用同一套代码与状态机。
+
+**操作演示（v0.4.0 Release 附件，可直接在线播放）**：
+
+- 📹 [云端模式操作演示](https://github.com/Thy985/xuexitong/releases/download/v0.4.0/demo-cloud-v0.4.0.mp4) —— 在 GitHub Actions 上配置 Secrets 并跑 Scheduler
+- 📹 [本地模式操作演示](https://github.com/Thy985/xuexitong/releases/download/v0.4.0/demo-local-v0.4.0.mp4) —— 解压即用、双击刷课
 
 ```bash
 .venv/Scripts/python.exe build.py     # 产物 dist/Xuexitong/（内置浏览器，随包附带使用手册）
@@ -346,9 +352,36 @@ python app/run.py --action run --course-url "https://mooc1.chaoxing.com/..." --c
 
 - 双击 `Xuexitong.exe`：首次引导填账号（写入旁 `.env`）并粘贴课程 URL；此后每次启动有**可跳过向导**（回车开始 / `s` 换课 / 数字调本次每轮章数）；
 - 常驻循环：空闲轮 30 分钟、活跃轮（刚推进过任务）2 分钟，决策与熔断 cooldown 与 GHA 完全同源；课程完成自动退出，`Ctrl+C` 优雅停止；
+- **视频倍速可配置（默认 1.0，不倍速）**：`.env` 里 `XUE_PLAYBACK_RATE`（0.5–2.0，非法值回退 1.0）或 CLI `--playback-rate` 优先；v3 主链路与章内后续视频点分层应用同一配置，站点按服务端记账节奏播放（详见下方「视频倍速」）；
 - 升级只替换 `Xuexitong.exe` + `internal/`，保留 `state/`、`.cache/`、`.env`。
 
 与 GHA 的错峰双跑与状态收敛详见手册 §8。核心结论：两边都以学习通服务端为真源（每轮探针重扫服务端完成标记），**错峰跑无需显式同步**；只要避开 cron 时间窗（北京 00:07 / 02:07）不重叠、换课两边各自做即可。
+
+---
+
+## 视频倍速（默认 1.0，不倍速）
+
+v0.4 起倍速从硬编码 1.5x 收敛为**可配置、默认 1.0**——统一的是配置与控制接口，不强统一底层播放实现。配置单一权威来源：`XUE_PLAYBACK_RATE`（0.5–2.0，非法/缺失回退 1.0），CLI `--playback-rate` 优先。
+
+| 形态 | 怎么配 |
+|---|---|
+| 本地 exe | 编辑 `Xuexitong.exe` 旁 `.env`，取消 `# XUE_PLAYBACK_RATE=1.0` 注释并填值（如 `1.5`） |
+| GitHub Actions 手动 | `workflow_dispatch` 的 `playback_rate` 输入（1.0/1.25/1.5/2.0） |
+| GitHub Actions 定时 | 仓库 → Settings → Secrets and variables → **Variables**：`XUE_PLAYBACK_RATE` |
+
+两条播放路径分层应用同一配置：
+
+- **v3 主链路**（整章自然连播，`video_index` 0/1）由 userscript 读 `window.__XUE_PLAYBACK_RATE__` 预置项设倍速；
+- **章内第 2 段及以后**（`video_index ≥ 2`）由 Python 引擎基于**已绑定目标帧**（`objectid in src` 严格匹配）设倍速——找不到目标帧时干净失败（`TARGET_NOT_ON_PAGE`），绝不退而求其次改别的视频。
+
+真站验证（站点多媒体上报反推：上报进度增量 ÷ 真实时间增量）：
+
+| 路径 | 配置 | 站点实测 |
+|---|---|---|
+| v3 主链路 | 1.0 | ~0.99x |
+| 章内第 2 段（引擎侧） | 1.5 | ~1.48x |
+
+> 注意：倍速是否计入学习时长由学习通服务端决定，工程不承诺；默认 1.0 也不应被视为站点一定认可学习时长的保证（`isPassed` 判定口径见手册）。
 
 ---
 
