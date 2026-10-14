@@ -2056,5 +2056,57 @@
     "_cell_idx": 31,
     "rollback_count": 0,
     "last_rollback_at_utc": ""
+  },
+  "1217304734": {
+    "task_id": "1217304734",
+    "chapter_id": "1217304734",
+    "title": "IP数据报的分片与重组",
+    "task_type": "video",
+    "status": "COMPLETED",
+    "priority": 0,
+    "attempt_count": 1,
+    "attempts": 1,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "SERVER_VERIFIED",
+      "verified_at_utc": "2026-10-14T20:18:59.082051+00:00",
+      "run_id": "38629636457",
+      "source_detail": "passed_object_ids=1"
+    },
+    "completion_evidence": {
+      "type": "SERVER_VERIFIED",
+      "source": "isPassed",
+      "run_id": "38629636457",
+      "observed_at_utc": "2026-10-14T20:18:59.082051+00:00",
+      "detail": "passed_object_ids=1",
+      "passed_object_ids": [
+        "6bfa3a7f25eafa7b988fc57f4e5adf36"
+      ]
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-10-14T20:18:59.082061+00:00"
+    },
+    "created_at_utc": "2026-10-14T20:11:10.937613+00:00",
+    "updated_at_utc": "2026-10-14T20:18:59.082051+00:00",
+    "last_run_id": "38629636457",
+    "last_run_at_utc": "2026-10-14T20:18:59.082051+00:00",
+    "last_started_at": "2026-10-14T20:18:59.082051+00:00",
+    "last_finished_at": "2026-10-14T20:18:59.082051+00:00",
+    "last_success_at_utc": "2026-10-14T20:18:59.082051+00:00",
+    "last_failure_at_utc": null,
+    "_ch_idx": 32,
+    "_cell_idx": 32,
+    "rollback_count": 0,
+    "last_rollback_at_utc": ""
   }
 }
