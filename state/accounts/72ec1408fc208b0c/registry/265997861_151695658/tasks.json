@@ -2264,5 +2264,157 @@
     "_cell_idx": 35,
     "rollback_count": 0,
     "last_rollback_at_utc": ""
+  },
+  "1217304738": {
+    "task_id": "1217304738",
+    "chapter_id": "1217304738",
+    "title": "IPV6",
+    "task_type": "video",
+    "status": "COMPLETED",
+    "priority": 0,
+    "attempt_count": 1,
+    "attempts": 1,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "SERVER_VERIFIED",
+      "verified_at_utc": "2026-11-10T00:28:59.993577+00:00",
+      "run_id": "42726055165",
+      "source_detail": "passed_object_ids=1"
+    },
+    "completion_evidence": {
+      "type": "SERVER_VERIFIED",
+      "source": "isPassed",
+      "run_id": "42726055165",
+      "observed_at_utc": "2026-11-10T00:28:59.993577+00:00",
+      "detail": "passed_object_ids=1",
+      "passed_object_ids": [
+        "94382be48a99aae745efd4481afa4af1"
+      ]
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-11-10T00:28:59.993586+00:00"
+    },
+    "created_at_utc": "2026-11-10T00:10:49.115964+00:00",
+    "updated_at_utc": "2026-11-10T00:28:59.993577+00:00",
+    "last_run_id": "42726055165",
+    "last_run_at_utc": "2026-11-10T00:28:59.993577+00:00",
+    "last_started_at": "2026-11-10T00:28:59.993577+00:00",
+    "last_finished_at": "2026-11-10T00:28:59.993577+00:00",
+    "last_success_at_utc": "2026-11-10T00:28:59.993577+00:00",
+    "last_failure_at_utc": null,
+    "_ch_idx": 36,
+    "_cell_idx": 36,
+    "rollback_count": 0,
+    "last_rollback_at_utc": ""
+  },
+  "1217304738:video2": {
+    "task_id": "1217304738:video2",
+    "chapter_id": "1217304738",
+    "title": "IPV6",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-11-10T00:10:49.115972+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-11-10T00:10:49.115975+00:00"
+    },
+    "created_at_utc": "2026-11-10T00:10:49.115978+00:00",
+    "updated_at_utc": "2026-11-10T00:10:49.115978+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 36,
+    "_cell_idx": 36,
+    "rollback_count": 0,
+    "last_rollback_at_utc": ""
+  },
+  "1217304739": {
+    "task_id": "1217304739",
+    "chapter_id": "1217304739",
+    "title": "路由协议概述",
+    "task_type": "video",
+    "status": "DISCOVERED",
+    "priority": 0,
+    "attempt_count": 0,
+    "attempts": 0,
+    "consecutive_failures": 0,
+    "max_attempts": 3,
+    "lease": {
+      "run_id": null,
+      "started_at_utc": null,
+      "expires_at_utc": null
+    },
+    "verification": {
+      "level": "NONE",
+      "verified_at_utc": null,
+      "run_id": null,
+      "source_detail": ""
+    },
+    "completion_evidence": {
+      "type": "NONE",
+      "source": "",
+      "run_id": "",
+      "observed_at_utc": "2026-11-10T00:10:49.116010+00:00",
+      "detail": "",
+      "passed_object_ids": []
+    },
+    "failure": {
+      "stage": "",
+      "run_id": "",
+      "detail": "",
+      "consecutive_failures": 0,
+      "occurred_at_utc": "2026-11-10T00:10:49.116015+00:00"
+    },
+    "created_at_utc": "2026-11-10T00:10:49.116018+00:00",
+    "updated_at_utc": "2026-11-10T00:10:49.116018+00:00",
+    "last_run_id": null,
+    "last_run_at_utc": null,
+    "last_started_at": null,
+    "last_finished_at": null,
+    "last_success_at_utc": null,
+    "last_failure_at_utc": null,
+    "_ch_idx": 37,
+    "_cell_idx": 37,
+    "rollback_count": 0,
+    "last_rollback_at_utc": ""
   }
 }
